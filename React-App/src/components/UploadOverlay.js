@@ -75,16 +75,16 @@ const UploadOverlay = forwardRef(({ onClose }, ref) => {
     };
 
     return (
-        <div className="upload-overlay">
+        <div className="flex flex-col justify-center items-center fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-10">
             <div
-                className={`upload-overlay-box ${isDragging ? 'dragging' : ''}`}
+                class={`upload-overlay-box ${isDragging ? 'dragging' : ''}`}
                 ref={overlayBoxRef}
                 onDragLeave={handleDragLeave}
             >
                 {fileName ? (
                     <>
                         <p>{fileName}</p>
-                        <button className='browse-button' onClick={handleChooseAnotherFile}>
+                        <button class="hover:bg-sky-950 text-sm hover:text-sky-100 border border-solid border-sky-950 bg-white text-sky-950 mt-10" onClick={handleChooseAnotherFile}>
                             Choose Another File
                         </button>
                     </>
@@ -92,7 +92,7 @@ const UploadOverlay = forwardRef(({ onClose }, ref) => {
                     <>
                         <p className="drag-drop-p">Drag & Drop to upload</p>
                         <p className="or-p">or</p>
-                        <button className='browse-button' onClick={() => fileInputRef.current.click()}>
+                        <button class="hover:bg-sky-950 hover:text-sky-100 border border-solid border-sky-950 bg-white text-sky-950" onClick={() => fileInputRef.current.click()}>
                             Browse files
                         </button>
                     </>

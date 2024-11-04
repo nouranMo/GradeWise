@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
+import logo from '../images/logo.png';
 
 function Navbar() {
   const location = useLocation();
@@ -9,7 +10,8 @@ function Navbar() {
   const isHomepage = location.pathname === '/homepage';
 
   return (
-    <nav>
+    <nav class="navbar">
+      {/* <img src={logo} alt="logo" /> */}
       <Link to="/"><h1 className='doc-checker'>Doc Checker</h1></Link>
       {(!isLoginPage && !isHomepage && !isRegisterPage) && <Link to="/login"><button>Login</button></Link>}
 

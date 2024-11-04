@@ -2,12 +2,14 @@ import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import ScrollAnimation from "../ScrollAnimation";
 import landingImage from "../../images/landing.png";
+import naderImage from "../../images/nader.jpg";
+import zeinaImage from "../../images/zeina.jpg";
 
 const teamMembers = [
-  { name: "Nader Amir", role: "", img: landingImage },
+  { name: "Nader Amir", role: "", img: naderImage },
   { name: "Nouran Mohamed", role: "", img: landingImage },
   { name: "George Ayman", role: "", img: landingImage },
-  { name: "Zeina Hesham", role: "", img: landingImage },
+  { name: "Zeina Hesham", role: "", img: zeinaImage },
 ];
 
 function TeamSection() {
@@ -46,7 +48,7 @@ function TeamSection() {
             className="flex flex-col justify-center items-center gap-4"
             variants={itemVariants}
           >
-            <img src={member.img} alt={member.name} />
+            <img class="w-52 rounded-full" src={member.img} alt={member.name} />
             <h2 className="text-2xl">{member.name}</h2>
             <p className="text-lg">{member.role}</p>
           </motion.div>

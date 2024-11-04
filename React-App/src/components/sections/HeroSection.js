@@ -1,14 +1,14 @@
 import { Link } from "react-router-dom";
 import landingImage from "../../images/landing.png";
-import icon from "../../images/White Icon.png";
+import logo from "../../images/logo.png";
 
 function HeroSection() {
   return (
-    <div className="flex flex-row justify-between items-center h-screen bg-gradient-to-tl from-sky-800 to-sky-400 px-[10%]">
+    <div className="flex flex-row justify-between items-center h-screen bg-gradient-to-tl from-sky-950 to-sky-600 px-[10%]">
       <div className="flex flex-col justify-center items-center w-[50%] gap-16">
         {/* Header with logo and link */}
         <div className="flex flex-row justify-start items-center gap-2">
-          <img src={icon} alt="file" className="w-[6%]" />
+          <img src={logo} alt="file" className="w-[6%]" />
           <Link to="/">
             <h1 className="font-mono text-2xl text-sky-100">Doc Checker</h1>
           </Link>
