@@ -4,9 +4,9 @@ import Navbar from './Navbar';
 
 function RegisterPage() {
   return (
-    <div class="m-0 p-0 h-screen bg-gradient-to-tl from-sky-800 to-sky-400">
+    <div class="m-0 p-0 h-screen bg-gradient-to-tl from-sky-950 to-sky-600">
       <Navbar />
-      <div class="w-[50%] h-[60%] mx-auto mt-32 shadow-2xl text-sky-950 text-sm bg-white rounded-md">
+      <div class="w-[40%] h-[60%] mx-auto mt-20 shadow-2xl text-sky-950 text-sm bg-white rounded-md">
         <h2 class="text-center text-xl mb-4 pt-12">Hi there!</h2>
         <form class="flex flex-col justify-center items-center gap-4 w-[80%] mx-auto">
           <div class="w-full">

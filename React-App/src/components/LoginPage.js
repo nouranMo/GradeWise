@@ -4,11 +4,11 @@ import Navbar from './Navbar';
 
 function LoginPage() {
   return (
-    <div class="m-0 p-0 h-screen bg-gradient-to-tl from-sky-800 to-sky-400">
+    <div class="m-0 p-0 h-screen bg-gradient-to-tl from-sky-950 to-sky-600">
       <Navbar />
-      <div class="w-[50%] h-[60%] mx-auto mt-32 shadow-2xl text-sky-950 text-sm bg-white rounded-md">
+      <div class="w-[40%] h-[60%] mx-auto mt-20 shadow-2xl text-sky-950 text-sm bg-white rounded-md">
         <h2 class="text-center text-xl mb-10 pt-12">Welcome back!</h2>
-        <form class="flex flex-col justify-center items-center gap-4 w-[80%] mx-auto">
+        <form class="flex flex-col justify-center items-center gap-6 w-[80%] mx-auto">
           <div class="w-full">
             <p>EMAIL</p>
             <input class="border border-sky-950 w-full h-10 focus:outline-none focus:border-2 p-3" type="email"/>
