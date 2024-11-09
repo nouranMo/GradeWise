@@ -13,15 +13,21 @@ function RegisterPage() {
             <p>EMAIL</p>
             <input class="border border-sky-950 w-full h-10 focus:outline-none focus:border-2 p-3" type="email"/>
           </div>
+
           <div class="w-full">
             <p>PASSWORD</p>
             <input class="border border-sky-950 w-full h-10 focus:outline-none focus:border-2 p-3" type="password"/>
           </div>
+
           <div class="w-full">
             <p>CONFIRM PASSWORD</p>
             <input class="border border-sky-950 w-full h-10 focus:outline-none focus:border-2 p-3" type="password"/>
           </div>
-          <button class="border border-sky-950 w-full h-10 bg-white text-sky-950 hover:bg-sky-950 hover:text-white" type="submit">Register</button>
+
+          <Link to="/homepage" class="w-full">
+            <button class="border border-sky-950 w-full h-10 bg-white text-sky-950 hover:bg-sky-950 hover:text-white" type="submit">Register</button>
+          </Link>
+
           <div class="self-start">
             <p class="text-xs">Already have an account?</p>
             <p class="text-sky-950 hover:font-bold w-fit"><Link to='/login'>Login</Link></p>

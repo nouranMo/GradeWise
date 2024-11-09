@@ -13,12 +13,17 @@ function LoginPage() {
             <p>EMAIL</p>
             <input class="border border-sky-950 w-full h-10 focus:outline-none focus:border-2 p-3" type="email"/>
           </div>
+          
           <div class="w-full">
             <p>PASSWORD</p>
             <input class="border border-sky-950 w-full h-10 focus:outline-none focus:border-2 p-3" type="password"/>
             <p class="text-xs mt-2 hover:cursor-pointer hover:font-semibold text-sky-950 w-fit">Forgot your password?</p>
           </div>
-          <button class="border border-sky-950 w-full h-10 bg-white text-sky-950 hover:bg-sky-950 hover:text-white" type="submit">Log In</button>
+
+          <Link to="/homepage" class="w-full">
+            <button class="border border-sky-950 w-full h-10 bg-white text-sky-950 hover:bg-sky-950 hover:text-white" type="submit">Log In</button>
+          </Link>
+
           <div class="self-start w-fit">
             <p class="text-xs">Need an account?</p>
             <p class="text-sky-950 hover:font-bold w-fit"><Link to='/register'>Register</Link></p>

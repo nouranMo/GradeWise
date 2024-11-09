@@ -4,11 +4,12 @@ import ScrollAnimation from "../ScrollAnimation";
 import landingImage from "../../images/landing.png";
 import naderImage from "../../images/nader.jpg";
 import zeinaImage from "../../images/zeina.jpg";
+import georgeImage from "../../images/george.jpg";
 
 const teamMembers = [
   { name: "Nader Amir", role: "", img: naderImage },
   { name: "Nouran Mohamed", role: "", img: landingImage },
-  { name: "George Ayman", role: "", img: landingImage },
+  { name: "George Ayman", role: "", img: georgeImage },
   { name: "Zeina Hesham", role: "", img: zeinaImage },
 ];
 
