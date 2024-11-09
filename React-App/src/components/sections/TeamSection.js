@@ -5,10 +5,11 @@ import landingImage from "../../images/landing.png";
 import naderImage from "../../images/nader.jpg";
 import zeinaImage from "../../images/zeina.jpg";
 import georgeImage from "../../images/george.jpg";
+import nouranImage from "../../images/nouran.jpg";
 
 const teamMembers = [
   { name: "Nader Amir", role: "", img: naderImage },
-  { name: "Nouran Mohamed", role: "", img: landingImage },
+  { name: "Nouran Mohamed", role: "", img: nouranImage },
   { name: "George Ayman", role: "", img: georgeImage },
   { name: "Zeina Hesham", role: "", img: zeinaImage },
 ];
