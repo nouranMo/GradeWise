@@ -8,14 +8,15 @@ function Navbar() {
   const isLoginPage = location.pathname === '/login';
   const isRegisterPage = location.pathname === '/register';
   const isHomepage = location.pathname === '/homepage';
+  const isReportPage = location.pathname === '/report';
 
   return (
     <nav class="navbar">
       {/* <img src={logo} alt="logo" /> */}
       <Link to="/"><h1 className='doc-checker'>Doc Checker</h1></Link>
-      {(!isLoginPage && !isHomepage && !isRegisterPage) && <Link to="/login"><button>Login</button></Link>}
+      {(!isLoginPage && !isHomepage && !isRegisterPage && !isReportPage) && <Link to="/login"><button>Login</button></Link>}
 
-      {(isHomepage) && <Link to="/"><button>NF</button></Link>}
+      {(isHomepage || isReportPage) && <Link to="/"><button>NF</button></Link>}
     </nav>
   );
 }

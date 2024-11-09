@@ -1,9 +1,10 @@
 import React, { useRef, useEffect, forwardRef, useState } from "react";
+import { Link } from "react-router-dom";
 
 const UploadOverlay = forwardRef(({ onClose }, ref) => {
     const overlayBoxRef = useRef(null);
     const fileInputRef = useRef(null);
-    const [fileName, setFileName] = useState('');
+    const [fileNames, setFileNames] = useState([]); // Changed to an array for multiple file names
     const [isDragging, setIsDragging] = useState(false);
 
     // Close overlay when clicking outside of the overlay box
@@ -15,19 +16,19 @@ const UploadOverlay = forwardRef(({ onClose }, ref) => {
         };
 
         const handleDragOver = (event) => {
-            event.preventDefault(); // Prevent default behavior
-            event.stopPropagation(); // Stop the event from bubbling up
-            setIsDragging(true); // Indicate that a file is being dragged over the area
+            event.preventDefault();
+            event.stopPropagation();
+            setIsDragging(true);
         };
 
         const handleDrop = (event) => {
-            event.preventDefault(); // Prevent default behavior
+            event.preventDefault();
             event.stopPropagation();
-            setIsDragging(false); // Reset dragging state
+            setIsDragging(false);
 
-            const files = event.dataTransfer.files; // Get the dropped files
+            const files = event.dataTransfer.files;
             if (files.length > 0) {
-                validateAndSetFile(files[0]); // Validate and set the first file
+                validateAndSetFiles(files);
             }
         };
 
@@ -44,55 +45,69 @@ const UploadOverlay = forwardRef(({ onClose }, ref) => {
 
     // Handle file selection from input
     const handleFileSelect = (event) => {
-        const files = event.target.files; // Get the selected files
+        const files = event.target.files;
         if (files.length > 0) {
-            validateAndSetFile(files[0]); // Validate and set the file
+            validateAndSetFiles(files);
         }
     };
 
-    // Validate and set file
-    const validateAndSetFile = (file) => {
-        if (file && file.type === 'application/pdf') {
-            setFileName(file.name); // Update state with the file name
-        } else {
-            if (file) {
-                alert('Please select a valid PDF file.'); // Alert if the file is not a PDF
+    // Validate and set files
+    const validateAndSetFiles = (files) => {
+        const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+        let validFiles = [];
+        let invalidFiles = [];
+
+        for (let i = 0; i < files.length; i++) {
+            if (validTypes.includes(files[i].type)) {
+                validFiles.push(files[i].name);
+            } else {
+                invalidFiles.push(files[i].name);
             }
-            setFileName(''); // Reset the file name if the selection is invalid
         }
+
+        if (invalidFiles.length > 0) {
+            alert(`Please select valid PDF or image files: ${invalidFiles.join(', ')}`);
+        }
+
+        setFileNames(validFiles);
     };
 
-    // Handle choosing another file
     const handleChooseAnotherFile = () => {
-        fileInputRef.current.click(); // Open the file explorer without resetting the file
+        fileInputRef.current.click();
     };
 
-    // Drag and Drop Handlers
     const handleDragLeave = (event) => {
         event.preventDefault();
         event.stopPropagation();
-        setIsDragging(false); // Reset dragging state when the file leaves the area
+        setIsDragging(false);
     };
 
     return (
         <div className="flex flex-col justify-center items-center fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-10">
             <div
-                class={`upload-overlay-box ${isDragging ? 'dragging' : ''}`}
+                className={`upload-overlay-box ${isDragging ? 'dragging' : ''}`}
                 ref={overlayBoxRef}
                 onDragLeave={handleDragLeave}
             >
-                {fileName ? (
+                {fileNames.length > 0 ? (
                     <>
-                        <p>{fileName}</p>
-                        <button class="hover:bg-sky-950 text-sm hover:text-sky-100 border border-solid border-sky-950 bg-white text-sky-950 mt-10" onClick={handleChooseAnotherFile}>
-                            Choose Another File
-                        </button>
+                        <div className="text-sm">
+                            {fileNames.map((name, index) => (
+                                <p key={index}>{name}</p>
+                            ))}
+                        </div>
+
+                        <Link to="/report" className="w-[40%]">
+                            <button className="hover:bg-sky-950 hover:text-sky-100 border border-solid border-sky-950 bg-white text-sky-950 mt-5 w-full">Upload</button>
+                        </Link>
+
+                        <p className="text-sky-950 hover:font-bold hover:cursor-pointer text-sm" onClick={handleChooseAnotherFile}>Choose another file</p>
                     </>
                 ) : (
                     <>
                         <p className="drag-drop-p">Drag & Drop to upload</p>
                         <p className="or-p">or</p>
-                        <button class="hover:bg-sky-950 hover:text-sky-100 border border-solid border-sky-950 bg-white text-sky-950" onClick={() => fileInputRef.current.click()}>
+                        <button className="hover:bg-sky-950 hover:text-sky-100 border border-solid border-sky-950 bg-white text-sky-950" onClick={() => fileInputRef.current.click()}>
                             Browse files
                         </button>
                     </>
@@ -102,7 +117,8 @@ const UploadOverlay = forwardRef(({ onClose }, ref) => {
                     ref={fileInputRef}
                     style={{ display: "none" }} // Hide the input visually
                     onChange={handleFileSelect}
-                    accept=".pdf" // Limit to PDF files only
+                    accept=".pdf,.jpeg,.jpg,.png" // Accept both PDFs and images
+                    multiple // Allow multiple file selection
                 />
             </div>
         </div>
