@@ -16,7 +16,8 @@
     "react-router-dom": "^6.27.0",
     "react-scripts": "5.0.1",
     "react-toastify": "^10.0.5",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "your-frontend": "file:"
   },
   "scripts": {
     "start": "react-scripts start",
