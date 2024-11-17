@@ -28,7 +28,7 @@ function UMLReport() {
     }
 
     return (
-        <div className="relative h-screen p-0 m-0">
+        <div className="relative min-h-screen p-0 m-0">
             {/* Background Layer */}
             <div className="absolute inset-0 bg-sky-900"></div>
             <div className="absolute bg-sky-500 w-72 h-72 rounded-full opacity-40 blur-3xl top-10 left-10"></div>
