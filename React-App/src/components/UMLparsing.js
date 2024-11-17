@@ -19,18 +19,17 @@ function UMLparsing() {
 				accept="image/*"
 				className="border border-solid border-sky-300 bg-transparent text-sky-100 p-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-sky-500"
 				/>
-				<label className="text-sky-100 text-lg font-poppins">Text File</label>
-				<input
-				type="file"
-				accept=".txt"
-				className="border border-solid border-sky-300 bg-transparent text-sky-100 p-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-sky-500"
+				<label className="text-sky-100 text-lg font-poppins">Text</label>
+				{/* input is a large text area */}
+				<textarea
+				className="border border-solid border-sky-300 bg-transparent text-sky-100 p-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-sky-500 h-[30vh]"
 				/>
-				<Link to="/report">
+				<Link to="/report" class="w-full">
 					<button
 					type="submit"
 					className="mt-4 bg-sky-500 text-white px-4 py-2 rounded-lg hover:bg-sky-600 transition-all duration-300 w-full"
 					>
-					Submit
+					Parse
 					</button>
 				</Link>
 			</form>
