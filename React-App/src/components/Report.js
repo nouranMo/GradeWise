@@ -4,7 +4,7 @@ import Navbar from './Navbar';
 function Report() {
     return (
         <>
-            <div className="p-0 m-0 bg-gradient-to-tl from-sky-950 to-sky-600 h-screen">
+            <div className="p-0 m-0 bg-sky-900 h-screen">
                 <Navbar />
                 <div className="flex flex-col justify-center items-center">
                     <div className="flex flex-row w-screen">
