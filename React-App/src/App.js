@@ -10,7 +10,7 @@ import RegisterPage from './components/RegisterPage';
 import Signup from './components/Signup';
 import UMLparsing from './components/UMLparsing';
 import SectionExtraction from './components/sectionExtraction';
-
+import UMLReport from './components/UMLReport';
 function App() {
     return (
       <Router>
@@ -24,6 +24,7 @@ function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/umlparsing" element={<UMLparsing />} />
             <Route path="/sectionextraction" element={<SectionExtraction />} />
+            <Route path="/umlreport" element={<UMLReport />} />
         </Routes>
       </Router>
     );
