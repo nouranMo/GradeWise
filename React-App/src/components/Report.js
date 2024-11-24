@@ -10,7 +10,7 @@ function Report() {
   console.log(validationResults); // Log validation results to check if they exist
 
   return (
-    <div className="p-0 m-0 bg-sky-900 h-screen">
+    <div className="p-0 m-0 bg-sky-900 min-h-screen overflow-hidden">
       <Navbar />
       <div className="flex flex-col justify-center items-center">
         <div className="flex flex-row w-screen">
@@ -19,11 +19,11 @@ function Report() {
               <h2 className="text-center text-sky-950">Document Extraction</h2>
             </div>
 
-            <div className="pt-5 px-10 bg-sky-100 mt-1 h-[70vh]">
+            <div className="pt-5 px-10 bg-sky-100 mt-1">
               <p className="text-sky-950">Document Text</p>
               {/* Render parsed data with a fallback if empty */}
               {parsedData ? (
-                <pre className="text-sky-950">{JSON.stringify(parsedData, null, 2)}</pre>
+                <pre className="text-sky-950 text-wrap text-sm">{JSON.stringify(parsedData, null, 2)}</pre>
               ) : (
                 <p className="text-sky-950">No document data available</p>
               )}
@@ -38,11 +38,11 @@ function Report() {
               <h2 className="text-center text-sky-950">Validation Results</h2>
             </div>
 
-            <div className="pt-5 px-10 bg-sky-100 mt-1 h-[70vh]">
+            <div className="pt-5 px-10 bg-sky-100 mt-1">
               <p className="text-sky-950">Validation Issues</p>
               {/* Render validation results */}
               {validationResults ? (
-                <pre className="text-sky-950">{JSON.stringify(validationResults, null, 2)}</pre>
+                <pre className="text-sky-950 text-wrap text-sm">{JSON.stringify(validationResults, null, 2)}</pre>
               ) : (
                 <p className="text-sky-950">No validation results available</p>
               )}
