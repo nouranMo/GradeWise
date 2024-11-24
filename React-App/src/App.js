@@ -10,6 +10,7 @@ import RegisterPage from './components/RegisterPage';
 import Signup from './components/Signup';
 import UMLparsing from './components/UMLparsing';
 import SectionExtraction from './components/sectionExtraction';
+
 import UMLReport from './components/UMLReport';
 function App() {
     return (
