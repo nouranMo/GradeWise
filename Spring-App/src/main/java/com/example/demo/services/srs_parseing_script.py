@@ -5,6 +5,9 @@ from PyPDF2 import PdfReader
 import re
 import language_tool_python
 from spellchecker import SpellChecker
+import fitz  # PyMuPDF
+from PIL import Image
+import pytesseract
 
 # Initialize Grammar and Spell Checkers
 grammar_tool = language_tool_python.LanguageTool('en-US')
@@ -15,11 +18,13 @@ CUSTOM_TERMS = ['qanna', 'srs']
 # Configuration Class
 class Config:
     UPLOAD_FOLDER = 'uploads/'
+    IMAGES_FOLDER = 'extracted_images/'
     ALLOWED_EXTENSIONS = {'pdf'}
     
     @staticmethod
     def init_app(app):
         os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)  # Ensure the uploads folder exists
+        os.makedirs(Config.IMAGES_FOLDER, exist_ok=True)  # Ensure the images folder exists
 
 # Helper Functions
 def extract_text_from_pdf(filepath):
@@ -29,6 +34,31 @@ def extract_text_from_pdf(filepath):
     for page in reader.pages:
         text += page.extract_text() + "\n"
     return text
+
+def extract_images_from_pdf(pdf_path):
+    """Extract images from the given PDF file using PyMuPDF."""
+    doc = fitz.open(pdf_path)
+    image_files = []
+    
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+        img_list = page.get_images(full=True)
+        
+        for img_index, img in enumerate(img_list):
+            xref = img[0]
+            base_image = doc.extract_image(xref)
+            image_data = base_image["image"]
+            image_ext = base_image["ext"]
+            
+            image_filename = f"image_page_{page_num + 1}_img_{img_index + 1}.{image_ext}"
+            image_path = os.path.join(current_app.config['IMAGES_FOLDER'], image_filename)
+            
+            with open(image_path, "wb") as img_file:
+                img_file.write(image_data)
+            
+            image_files.append(image_path)  # Store the path to the image
+    
+    return image_files
 
 def strip_numbering(title):
     """Remove numbering from section or subsection titles."""
@@ -324,7 +354,7 @@ Config.init_app(app)
 
 # Enable CORS for all routes
 CORS(app)
-# CORS(app, resources={r"/*": {"origins": "http://127.0.0.1:3000"}})
+
 # Upload PDF Blueprint
 @app.route('/upload_pdf', methods=['POST'])
 def upload_pdf():
@@ -337,18 +367,27 @@ def upload_pdf():
 
     try:
         pdf_file.save(save_path)
+        
+        # Extract images from the PDF
+        image_files = extract_images_from_pdf(save_path)
+        
+        # Extract text from the PDF
         pdf_text = extract_text_from_pdf(save_path)
+        
+        # Parse the SRS document
         parsed_srs = parse_srs(pdf_text)
+        
+        # Validate the structure of the SRS document
         validation_results = validate_srs_structure(parsed_srs, PREDEFINED_STRUCTURE)
+        
         return jsonify({
             "parsed_srs": parsed_srs,
-            "validation_results": validation_results
+            "validation_results": validation_results,
+            "extracted_images": image_files  # Return paths of the extracted images
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-
-
 if __name__ == "__main__":
-    app.run(debug=True,port=5001)
+    app.run(debug=True, port=5001)
