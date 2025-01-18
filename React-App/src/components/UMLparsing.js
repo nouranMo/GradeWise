@@ -3,38 +3,78 @@ import Navbar from './Navbar';
 import { useNavigate } from 'react-router-dom';
 
 function UMLparsing() {
-    const [image, setImage] = useState(null);
-    const [text, setText] = useState('');
+    const [file, setFile] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!image || !text) {
-            alert('Please provide an image and text.');
+        console.group('UMLparsing - handleSubmit');
+        
+        if (!file) {
+            console.warn('No file selected');
+            alert('Please provide a PDF file.');
+            console.groupEnd();
             return;
         }
 
-        const formData = new FormData();
-        formData.append('image', image);
-        formData.append('paragraph', text);
+        console.log('Selected file:', file);
+        console.log('File type:', file.type);
+        console.log('File size:', file.size);
 
+        const formData = new FormData();
+        formData.append('pdfFile', file);
+
+        setIsLoading(true);
         try {
-            const response = await fetch('http://localhost:5000/process', {
+            console.log('Sending request to server...');
+            const response = await fetch('http://localhost:5000/analyze_document', {
                 method: 'POST',
                 body: formData,
             });
 
+            console.log('Response status:', response.status);
             if (!response.ok) {
-                throw new Error('Failed to process the image.');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const result = await response.json();
+            console.log('Received result:', result);
+            
             navigate('/umlreport', { state: { result } });
         } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to process the image.');
+            console.error('Error during document processing:', error);
+            alert('Failed to process the document: ' + error.message);
+        } finally {
+            setIsLoading(false);
+            console.groupEnd();
         }
+    };
+
+    const handleFileChange = (e) => {
+        console.group('UMLparsing - handleFileChange');
+        const selectedFile = e.target.files[0];
+        
+        if (selectedFile) {
+            console.log('File selected:', {
+                name: selectedFile.name,
+                type: selectedFile.type,
+                size: selectedFile.size
+            });
+            
+            if (selectedFile.type !== 'application/pdf') {
+                console.warn('Invalid file type:', selectedFile.type);
+                alert('Please select a PDF file.');
+                e.target.value = '';
+                setFile(null);
+            } else {
+                setFile(selectedFile);
+            }
+        } else {
+            console.log('No file selected');
+            setFile(null);
+        }
+        console.groupEnd();
     };
 
     return (
@@ -50,24 +90,20 @@ function UMLparsing() {
                 className="relative z-10 flex flex-col justify-center items-center gap-6 mt-10 p-6 bg-white bg-opacity-20 rounded-lg shadow-lg w-80 mx-auto"
                 onSubmit={handleSubmit}
             >
-                <label className="text-sky-100 text-lg font-poppins">Image</label>
+                <label className="text-sky-100 text-lg font-poppins">Upload SRS Document (PDF)</label>
                 <input
                     type="file"
-                    accept="image/*"
+                    accept=".pdf"
                     className="border border-solid border-sky-300 bg-transparent text-sky-100 p-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    onChange={(e) => setImage(e.target.files[0])}
-                />
-                <label className="text-sky-100 text-lg font-poppins">Text</label>
-                <textarea
-                    className="border border-solid border-sky-300 bg-transparent text-sky-100 p-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-sky-500 h-[30vh]"
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
+                    onChange={handleFileChange}
                 />
                 <button
                     type="submit"
-                    className="mt-4 bg-sky-500 text-white px-4 py-2 rounded-lg hover:bg-sky-600 transition-all duration-300 w-full"
+                    disabled={isLoading || !file}
+                    className={`mt-4 bg-sky-500 text-white px-4 py-2 rounded-lg transition-all duration-300 w-full
+                        ${isLoading || !file ? 'opacity-50 cursor-not-allowed' : 'hover:bg-sky-600'}`}
                 >
-                    Parse
+                    {isLoading ? 'Processing...' : 'Analyze Document'}
                 </button>
             </form>
         </div>
