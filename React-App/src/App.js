@@ -10,7 +10,7 @@ import RegisterPage from './components/RegisterPage';
 import Signup from './components/Signup';
 import UMLparsing from './components/UMLparsing';
 import SectionExtraction from './components/sectionExtraction';
-
+import ParsingResultPage from './components/ParsingResultPage';
 import UMLReport from './components/UMLReport';
 function App() {
     return (
@@ -26,6 +26,7 @@ function App() {
             <Route path="/umlparsing" element={<UMLparsing />} />
             <Route path="/sectionextraction" element={<SectionExtraction />} />
             <Route path="/umlreport" element={<UMLReport />} />
+            <Route path="/parsing-result" element={<ParsingResultPage />} />
         </Routes>
       </Router>
     );
