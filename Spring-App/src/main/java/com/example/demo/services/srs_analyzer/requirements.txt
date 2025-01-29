@@ -1,0 +1,14 @@
+transformers
+torch
+pdfplumber
+fuzzywuzzy
+requests
+Flask
+Werkzeug
+opencv-python
+pytesseract
+fitz
+PyMuPDF
+bs4
+google-cloud-aiplatform
+google.generativeai
