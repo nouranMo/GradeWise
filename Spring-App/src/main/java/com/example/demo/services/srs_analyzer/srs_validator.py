@@ -1,5 +1,6 @@
 import re
 import logging
+from image_processing import ImageProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -256,3 +257,29 @@ class SRSValidator:
 
         logger.info("SRS validation completed")
         return validation_results 
+    
+def process_pdf_and_validate(pdf_path, predefined_structure):
+    """Process the PDF, extract images, and validate the SRS structure."""
+    logger.info("Starting PDF processing and validation pipeline")
+    
+    # Step 1: Map pages to sections
+    section_titles = list(predefined_structure.keys())
+    section_map = ImageProcessor.map_pages_to_sections(pdf_path, section_titles)
+
+    # Step 2: Extract images by section and ensure folder hierarchy
+    section_image_paths = ImageProcessor.extract_images_by_section(pdf_path, section_map)
+    logger.info(f"Extracted images organized by sections")
+
+    # Step 3: Validate extracted content
+    # Assume `parsed_data` is obtained from text extracted and parsed from the PDF
+    parsed_data = SRSValidator.parse_srs(open(pdf_path, 'rb').read().decode('utf-8', errors='ignore'))
+    validation_results = SRSValidator.validate_srs_structure(parsed_data)
+
+    # Step 4: Combine results
+    for section, images in section_image_paths.items():
+        if not images and section in validation_results["missing_sections"]:
+            logger.warning(f"No images found for section: {section}")
+    
+    logger.info("Processing and validation completed")
+    return validation_results, section_image_paths
+

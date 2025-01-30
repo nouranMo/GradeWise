@@ -1,10 +1,10 @@
-from transformers import pipeline
+import re
 import language_tool_python
 from spellchecker import SpellChecker
-import re
+from transformers import pipeline
+import torch
 from PyPDF2 import PdfReader
 import logging
-import torch
 from concurrent.futures import ThreadPoolExecutor
 import functools
 
@@ -18,19 +18,19 @@ def async_operation(func):
             return future.result()
     return wrapper
 
+
 class TextProcessor:
-    def __init__(self):
+    def _init_(self):
         logger.info("Initializing TextProcessor")
         self.grammar_tool = language_tool_python.LanguageTool('en-US')
         self.spell_checker = SpellChecker()
         self.CUSTOM_TERMS = ['qanna', 'srs']
-        
+
         try:
-            # Use a smaller, public model
-            model_name = "sshleifer/distilbart-cnn-6-6"  # Changed model
+            model_name = "sshleifer/distilbart-cnn-6-6"
             device = 0 if torch.cuda.is_available() else -1
             logger.info(f"Using device: {'GPU' if device == 0 else 'CPU'}")
-            
+
             logger.info(f"Loading model: {model_name}")
             self.summarizer = pipeline(
                 "summarization",
@@ -40,9 +40,13 @@ class TextProcessor:
             logger.info("Model loaded successfully")
         except Exception as e:
             logger.error(f"Error loading model: {str(e)}")
-            # Fallback to basic text processing if model fails
             self.summarizer = None
             logger.warning("Using fallback text processing method")
+
+    @staticmethod
+    def strip_numbering(title: str) -> str:
+        """Remove numbering from a section title (e.g., '1.2 Title' -> 'Title')."""
+        return re.sub(r'^\d+(\.\d+)*\s+', '', title).strip()
 
     def extract_text_from_pdf(self, pdf_path):
         """Extract text from PDF file."""
@@ -58,12 +62,51 @@ class TextProcessor:
             logger.error(f"Error extracting text from PDF: {str(e)}")
             raise
 
+    def extract_sections_with_figures(self, text):
+        """
+        Extract sections and associate them with figure captions.
+        Returns a list of dictionaries with section title, content, and figure positions.
+        """
+        logger.info("Extracting sections with figure captions")
+        sections = []
+        figures = []
+        current_section = None
+
+        lines = text.splitlines()
+        for line in lines:
+            section_match = re.match(r'^\d+(\.\d+)*\s+[A-Z]', line)  # Detect section titles
+            figure_match = re.search(r'Figure\s+\d+[:.-]?', line, re.IGNORECASE)
+
+            if section_match:
+                if current_section:
+                    sections.append(current_section)
+
+                current_section = {
+                    "title": self.strip_numbering(line.strip()),
+                    "content": "",
+                    "figures": []
+                }
+
+            elif figure_match and current_section:
+                figure_caption = line.strip()
+                figures.append(figure_caption)
+                current_section["figures"].append(figure_caption)
+
+            if current_section:
+                current_section["content"] += line + "\n"
+
+        if current_section:
+            sections.append(current_section)
+
+        logger.info(f"Extracted {len(sections)} sections with {len(figures)} figures")
+        return sections, figures
+
     def parse_document_sections(self, text):
         """Parse document into logical segments based on sections."""
         logger.info("Parsing document sections")
         segments = []
         current_segment = ""
-        
+
         try:
             lines = text.splitlines()
             for line in lines:
@@ -74,14 +117,46 @@ class TextProcessor:
                     current_segment = line + "\n"
                 else:
                     current_segment += line + "\n"
-            
+
             if current_segment:
                 segments.append(current_segment.strip())
-            
+
             logger.info(f"Parsed {len(segments)} sections")
             return segments
         except Exception as e:
             logger.error(f"Error parsing document sections: {str(e)}")
+            raise
+
+    def get_section_for_text(self, text, sections):
+        """Helper function to find which section a given piece of text belongs to."""
+        for section in sections:
+            if text in section:
+                return section.splitlines()[0]  # Return the section title
+        return None
+
+    def parse_document_sections_with_pages(self, pdf_path):
+        """Parse sections and associate them with page numbers."""
+        logger.info("Parsing document sections with page numbers")
+        sections = []
+        try:
+            reader = PdfReader(pdf_path)
+            last_valid_section = None
+
+            for page_num, page in enumerate(reader.pages, start=1):
+                text = page.extract_text()
+                has_text = bool(text.strip())  # Check if the page has meaningful text
+
+                lines = text.splitlines() if text else []
+                for line in lines:
+                    if re.match(r'^\d+(\.\d+)* [A-Z]', line):  # Section/subsection pattern
+                        section_title = self.strip_numbering(line.strip())
+                        last_valid_section = section_title if has_text else last_valid_section
+                        sections.append((section_title, page_num, has_text))
+
+            logger.info(f"Identified {len(sections)} sections with page numbers")
+            return sections
+        except Exception as e:
+            logger.error(f"Error parsing document sections with pages: {str(e)}")
             raise
 
     @async_operation
@@ -106,8 +181,6 @@ class TextProcessor:
             logger.error(f"Error generating scope: {str(e)}")
             return text[:200] + '...' if len(text) > 200 else text
 
-
-
     @async_operation
     def check_spelling_and_grammar(self, text):
         """Check spelling and grammar with limits."""
@@ -121,7 +194,7 @@ class TextProcessor:
             text = re.sub(r'(\w)- (\w)', r'\1\2', text)  
             text = re.sub(r'(\w)-\s+(\w)', r'\1\2', text)  
             clean_text = re.sub(r'[^\w\s\'-]', '', text)
-        
+
             words = clean_text.split()
             misspelled = self.spell_checker.unknown(words)
 
@@ -131,15 +204,15 @@ class TextProcessor:
                 if word.lower() not in self.CUSTOM_TERMS and not re.match(r"\w+'s$", word)
                 and word in self.spell_checker.unknown([word])
             }
-            
+
             misspelled = {word: self.spell_checker.correction(word) 
                          for word in misspelled 
                          if word.lower() not in self.CUSTOM_TERMS}
-            
+
             for term in self.CUSTOM_TERMS:
                 if term in words:
                     misspelled[term] = term
-            
+
             misspelled = {word: correction 
                          for word, correction in misspelled.items() 
                          if correction is not None}
@@ -158,10 +231,10 @@ class TextProcessor:
                         "context": issue_text,
                         "replacements": issue.replacements
                     })
-            
+
             logger.debug(f"Found {len(misspelled)} spelling issues and {len(grammar_suggestions)} grammar issues")
             return misspelled, grammar_suggestions
         
         except Exception as e:
             logger.error(f"Error in spelling/grammar check: {str(e)}")
-            return {}, [] 
+            return {}, []

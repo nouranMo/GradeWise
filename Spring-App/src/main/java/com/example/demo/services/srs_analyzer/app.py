@@ -95,26 +95,76 @@ def analyze_document():
                 'spelling_grammar': spelling_grammar_results
             }
 
-        if analyses.get('imageAnalysis'):
-            logger.debug("Performing image analysis")
-            image_paths = image_processor.extract_images_from_pdf(pdf_path)
-            image_results = []
+        # if analyses.get('imageAnalysis'):
+        #     logger.debug("Performing image analysis")
             
-            for i, img_path in enumerate(image_paths):
-                try:
-                    image_text = image_processor.extract_text_from_image(img_path)
-                    if image_text.strip():
-                        image_results.append({
-                            'image_index': i + 1,
-                            'extracted_text': image_text
-                        })
-                except Exception as e:
-                    logger.error(f"Error processing image {i+1}: {str(e)}")
+        #     # Step 1: Map pages to sections for image extraction
+            
+        #     section_map = image_processor.extract_images_from_pdf(pdf_path)
+            
+        #     # Step 2: Extract images by section
+        #    # section_image_paths = image_processor.extract_images_by_section(pdf_path, section_map)
+        #     image_results = []
+            
+        #     for section, img_paths in section_image_paths.items():
+        #         for i, img_path in enumerate(img_paths):
+        #             try:
+        #                 image_text = image_processor.extract_text_from_image(img_path)
+        #                 if image_text.strip():
+        #                     image_results.append({
+        #                         'section': section,
+        #                         'image_index': i + 1,
+        #                         'extracted_text': image_text
+        #                     })
+        #             except Exception as e:
+        #                 logger.error(f"Error processing image {i+1}: {str(e)}")
                     
-            response['image_analysis'] = {
-                'total_images': len(image_paths),
-                'processed_images': image_results
-            }
+        #     response['image_analysis'] = {
+        #         'total_images': sum(len(paths) for paths in section_image_paths.values()),
+        #         'processed_images': image_results
+        #     }
+        
+        # Process the images for text extraction and analysis
+        # Extract and process images
+        logger.debug("Processing images")
+        image_paths = image_processor.extract_images_from_pdf(pdf_path)
+        
+        # Ensure 'uploads' folder is created if it doesn't exist yet
+        base_path = app.config['UPLOAD_FOLDER']  # Base path for your images
+        if not os.path.exists(base_path):
+            logger.info(f"Creating upload folder: {base_path}")
+            os.makedirs(base_path)
+
+        # Now that the images are extracted and uploaded, classify and move images
+        # classify_and_organize_images()  # Call the function to classify and move images
+        
+        # Process the images for text extraction and analysis
+        for i, img_path in enumerate(image_paths):
+            try:
+                image_text = image_processor.extract_text_from_image(img_path)
+                if image_text.strip():  # Only process non-empty text
+                    scope = text_processor.generate_section_scope(image_text)
+                    all_scopes.append(scope)
+                    scope_sources.append(f"Image {i+1}")
+                    spelling_grammar = text_processor.check_spelling_and_grammar(image_text)
+                    spelling_grammar_results.append(spelling_grammar)
+            except Exception as e:
+                logger.error(f"Error processing image {i+1}: {str(e)}")
+
+        # Process text sections
+        logger.debug("Processing text sections")
+        sections = text_processor.parse_document_sections(pdf_text)
+        for i, section in enumerate(sections):
+            try:
+                scope = text_processor.generate_section_scope(section)
+                all_scopes.append(scope)
+                scope_sources.append(f"Section {i+1}")
+                spelling_grammar = text_processor.check_spelling_and_grammar(section)
+                spelling_grammar_results.append(spelling_grammar)
+            except Exception as e:
+                logger.error(f"Error processing section {i+1}: {str(e)}")
+                
+      
 
         logger.info("Analysis completed successfully")
         return jsonify(response)
@@ -125,6 +175,7 @@ def analyze_document():
             'error': str(e),
             'status': 'error'
         }), 500
+
 
 if __name__ == '__main__':
     logger.info("Starting Flask server on port 5000")
