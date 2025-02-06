@@ -15,10 +15,10 @@ function Navbar() {
   return (
     <nav class="relative z-20 flex justify-between items-center p-4 text-white pb-[5%] mx-[10%]">
       {/* <img src={logo} alt="logo" /> */}
-      <Link to="/"><h1 className='doc-checker'>Doc Checker</h1></Link>
+      <Link to="/"><h1 className='doc-checker'>GradeWise</h1></Link>
       {(!isLoginPage && !isHomepage && !isRegisterPage && !isReportPage && !isUMLparsing && !isSectionExtraction) && <Link to="/login"><button>Login</button></Link>}
 
-      {(isHomepage || isReportPage || isUMLparsing || isSectionExtraction) && <Link to="/"><button>NF</button></Link>}
+      {(isHomepage || isReportPage || isUMLparsing || isSectionExtraction) && <Link to="/"><button>GradeWise</button></Link>}
     </nav>
   );
 }

@@ -17,7 +17,7 @@ function HeroSection() {
           <div className="flex flex-row justify-start items-center gap-2">
             <img src={logo} alt="logo" className="w-[6%]" />
             <Link to="/">
-              <h1 className="font-mono text-2xl text-sky-100">Doc Checker</h1>
+              <h1 className="font-mono text-2xl text-sky-100">GradeWise</h1>
             </Link>
           </div>
 
@@ -36,7 +36,7 @@ function HeroSection() {
 
         {/* Image Section */}
         <div>
-          <img src={landingImage} alt="Doc Checker" />
+          <img src={landingImage} alt="GradeWise" />
         </div>
       </div>
     </div>
