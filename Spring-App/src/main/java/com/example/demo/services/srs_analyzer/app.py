@@ -9,6 +9,9 @@ import os
 from werkzeug.utils import secure_filename
 import logging
 import json
+from business_value_evaluator import BusinessValueEvaluator  # Import the evaluator class
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +19,7 @@ app = create_app()
 text_processor = TextProcessor()
 image_processor = ImageProcessor()
 similarity_analyzer = SimilarityAnalyzer()
+business_evaluator = BusinessValueEvaluator()
 
 @app.route('/analyze_document', methods=['POST'])
 def analyze_document():
@@ -95,6 +99,8 @@ def analyze_document():
                 'spelling_grammar': spelling_grammar_results
             }
 
+
+
         # if analyses.get('imageAnalysis'):
         #     logger.debug("Performing image analysis")
             
@@ -103,7 +109,7 @@ def analyze_document():
         #     section_map = image_processor.extract_images_from_pdf(pdf_path)
             
         #     # Step 2: Extract images by section
-        #    # section_image_paths = image_processor.extract_images_by_section(pdf_path, section_map)
+        #     section_image_paths = image_processor.extract_images_from_pdf(pdf_path, section_map)
         #     image_results = []
             
         #     for section, img_paths in section_image_paths.items():
@@ -165,7 +171,18 @@ def analyze_document():
                 logger.error(f"Error processing section {i+1}: {str(e)}")
                 
       
-
+        if analyses.get('businessValueAnalysis'):
+            logger.debug("Performing business value analysis")
+        try:
+            business_value_result = business_evaluator.evaluate_business_value(pdf_text)
+            response['business_value_analysis'] = business_value_result
+        except Exception as e:
+            logger.error(f"Business value evaluation failed: {str(e)}")
+            response['business_value_analysis'] = {
+                'status': 'error',
+                'message': 'Business value analysis failed'
+            }
+    
         logger.info("Analysis completed successfully")
         return jsonify(response)
 

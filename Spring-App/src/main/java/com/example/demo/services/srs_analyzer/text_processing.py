@@ -7,6 +7,7 @@ from PyPDF2 import PdfReader
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import functools
+from business_value_evaluator import BusinessValueEvaluator
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +21,12 @@ def async_operation(func):
 
 
 class TextProcessor:
-    def _init_(self):
+    def __init__(self):
         logger.info("Initializing TextProcessor")
         self.grammar_tool = language_tool_python.LanguageTool('en-US')
         self.spell_checker = SpellChecker()
         self.CUSTOM_TERMS = ['qanna', 'srs']
+        self.business_value_evaluator = BusinessValueEvaluator()
 
         try:
             model_name = "sshleifer/distilbart-cnn-6-6"
@@ -238,3 +240,14 @@ class TextProcessor:
         except Exception as e:
             logger.error(f"Error in spelling/grammar check: {str(e)}")
             return {}, []
+    @async_operation
+    def evaluate_business_value(self, text):
+        """
+        Evaluate the business value of a given text.
+        """
+        logger.info("Evaluating business value of text...")
+        try:
+            return self.business_value_evaluator.evaluate_business_value(text)
+        except Exception as e:
+            logger.error(f"Error evaluating business value: {str(e)}")
+            raise    

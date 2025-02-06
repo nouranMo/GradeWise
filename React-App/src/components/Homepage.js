@@ -10,7 +10,8 @@ function Homepage() {
         srsValidation: false,
         referencesValidation: false,
         contentAnalysis: false,
-        imageAnalysis: false
+        imageAnalysis: false,
+        businessValueAnalysis: false
     });
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const navigate = useNavigate();
@@ -150,6 +151,12 @@ function Homepage() {
                                 label="Image Analysis"
                                 checked={selectedAnalyses.imageAnalysis}
                                 onChange={() => handleCheckboxChange('imageAnalysis')}
+                            />
+                             <CheckboxOption
+                                id="businessValueAnalysis"
+                                label="Business Analysis"
+                                checked={selectedAnalyses.businessValueAnalysis}
+                                onChange={() => handleCheckboxChange('businessValueAnalysis')}
                             />
                         </div>
                     </div>
