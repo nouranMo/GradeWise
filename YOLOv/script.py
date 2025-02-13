@@ -177,7 +177,7 @@ def validate_uml(json_data):
     return response.text
 
 # 🔹 Step 5: Run the Script
-import os
+
 import time
 
 
