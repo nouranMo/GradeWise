@@ -9,7 +9,7 @@ import os
 from werkzeug.utils import secure_filename
 import logging
 import json
-from business_value_evaluator import BusinessValueEvaluator  # Import the evaluator class
+from business_value_evaluator import BusinessValueEvaluator 
 import subprocess
 import sys
 import os
@@ -122,11 +122,7 @@ def analyze_document():
                 'scope_sources': scope_sources,
                 'scopes': all_scopes,
                 'spelling_grammar': spelling_grammar_results
-            }
-
-
-
-    
+            }    
  
         # Process the images for text extraction and analysis
         # Extract and process images
@@ -138,9 +134,6 @@ def analyze_document():
         if not os.path.exists(base_path):
             logger.info(f"Creating upload folder: {base_path}")
             os.makedirs(base_path)
-
-        # Now that the images are extracted and uploaded, classify and move images
-        # classify_and_organize_images()  # Call the function to classify and move images
         
         # Process the images for text extraction and analysis
         for i, img_path in enumerate(image_paths):

@@ -7,9 +7,8 @@ import random
 from functools import wraps, lru_cache
 from dotenv import load_dotenv
 import os
-# Configure OpenAI API
 
-# Load environment variables from the .env file
+
 load_dotenv()
 openai.api_key = os.getenv("api_key")
 
