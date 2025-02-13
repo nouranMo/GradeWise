@@ -25,7 +25,7 @@ class TextProcessor:
         logger.info("Initializing TextProcessor")
         self.grammar_tool = language_tool_python.LanguageTool('en-US')
         self.spell_checker = SpellChecker()
-        self.CUSTOM_TERMS = ['qanna', 'srs']
+        self.CUSTOM_TERMS = ['qanna', 'srs'] #Hopefully grammarly API and remove this
         self.business_value_evaluator = BusinessValueEvaluator()
 
         try:
