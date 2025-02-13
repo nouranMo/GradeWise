@@ -181,10 +181,6 @@ import os
 import time
 
 
-
-import time
-
-# Wait for JSON file to appear (increase wait time)
 output_dir = os.path.abspath(r"D:\Fourth year\Gradd\Automated-Checking-and-Grading-Tool-For-Technical-Documentation\YOLOv\output_results")
 print(f"🔍 Looking for JSON files in: {output_dir}")
 
