@@ -223,7 +223,7 @@ def analyze_document():
                 logger.error(f"YOLO script execution failed: {str(e)}")
                 response['image_validation'] = {"status": "error", "message": "YOLO script execution failed"}
             
-            return jsonify(response)  # Ensure response is returned only inside the if block
+            return jsonify(response) 
 
     except Exception as e:
         logger.error(f"Error during document processing: {str(e)}", exc_info=True)
