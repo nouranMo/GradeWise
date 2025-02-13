@@ -10,7 +10,30 @@ from werkzeug.utils import secure_filename
 import logging
 import json
 from business_value_evaluator import BusinessValueEvaluator  # Import the evaluator class
+import subprocess
+import sys
+import os
 
+# Explicit path to YOLOv8
+YOLO_PATH = r"D:\Fourth year\Gradd\Automated-Checking-and-Grading-Tool-For-Technical-Documentation\YOLOv"
+
+# Add YOLOv8 to sys.path if not already included
+if YOLO_PATH not in sys.path:
+    sys.path.insert(0, YOLO_PATH)  # Insert at position 0 to prioritize this over installed packages
+
+# Print sys.path to verify
+print("PYTHON SEARCH PATHS:", sys.path)
+
+# Import script correctly
+import importlib.util
+
+script_path = os.path.join(YOLO_PATH, "script.py")
+spec = importlib.util.spec_from_file_location("script", script_path)
+script = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(script)
+
+# Now you can use process_image from script
+process_image = script.process_image
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +43,8 @@ text_processor = TextProcessor()
 image_processor = ImageProcessor()
 similarity_analyzer = SimilarityAnalyzer()
 business_evaluator = BusinessValueEvaluator()
+
+
 
 @app.route('/analyze_document', methods=['POST'])
 def analyze_document():
@@ -73,7 +98,7 @@ def analyze_document():
                     'status': 'error',
                     'message': 'Failed to process references'
                 }
-
+   
         if analyses.get('contentAnalysis'):
             logger.debug("Performing content analysis")
             sections = text_processor.parse_document_sections(pdf_text)
@@ -184,7 +209,21 @@ def analyze_document():
             }
     
         logger.info("Analysis completed successfully")
-        return jsonify(response)
+
+
+    # **Diagram Convention Analysis (YOLO Script)**
+        if analyses.get('DiagramConvention'):
+            logger.debug("Running YOLO script for diagram validation")
+
+            try:
+                # Run script.py as a separate process
+                subprocess.run(["python", script_path], check=True)
+                response['image_validation'] = {"status": "success", "message": "YOLO script executed"}
+            except subprocess.CalledProcessError as e:
+                logger.error(f"YOLO script execution failed: {str(e)}")
+                response['image_validation'] = {"status": "error", "message": "YOLO script execution failed"}
+            
+            return jsonify(response)  # Ensure response is returned only inside the if block
 
     except Exception as e:
         logger.error(f"Error during document processing: {str(e)}", exc_info=True)
@@ -193,7 +232,6 @@ def analyze_document():
             'status': 'error'
         }), 500
 
-
 if __name__ == '__main__':
     logger.info("Starting Flask server on port 5000")
-    app.run(debug=True, port=5000) 
+    app.run(debug=True, port=5000)

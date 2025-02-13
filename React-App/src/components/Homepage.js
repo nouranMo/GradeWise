@@ -11,7 +11,8 @@ function Homepage() {
         referencesValidation: false,
         contentAnalysis: false,
         imageAnalysis: false,
-        businessValueAnalysis: false
+        businessValueAnalysis: false,
+        DiagramConvention: false
     });
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const navigate = useNavigate();
@@ -157,6 +158,12 @@ function Homepage() {
                                 label="Business Analysis"
                                 checked={selectedAnalyses.businessValueAnalysis}
                                 onChange={() => handleCheckboxChange('businessValueAnalysis')}
+                            />
+                             <CheckboxOption
+                                id="DiagramConvention"
+                                label="Diagram Convention"
+                                checked={selectedAnalyses.DiagramConvention}
+                                onChange={() => handleCheckboxChange('DiagramConvention')}
                             />
                         </div>
                     </div>

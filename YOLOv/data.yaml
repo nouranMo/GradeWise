@@ -1,0 +1,5 @@
+train: C:/Users/a/Documents/YOLOv8/dataset/train # Path to training images
+val: C:/Users/a/Documents/YOLOv8/dataset/val     # Path to validation images
+
+nc: 3  # Number of classes
+names: ['use case diagram', 'use_case_actor', 'use_case_oval']
