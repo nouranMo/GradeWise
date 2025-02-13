@@ -150,11 +150,7 @@ def analyze_document():
         #             except Exception as e:
         #                 logger.error(f"Error processing image {i+1}: {str(e)}")
                     
-        #     response['image_analysis'] = {
-        #         'total_images': sum(len(paths) for paths in section_image_paths.values()),
-        #         'processed_images': image_results
-        #     }
-        
+   
         # Process the images for text extraction and analysis
         # Extract and process images
         logger.debug("Processing images")
