@@ -137,20 +137,7 @@ def analyze_document():
         #     section_image_paths = image_processor.extract_images_from_pdf(pdf_path, section_map)
         #     image_results = []
             
-        #     for section, img_paths in section_image_paths.items():
-        #         for i, img_path in enumerate(img_paths):
-        #             try:
-        #                 image_text = image_processor.extract_text_from_image(img_path)
-        #                 if image_text.strip():
-        #                     image_results.append({
-        #                         'section': section,
-        #                         'image_index': i + 1,
-        #                         'extracted_text': image_text
-        #                     })
-        #             except Exception as e:
-        #                 logger.error(f"Error processing image {i+1}: {str(e)}")
-                    
-   
+ 
         # Process the images for text extraction and analysis
         # Extract and process images
         logger.debug("Processing images")
