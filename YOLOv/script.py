@@ -115,7 +115,7 @@ if os.path.exists(IMAGE_FOLDER):
 else:
     print(f"Folder not found: {IMAGE_FOLDER}")
 
-########################
+
 
 # 🔹 Step 1: Set up Gemini API Key
 API_KEY = "AIzaSyDQ5zYTJibmzpLtWA4dFNf1sFno7bm9Mu4"  # Replace with your actual API key

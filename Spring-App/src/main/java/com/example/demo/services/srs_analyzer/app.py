@@ -211,7 +211,7 @@ def analyze_document():
         logger.info("Analysis completed successfully")
 
 
-    # **Diagram Convention Analysis (YOLO Script)**
+    # Diagram Convention Analysis (YOLO Script)
         if analyses.get('DiagramConvention'):
             logger.debug("Running YOLO script for diagram validation")
 
