@@ -180,27 +180,7 @@ def validate_uml(json_data):
 import os
 import time
 
-# Get the absolute path of the output_results folder
-# output_dir = os.path.abspath(r"D:\Fourth year\Gradd\Automated-Checking-and-Grading-Tool-For-Technical-Documentation\YOLOv\output_results")
-# print(f"🔍 Looking for JSON files in: {output_dir}")
 
-# # Check if the folder exists
-# if not os.path.exists(output_dir):
-#     print(f"❌ Folder does not exist: {output_dir}")
-# else:
-#     # Wait a moment in case files are still being written
-#     time.sleep(2)
-
-#     # List JSON files in the directory
-#     json_files = [f for f in os.listdir(output_dir) if f.endswith(".json")]
-#     print(f"📂 Files found: {json_files}")
-
-#     if json_files:
-#         # Get the first JSON file's path
-#         json_file_path = os.path.join(output_dir, json_files[0])
-#         print(f"✅ Found JSON file: {json_file_path}")
-#     else:
-#         print("❌ No JSON files found.")
 
 import time
 
