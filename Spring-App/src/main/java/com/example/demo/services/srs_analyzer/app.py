@@ -126,17 +126,7 @@ def analyze_document():
 
 
 
-        # if analyses.get('imageAnalysis'):
-        #     logger.debug("Performing image analysis")
-            
-        #     # Step 1: Map pages to sections for image extraction
-            
-        #     section_map = image_processor.extract_images_from_pdf(pdf_path)
-            
-        #     # Step 2: Extract images by section
-        #     section_image_paths = image_processor.extract_images_from_pdf(pdf_path, section_map)
-        #     image_results = []
-            
+    
  
         # Process the images for text extraction and analysis
         # Extract and process images
