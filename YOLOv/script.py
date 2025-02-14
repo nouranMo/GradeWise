@@ -8,10 +8,17 @@ import json
 from ultralytics import YOLO
 
 # Define paths
-YOLO_MODEL_PATH = r"D:\Fourth year\Gradd\Automated-Checking-and-Grading-Tool-For-Technical-Documentation\YOLOv\runs\detect\train5\weights\best.pt"
-IMAGE_FOLDER = r"D:\Fourth year\Gradd\Automated-Checking-and-Grading-Tool-For-Technical-Documentation\uploads\System Functions"  # Change this to the folder where images are stored
-OUTPUT_FOLDER = r"D:\Fourth year\Gradd\Automated-Checking-and-Grading-Tool-For-Technical-Documentation\YOLOv\output_results"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "../"))
+print(f"BASE_DIR: {BASE_DIR}")
+print(f"PROJECT_ROOT: {PROJECT_ROOT}")
 
+# Define paths relative to the script directory
+YOLO_MODEL_PATH = os.path.join(BASE_DIR, "runs", "detect", "train5", "weights", "best.pt")
+IMAGE_FOLDER = os.path.join(PROJECT_ROOT, "Spring-App", "src", "main", "java", "com", "example", "demo", "services", "srs_analyzer","uploads","System Functions")
+# IMAGE_FOLDER = os.path.join(PROJECT_ROOT, "uploads","System Functions")
+OUTPUT_FOLDER = os.path.join(BASE_DIR,  "output_results")
+print(f"IMAGE_FOLDER: {IMAGE_FOLDER}")
 # Ensure output folder exists
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
@@ -181,7 +188,7 @@ def validate_uml(json_data):
 import time
 
 
-output_dir = os.path.abspath(r"D:\Fourth year\Gradd\Automated-Checking-and-Grading-Tool-For-Technical-Documentation\YOLOv\output_results")
+output_dir = OUTPUT_FOLDER
 print(f"🔍 Looking for JSON files in: {output_dir}")
 
 if not os.path.exists(output_dir):
