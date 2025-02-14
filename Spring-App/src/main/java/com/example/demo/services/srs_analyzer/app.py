@@ -15,7 +15,13 @@ import sys
 import os
 
 # Explicit path to YOLOv8
-YOLO_PATH = r"D:\Fourth year\Gradd\Automated-Checking-and-Grading-Tool-For-Technical-Documentation\YOLOv"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Move up multiple levels to locate the project root (Spring-App's parent)
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "../../../../../../../../.."))
+
+# Dynamically construct the YOLOv path
+YOLO_PATH = os.path.join(PROJECT_ROOT, "YOLOv")
 
 # Add YOLOv8 to sys.path if not already included
 if YOLO_PATH not in sys.path:
