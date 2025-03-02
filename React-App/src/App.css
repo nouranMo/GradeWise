@@ -1,43 +1,6 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Fonts */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @font-face {
   font-family: 'Saira';
@@ -60,8 +23,8 @@
 }
 
 :root {
-  --primary-color: #43b4fc;
-  --secondary-color: #0b3a58;
+  --primary-color: #ff6464;
+  --secondary-color: #ff4444;
 }
 
 /* General */
@@ -72,23 +35,6 @@ body {
   padding: 0;
 }
 
-button {
-  font-family: 'Poppins', monospace;
-  border-radius: 0.375rem;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  transition: ease-in-out 0.2s;
-}
-
-input {
-  border-radius: 0.375rem;
-}
-
-button:hover {
-  /* button gets smaller, to make it appear as if it's being pressed */
-  transform: scale(0.97);
-}
-
 a {
   text-decoration: none;
 }
@@ -97,73 +43,4 @@ a {
 
 .fp-watermark {
   display: none !important;
-}
-
-/* Navbar */
-
-.navbar {
-  font-family: 'Poppins', monospace;
-  padding: 2% 10%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.navbar a {
-  text-decoration: none;
-  color: #dbeefb;
-}
-
-.doc-checker {
-  margin: 0;
-  padding: 0;
-}
-
-::-webkit-scrollbar {
-  width: 3px;
-}
-
-::-webkit-scrollbar-track {
-  background: #082f49;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #dbeefb;
-}
-
-/* Upload Overlay */
-
-.upload-overlay-box {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 5%;
-  background-color: white;
-  border: var(--secondary-color) 1px dashed;
-  font-family: 'Poppins', monospace;
-  width: 30%;
-  height: 40%;
-  transition: background-color 0.3s, border-color 0.3s;
-}
-
-.upload-overlay-box.dragging {
-  border-color: white; /* Change border color when dragging */
-  background-color: rgba(255, 255, 255, 0.7); /* Light background on drag */
-}
-
-.drag-drop-p {
-  font-size: 1.2rem;
-  color: var(--secondary-color);
-}
-
-.or-p {
-  font-size: 1rem;
-  color: var(--secondary-color);
-  margin-bottom: 5%;
-}
-
-.upload-overlay img {
-  width: 40%;
-  height: 20%;
 }
