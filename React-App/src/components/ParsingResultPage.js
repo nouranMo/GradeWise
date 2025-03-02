@@ -13,10 +13,10 @@ function ParsingResult() {
                     {parsingResult?.message || 'No Parsing Result Found'}
                 </h2>
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={() => navigate('/dashboard')}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700"
                 >
-                    Go Back to Homepage
+                    Go Back to Dashboard
                 </button>
             </div>
         );

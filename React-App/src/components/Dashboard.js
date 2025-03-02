@@ -3,14 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import Navbar from "./Navbar";
 
-function Homepage() {
+function Dashboard() {
   const [analyzedDocuments, setAnalyzedDocuments] = useState([]);
   const [selectedAnalyses, setSelectedAnalyses] = useState({
-    srsValidation: false,
-    referencesValidation: false,
-    contentAnalysis: false,
-    imageAnalysis: false,
-    businessValueAnalysis: false,
+    SrsValidation: false,
+    ReferencesValidation: false,
+    ContentAnalysis: false,
+    ImageAnalysis: false,
+    BusinessValueAnalysis: false,
     DiagramConvention: false,
   });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -27,10 +27,19 @@ function Homepage() {
 
   const onDrop = async (acceptedFiles) => {
     const file = acceptedFiles[0];
+    const date = new Date();
+    const formattedDate = date
+      .toLocaleDateString("en-US", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+      .replace(/(\d+) ([A-Za-z]+), (\d+)/, "$1, $2, $3");
+
     const newDocument = {
       id: Date.now(),
       name: file.name,
-      date: new Date().toLocaleDateString(),
+      date: formattedDate,
       size: formatFileSize(file.size),
       status: "Pending Analysis",
       analyzed: false,
@@ -55,11 +64,9 @@ function Homepage() {
   });
 
   const formatFileSize = (bytes) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    if (bytes === 0) return "0 MB";
+    const MB = bytes / (1024 * 1024); // Convert bytes to MB
+    return MB.toFixed(2) + " MB"; // Show 2 decimal places
   };
 
   const handleDeleteDocument = (docId) => {
@@ -199,18 +206,27 @@ function Homepage() {
         {/* Document List */}
         <div>
           <div className="flex gap-4 mb-4">
-            <select className="border rounded-md px-3 py-1.5 text-sm text-gray-600">
-              <option>All ({analyzedDocuments.length})</option>
-            </select>
+            <div className="relative">
+              <select className="flex items-center space-x-2 border rounded-md px-3 py-1.5 pr-8 text-sm text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-200 cursor-pointer">
+                <option>All ({analyzedDocuments.length})</option>
+                <option>Analyzed</option>
+                <option>Pending</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"></div>
+            </div>
           </div>
 
           {/* Table Header */}
           <div className="grid grid-cols-5 gap-4 px-4 py-2 bg-gray-50 text-sm font-medium text-gray-500">
             <div>DOCUMENT NAME</div>
-            <div>UPLOAD DATE</div>
+            <div>
+              UPLOAD DATE
+              <span className="text-[10px] ml-2 text-gray-400">
+                (MMM DD, YYYY)
+              </span>
+            </div>
             <div>SIZE</div>
             <div>STATUS</div>
-            <div>ACTIONS</div>
           </div>
 
           {/* Table Content */}
@@ -225,7 +241,14 @@ function Homepage() {
                 className="grid grid-cols-5 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50"
                 onClick={() => handleDocumentClick(doc)}
               >
-                <div>{doc.name}</div>
+                <div className="overflow-hidden">
+                  <span
+                    className="truncate block"
+                    title={doc.name} // This creates the native tooltip
+                  >
+                    {doc.name}
+                  </span>
+                </div>
                 <div>{doc.date}</div>
                 <div>{doc.size}</div>
                 <div>
@@ -239,14 +262,14 @@ function Homepage() {
                     {doc.status}
                   </span>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-16">
                   {!doc.analyzed && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAnalyzeClick(doc);
                       }}
-                      className="px-3 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
+                      className="px-3 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300 ease-in-out"
                     >
                       Analyze
                     </button>
@@ -256,10 +279,10 @@ function Homepage() {
                       e.stopPropagation();
                       handleDeleteDocument(doc.id);
                     }}
-                    className="text-gray-400 hover:text-red-500"
+                    className="text-gray-400 hover:text-red-500 transition-colors duration-300 ease-in-out"
                   >
                     <svg
-                      className="w-4 h-4"
+                      className="w-5 h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -300,7 +323,7 @@ function Homepage() {
                           [key]: !prev[key],
                         }))
                       }
-                      className="w-4 h-4 text-[#FF4550]"
+                      className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none"
                     />
                     <span>{key.replace(/([A-Z])/g, " $1").trim()}</span>
                   </label>
@@ -315,8 +338,16 @@ function Homepage() {
                 </button>
                 <button
                   onClick={startAnalysis}
-                  disabled={isAnalyzing}
-                  className="px-4 py-2 bg-[#ff6464] text-white rounded-md hover:bg-[#ff4444] disabled:opacity-50"
+                  disabled={
+                    !Object.values(selectedAnalyses).some((value) => value) ||
+                    isAnalyzing
+                  }
+                  className={`px-4 py-2 bg-[#ff6464] text-white rounded-md transition-colors duration-300 ease-in-out ${
+                    !Object.values(selectedAnalyses).some((value) => value) ||
+                    isAnalyzing
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-[#ff4444]"
+                  }`}
                 >
                   {isAnalyzing ? "Analyzing..." : "Start Analysis"}
                 </button>
@@ -329,4 +360,4 @@ function Homepage() {
   );
 }
 
-export default Homepage;
+export default Dashboard;
