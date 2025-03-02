@@ -7,6 +7,8 @@ import { GoogleLogin } from "@react-oauth/google";
 import loginImage from "../images/lean-guy.png";
 import facebookLogo from "../images/facebook.svg";
 import linkedinLogo from "../images/linkedin.svg";
+import showImage from "../images/show.svg";
+import hideImage from "../images/hide.svg";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -33,15 +35,16 @@ const LoginPage = () => {
 
   useEffect(() => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmailValid = email && emailPattern.test(email);
+    const isPasswordValid = password && password.length >= 6;
 
+    // Set form validation immediately based on current values
+    setIsFormValidated(isEmailValid && isPasswordValid);
+
+    // Handle error messages with delay
     if (!email) {
       setErrors((prev) => ({ ...prev, email: "" }));
-      return;
-    }
-
-    if (emailPattern.test(email)) {
-      setErrors((prev) => ({ ...prev, email: "" }));
-    } else if (isDirty.email) {
+    } else if (!isEmailValid && isDirty.email) {
       const timeoutId = setTimeout(() => {
         setErrors((prev) => ({
           ...prev,
@@ -49,18 +52,13 @@ const LoginPage = () => {
         }));
       }, 500);
       return () => clearTimeout(timeoutId);
+    } else {
+      setErrors((prev) => ({ ...prev, email: "" }));
     }
-  }, [email, isDirty.email]);
 
-  useEffect(() => {
     if (!password) {
       setErrors((prev) => ({ ...prev, password: "" }));
-      return;
-    }
-
-    if (password.length >= 6) {
-      setErrors((prev) => ({ ...prev, password: "" }));
-    } else if (isDirty.password) {
+    } else if (!isPasswordValid && isDirty.password) {
       const timeoutId = setTimeout(() => {
         setErrors((prev) => ({
           ...prev,
@@ -68,20 +66,11 @@ const LoginPage = () => {
         }));
       }, 500);
       return () => clearTimeout(timeoutId);
+    } else {
+      setErrors((prev) => ({ ...prev, password: "" }));
     }
-  }, [password, isDirty.password]);
+  }, [email, password, isDirty.email, isDirty.password]);
 
-  useEffect(() => {
-    const isValid =
-      !errors.email &&
-      !errors.password &&
-      email.length > 0 &&
-      password.length > 0;
-    const timeoutId = setTimeout(() => {
-      setIsFormValidated(isValid);
-    }, 500);
-    return () => clearTimeout(timeoutId);
-  }, [email, password, errors.email, errors.password]);
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
     setIsDirty((prev) => ({ ...prev, email: true }));
@@ -210,7 +199,9 @@ const LoginPage = () => {
                   />
                 </div>
               )}
-              <div className="w-full text-center text-sm">Continue with Facebook</div>
+              <div className="w-full text-center text-sm">
+                Continue with Facebook
+              </div>
             </button>
 
             {/* LinkedIn Login Button */}
@@ -235,7 +226,9 @@ const LoginPage = () => {
                   />
                 </div>
               )}
-              <div className="w-full text-center text-sm">Continue with LinkedIn</div>
+              <div className="w-full text-center text-sm">
+                Continue with LinkedIn
+              </div>
             </button>
           </div>
 
@@ -295,7 +288,7 @@ const LoginPage = () => {
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
                   <img
-                    src={showPassword ? "/show.svg" : "/hide.svg"}
+                    src={showPassword ? showImage : hideImage}
                     alt={showPassword ? "Hide password" : "Show password"}
                     className="w-5 h-5"
                   />
