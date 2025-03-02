@@ -2,26 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: 'Saira';
-  src: url(./fonts/Saira/static/Saira-Medium.ttf) format('truetype');
-}
-
-@font-face {
-  font-family: 'B612';
-  src: url(./fonts/B612_Mono/B612Mono-Bold.ttf) format('truetype');
-}
-
-@font-face {
-  font-family: 'Poppins';
-  src: url(./fonts/B612_Mono/B612Mono-Regular.ttf);
-}
-
-@font-face {
-  font-family: 'Poppins';
-  src: url(./fonts/Poppins/Poppins-Regular.ttf);
-}
-
 :root {
   --primary-color: #ff6464;
   --secondary-color: #ff4444;

@@ -1,15 +1,15 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 
-import LandingPage from "./components/LandingPage";
-import Dashboard from "./components/Dashboard";
-import Report from "./components/Report";
-import LoginPage from "./components/LoginPage";
-import Signup from "./components/Signup";
-import UMLparsing from "./components/UMLparsing";
-import SectionExtraction from "./components/sectionExtraction";
-import ParsingResultPage from "./components/ParsingResultPage";
-import UMLReport from "./components/UMLReport";
+import LandingPage from "./pages/LandingPage";
+import Dashboard from "./pages/Dashboard";
+import Report from "./pages/Report";
+import LoginPage from "./pages/auth/LoginPage";
+import Signup from "./pages/auth/Signup";
+import UMLparsing from "./components/uml/UMLparsing";
+import SectionExtraction from "./components/uml/sectionExtraction";
+import ParsingResultPage from "./pages/ParsingResultPage";
+import UMLReport from "./components/uml/UMLReport";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 function App() {
