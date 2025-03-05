@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Python cache directories
+__pycache__/
+*.pyc
+*$py.class
+
+# Log files
+app.log
