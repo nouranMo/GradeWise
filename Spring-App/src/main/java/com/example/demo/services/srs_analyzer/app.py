@@ -177,7 +177,7 @@ def analyze_document():
             
         analyses = json.loads(analyses)
         
-        # Save and process PDF
+        # Save PDF
         pdf_file = request.files['pdfFile']
         pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(pdf_file.filename))
         pdf_file.save(pdf_path)
@@ -186,12 +186,20 @@ def analyze_document():
         # Initialize response dictionary
         response = {'status': 'success'}
 
-        # Extract text if needed for any analysis
-        if any([analyses.get('srsValidation'), analyses.get('contentAnalysis')]):
+        # Extract text only if needed for any of the text-based analyses
+        pdf_text = None
+        if any([analyses.get('SrsValidation'), 
+                analyses.get('ContentAnalysis'),
+                analyses.get('BusinessValueAnalysis')]):
             pdf_text = text_processor.extract_text_from_pdf(pdf_path)
 
+        # Initialize these variables only if needed for ContentAnalysis
+        all_scopes = []
+        scope_sources = []
+        spelling_grammar_results = []
+
         # Perform selected analyses
-        if analyses.get('srsValidation'):
+        if analyses.get('SrsValidation'):
             logger.debug("Performing SRS validation")
             parsed_srs = SRSValidator.parse_srs(pdf_text)
             validation_results = SRSValidator.validate_srs_structure(parsed_srs)
@@ -200,7 +208,7 @@ def analyze_document():
                 'parsed_sections': parsed_srs
             }
 
-        if analyses.get('referencesValidation'):
+        if analyses.get('ReferencesValidation'):
             logger.debug("Performing references validation")
             references_results = ReferencesValidator.validate_references_in_pdf(pdf_path)
             if references_results and 'reformatted_references' in references_results:
@@ -212,14 +220,12 @@ def analyze_document():
                     'status': 'error',
                     'message': 'Failed to process references'
                 }
-   
-        if analyses.get('contentAnalysis'):
+
+        if analyses.get('ContentAnalysis'):
             logger.debug("Performing content analysis")
             sections = text_processor.parse_document_sections(pdf_text)
-            all_scopes = []
-            scope_sources = []
-            spelling_grammar_results = []
-
+            
+            # Process text sections
             for i, section in enumerate(sections):
                 try:
                     scope = text_processor.generate_section_scope(section)
@@ -230,62 +236,123 @@ def analyze_document():
                 except Exception as e:
                     logger.error(f"Error processing section {i+1}: {str(e)}")
 
+            # Process images for content analysis
+            image_paths = image_processor.extract_images_from_pdf(pdf_path)
+            for i, img_path in enumerate(image_paths):
+                try:
+                    image_text = image_processor.extract_text_from_image(img_path)
+                    if image_text.strip():
+                        scope = text_processor.generate_section_scope(image_text)
+                        all_scopes.append(scope)
+                        scope_sources.append(f"Image {i+1}")
+                        spelling_grammar = text_processor.check_spelling_and_grammar(image_text)
+                        spelling_grammar_results.append(spelling_grammar)
+                except Exception as e:
+                    logger.error(f"Error processing image {i+1}: {str(e)}")
+
             similarity_matrix = similarity_analyzer.create_similarity_matrix(all_scopes)
             response['content_analysis'] = {
                 'similarity_matrix': similarity_matrix.tolist(),
                 'scope_sources': scope_sources,
                 'scopes': all_scopes,
                 'spelling_grammar': spelling_grammar_results
-            }    
- 
-        # Process images
-        logger.debug("Processing images")
-        image_paths = image_processor.extract_images_from_pdf(pdf_path)
-        
-        base_path = app.config['UPLOAD_FOLDER']
-        if not os.path.exists(base_path):
-            logger.info(f"Creating upload folder: {base_path}")
-            os.makedirs(base_path)
-        
-        for i, img_path in enumerate(image_paths):
-            try:
-                image_text = image_processor.extract_text_from_image(img_path)
-                if image_text.strip():
-                    scope = text_processor.generate_section_scope(image_text)
-                    all_scopes.append(scope)
-                    scope_sources.append(f"Image {i+1}")
-                    spelling_grammar = text_processor.check_spelling_and_grammar(image_text)
-                    spelling_grammar_results.append(spelling_grammar)
-            except Exception as e:
-                logger.error(f"Error processing image {i+1}: {str(e)}")
+            }
 
-        # Process text sections
-        logger.debug("Processing text sections")
-        sections = text_processor.parse_document_sections(pdf_text)
-        for i, section in enumerate(sections):
+        if analyses.get('ImageAnalysis'):
+            logger.debug("Processing images for image analysis")
             try:
-                scope = text_processor.generate_section_scope(section)
-                all_scopes.append(scope)
-                scope_sources.append(f"Section {i+1}")
-                spelling_grammar = text_processor.check_spelling_and_grammar(section)
-                spelling_grammar_results.append(spelling_grammar)
+                # Extract images from PDF
+                image_paths = image_processor.extract_images_from_pdf(pdf_path)
+                processed_images = []
+
+                for i, img_path in enumerate(image_paths):
+                    try:
+                        # Process each image
+                        image_info = {
+                            'image_index': i + 1,
+                            'path': img_path,
+                            'extracted_text': '',
+                            'analysis_results': {}
+                        }
+
+                        # Extract text from image
+                        image_text = image_processor.extract_text_from_image(img_path)
+                        if image_text.strip():
+                            image_info['extracted_text'] = image_text
+
+                        # Analyze image quality
+                        quality_metrics = image_processor.analyze_image_quality(img_path)
+                        image_info['analysis_results']['quality'] = quality_metrics
+
+                        # Detect objects in image (if applicable)
+                        objects = image_processor.detect_objects(img_path)
+                        if objects:
+                            image_info['analysis_results']['detected_objects'] = objects
+
+                        # Add any image-specific metadata
+                        metadata = image_processor.get_image_metadata(img_path)
+                        image_info['metadata'] = metadata
+
+                        processed_images.append(image_info)
+
+                    except Exception as e:
+                        logger.error(f"Error processing image {i+1}: {str(e)}")
+                        processed_images.append({
+                            'image_index': i + 1,
+                            'error': str(e)
+                        })
+
+                response['image_analysis'] = {
+                    'status': 'success',
+                    'total_images': len(image_paths),
+                    'processed_images': processed_images
+                }
+
             except Exception as e:
-                logger.error(f"Error processing section {i+1}: {str(e)}")
-                
-      
-        if analyses.get('businessValueAnalysis'):
+                logger.error(f"Error in image analysis: {str(e)}")
+                response['image_analysis'] = {
+                    'status': 'error',
+                    'message': str(e)
+                }
+
+        if analyses.get('BusinessValueAnalysis'):
             logger.debug("Performing business value analysis")
             try:
-                business_value_result = business_evaluator.evaluate_business_value(pdf_text)
+                # Analyze business value aspects
+                value_metrics = business_evaluator.evaluate_business_value(pdf_text)
+                
+                # Analyze cost implications
+                cost_analysis = business_evaluator.analyze_cost_implications(pdf_text)
+                
+                # Analyze market potential
+                market_analysis = business_evaluator.analyze_market_potential(pdf_text)
+                
+                # Analyze implementation feasibility
+                feasibility = business_evaluator.assess_implementation_feasibility(pdf_text)
+                
+                # Combine all business analyses
+                business_value_result = {
+                    'status': 'success',
+                    'value_metrics': value_metrics,
+                    'cost_analysis': cost_analysis,
+                    'market_analysis': market_analysis,
+                    'implementation_feasibility': feasibility,
+                    'overall_score': business_evaluator.calculate_overall_score(
+                        value_metrics, cost_analysis, market_analysis, feasibility
+                    ),
+                    'recommendations': business_evaluator.generate_recommendations(
+                        value_metrics, cost_analysis, market_analysis, feasibility
+                    )
+                }
+                
                 response['business_value_analysis'] = business_value_result
+                
             except Exception as e:
                 logger.error(f"Business value evaluation failed: {str(e)}")
                 response['business_value_analysis'] = {
                     'status': 'error',
                     'message': 'Business value analysis failed'
                 }
-
-            logger.info("Analysis completed successfully")
 
         if analyses.get('DiagramConvention'):
             logger.debug("Running YOLO script for diagram validation")
@@ -296,6 +363,7 @@ def analyze_document():
                 logger.error(f"YOLO script execution failed: {str(e)}")
                 response['image_validation'] = {"status": "error", "message": "YOLO script execution failed"}
 
+        logger.info("Analysis completed successfully")
         return jsonify(response)
 
     except Exception as e:

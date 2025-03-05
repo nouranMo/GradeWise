@@ -12,6 +12,7 @@ function Dashboard() {
     ImageAnalysis: false,
     BusinessValueAnalysis: false,
     DiagramConvention: false,
+    FullAnalysis: false,
   });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
@@ -27,6 +28,8 @@ function Dashboard() {
 
   const onDrop = async (acceptedFiles) => {
     const file = acceptedFiles[0];
+    console.log("Dropped file:", file);
+
     const date = new Date();
     const formattedDate = date
       .toLocaleDateString("en-US", {
@@ -45,6 +48,8 @@ function Dashboard() {
       analyzed: false,
       file: file, // Store the file for later analysis
     };
+
+    console.log("New document object:", newDocument);
 
     const updatedDocuments = [newDocument, ...analyzedDocuments];
     setAnalyzedDocuments(updatedDocuments);
@@ -83,6 +88,41 @@ function Dashboard() {
     }
   };
 
+  const areAllAnalysesSelected = (analyses) => {
+    return Object.entries(analyses).every(
+      ([key, value]) => key === "FullAnalysis" || value === true
+    );
+  };
+
+  const handleFullAnalysisChange = (checked) => {
+    setSelectedAnalyses((prev) => {
+      const newState = { ...prev };
+      // Set all analyses to the checked value
+      Object.keys(newState).forEach((key) => {
+        newState[key] = checked;
+      });
+      return newState;
+    });
+  };
+
+  const handleIndividualAnalysisChange = (key) => {
+    setSelectedAnalyses((prev) => {
+      const newState = {
+        ...prev,
+        [key]: !prev[key],
+      };
+
+      // Check if all individual analyses are selected after the change
+      const allSelected = Object.entries(newState).every(
+        ([k, v]) => k === "FullAnalysis" || v === true
+      );
+
+      // Update FullAnalysis based on whether all other options are selected
+      newState.FullAnalysis = allSelected;
+      return newState;
+    });
+  };
+
   const handleAnalyzeClick = (document) => {
     setSelectedDocument(document);
     setShowAnalysisModal(true);
@@ -96,14 +136,33 @@ function Dashboard() {
 
     setIsAnalyzing(true);
     const formData = new FormData();
+
+    console.log("Selected document:", selectedDocument);
+    console.log("File being uploaded:", selectedDocument.file);
+
+    // Make sure we're using the correct field name that backend expects
     formData.append("pdfFile", selectedDocument.file);
-    formData.append("analyses", JSON.stringify(selectedAnalyses));
+
+    // Remove the FullAnalysis key before sending to backend
+    const analysisToSend = { ...selectedAnalyses };
+    delete analysisToSend.FullAnalysis;
+
+    formData.append("analyses", JSON.stringify(analysisToSend));
+
+    for (let pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
 
     try {
       const response = await fetch("http://localhost:5000/analyze_document", {
         method: "POST",
         body: formData,
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Analysis failed");
+      }
 
       const result = await response.json();
 
@@ -126,7 +185,14 @@ function Dashboard() {
           JSON.stringify(updatedDocuments)
         );
         setShowAnalysisModal(false);
-        navigate("/parsing-result", { state: { parsingResult: result } });
+        // If Full Analysis is selected, go to Report page
+        if (selectedAnalyses.FullAnalysis) {
+          console.log("Navigating to report with data:", result);
+          navigate("/report", { state: { parsingResult: result } });
+        } else {
+          // For individual analyses, show the parsing result overlay
+          navigate("/parsing-result", { state: { parsingResult: result } });
+        }
       }
     } catch (error) {
       console.error("Error analyzing document:", error);
@@ -308,27 +374,43 @@ function Dashboard() {
               <h2 className="text-xl font-semibold mb-4">
                 Select Analyses to Perform
               </h2>
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                {Object.entries(selectedAnalyses).map(([key, value]) => (
-                  <label
-                    key={key}
-                    className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={value}
-                      onChange={() =>
-                        setSelectedAnalyses((prev) => ({
-                          ...prev,
-                          [key]: !prev[key],
-                        }))
-                      }
-                      className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none"
-                    />
-                    <span>{key.replace(/([A-Z])/g, " $1").trim()}</span>
-                  </label>
-                ))}
+
+              {/* Full Analysis Option */}
+              <div className="mb-4">
+                <label className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={selectedAnalyses.FullAnalysis}
+                    onChange={(e) => handleFullAnalysisChange(e.target.checked)}
+                    className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none"
+                  />
+                  <span className="font-semibold">
+                    Full Analysis (All Options)
+                  </span>
+                </label>
               </div>
+
+              {/* Individual Analysis Options */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {Object.entries(selectedAnalyses).map(([key, value]) => {
+                  if (key === "FullAnalysis") return null; // Skip Full Analysis in the grid
+                  return (
+                    <label
+                      key={key}
+                      className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={value}
+                        onChange={() => handleIndividualAnalysisChange(key)}
+                        className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none"
+                      />
+                      <span>{key.replace(/([A-Z])/g, " $1").trim()}</span>
+                    </label>
+                  );
+                })}
+              </div>
+
               <div className="flex justify-end space-x-4">
                 <button
                   onClick={() => setShowAnalysisModal(false)}
