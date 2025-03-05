@@ -29,10 +29,10 @@ function ParsingResult() {
                 <div className="flex justify-between items-center">
                     <h1 className="text-3xl font-bold text-gray-800">Analysis Results</h1>
                     <button
-                        onClick={() => navigate('/')}
-                        className="px-4 py-2 bg-sky-900 text-white rounded-lg hover:bg-sky-800"
+                        onClick={() => navigate('/dashboard')}
+                        className="px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300 ease-in-out"
                     >
-                        Back to Home
+                        Back to Dashboard
                     </button>
                 </div>
 

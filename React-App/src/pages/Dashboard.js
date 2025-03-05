@@ -377,12 +377,12 @@ function Dashboard() {
 
               {/* Full Analysis Option */}
               <div className="mb-4">
-                <label className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 bg-gray-50">
+                <label className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 bg-gray-50 hover:cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedAnalyses.FullAnalysis}
                     onChange={(e) => handleFullAnalysisChange(e.target.checked)}
-                    className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none"
+                    className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
                   />
                   <span className="font-semibold">
                     Full Analysis (All Options)
@@ -397,13 +397,13 @@ function Dashboard() {
                   return (
                     <label
                       key={key}
-                      className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50"
+                      className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 hover:cursor-pointer"
                     >
                       <input
                         type="checkbox"
                         checked={value}
                         onChange={() => handleIndividualAnalysisChange(key)}
-                        className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none"
+                        className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
                       />
                       <span>{key.replace(/([A-Z])/g, " $1").trim()}</span>
                     </label>
