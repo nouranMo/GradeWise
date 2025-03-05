@@ -139,7 +139,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto mt-6">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-gray-800">

@@ -75,12 +75,12 @@ export default function Hero() {
                 key={index}
                 className="flex items-center gap-4 p-4 rounded-lg inset-0 bg-white border border-gray-100 shadow-sm transition-all duration-300 hover:shadow-md hover:-inset-10"
               >
-                <div className="p-3 bg-black text-white rounded-md shrink-0">
+                <div className="p-1 bg-black text-white rounded-md shrink-0">
                   {feature.icon}
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-900">{feature.label}</p>
-                  <p className="text-[10px] text-gray-500">{feature.description}</p>
+                  <p className="text-sm font-medium text-gray-900">{feature.label}</p>
+                  <p className="text-[12px] text-gray-500">{feature.description}</p>
                 </div>
               </div>
             ))}

@@ -4,7 +4,7 @@ from image_processing import ImageProcessor
 from srs_validator import SRSValidator
 from similarity_analyzer import SimilarityAnalyzer
 from references_validation.references_validator import ReferencesValidator
-from flask import request, jsonify
+from flask import request, jsonify, session
 import os
 from werkzeug.utils import secure_filename
 import logging
@@ -13,6 +13,9 @@ from business_value_evaluator import BusinessValueEvaluator
 import subprocess
 import sys
 import os
+from google.oauth2 import id_token
+from google.auth.transport import requests
+from flask_cors import CORS
 
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -41,16 +44,122 @@ spec.loader.exec_module(script)
 # Now you can use process_image from script
 process_image = script.process_image
 
-
 logger = logging.getLogger(__name__)
 
 app = create_app()
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True,
+        "expose_headers": ["Content-Type", "Authorization"],
+        "max_age": 600
+    }
+})
+
+GOOGLE_CLIENT_ID = Config.GOOGLE_CLIENT_ID
+
 text_processor = TextProcessor()
 image_processor = ImageProcessor()
 similarity_analyzer = SimilarityAnalyzer()
 business_evaluator = BusinessValueEvaluator()
 
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
+@app.route('/api/auth/google', methods=['OPTIONS'])
+def handle_preflight():
+    response = jsonify({'status': 'ok'})
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
+
+@app.route('/api/auth/google', methods=['POST'])
+def google_auth():
+    try:
+        # Get the token from the request
+        data = request.get_json()
+        token = data.get('credential')
+
+        if not token:
+            return jsonify({'error': 'No token provided'}), 400
+
+        # Verify the token
+        idinfo = id_token.verify_oauth2_token(
+            token, requests.Request(), GOOGLE_CLIENT_ID)
+
+        # Get user info from the token
+        user_data = {
+            'email': idinfo['email'],
+            'name': idinfo.get('name', ''),
+            'picture': idinfo.get('picture', ''),
+            'given_name': idinfo.get('given_name', ''),
+            'family_name': idinfo.get('family_name', '')
+        }
+
+        # Store user data in session
+        session['user'] = user_data
+
+        response = jsonify({
+            'status': 'success',
+            'user': user_data
+        })
+
+        return response
+
+    except ValueError as e:
+        logger.error(f"Token validation failed: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid token'
+        }), 401
+    except Exception as e:
+        logger.error(f"Google authentication failed: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 400
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    try:
+        session.clear()
+        return jsonify({
+            'status': 'success',
+            'message': 'Logged out successfully'
+        })
+    except Exception as e:
+        logger.error(f"Logout failed: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 400
+
+@app.route('/api/auth/session', methods=['GET'])
+def check_session():
+    try:
+        if 'user' in session:
+            return jsonify({
+                'status': 'authenticated',
+                'user': session['user']
+            })
+        return jsonify({
+            'status': 'unauthenticated'
+        }), 401
+    except Exception as e:
+        logger.error(f"Session check failed: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 400
 
 @app.route('/analyze_document', methods=['POST'])
 def analyze_document():
@@ -94,7 +203,6 @@ def analyze_document():
         if analyses.get('referencesValidation'):
             logger.debug("Performing references validation")
             references_results = ReferencesValidator.validate_references_in_pdf(pdf_path)
-            # Ensure we're getting the correct structure
             if references_results and 'reformatted_references' in references_results:
                 response['references_validation'] = references_results
             else:
@@ -130,22 +238,19 @@ def analyze_document():
                 'spelling_grammar': spelling_grammar_results
             }    
  
-        # Process the images for text extraction and analysis
-        # Extract and process images
+        # Process images
         logger.debug("Processing images")
         image_paths = image_processor.extract_images_from_pdf(pdf_path)
         
-        # Ensure 'uploads' folder is created if it doesn't exist yet
-        base_path = app.config['UPLOAD_FOLDER']  # Base path for your images
+        base_path = app.config['UPLOAD_FOLDER']
         if not os.path.exists(base_path):
             logger.info(f"Creating upload folder: {base_path}")
             os.makedirs(base_path)
         
-        # Process the images for text extraction and analysis
         for i, img_path in enumerate(image_paths):
             try:
                 image_text = image_processor.extract_text_from_image(img_path)
-                if image_text.strip():  # Only process non-empty text
+                if image_text.strip():
                     scope = text_processor.generate_section_scope(image_text)
                     all_scopes.append(scope)
                     scope_sources.append(f"Image {i+1}")
@@ -170,32 +275,28 @@ def analyze_document():
       
         if analyses.get('businessValueAnalysis'):
             logger.debug("Performing business value analysis")
-        try:
-            business_value_result = business_evaluator.evaluate_business_value(pdf_text)
-            response['business_value_analysis'] = business_value_result
-        except Exception as e:
-            logger.error(f"Business value evaluation failed: {str(e)}")
-            response['business_value_analysis'] = {
-                'status': 'error',
-                'message': 'Business value analysis failed'
-            }
-    
-        logger.info("Analysis completed successfully")
+            try:
+                business_value_result = business_evaluator.evaluate_business_value(pdf_text)
+                response['business_value_analysis'] = business_value_result
+            except Exception as e:
+                logger.error(f"Business value evaluation failed: {str(e)}")
+                response['business_value_analysis'] = {
+                    'status': 'error',
+                    'message': 'Business value analysis failed'
+                }
 
+            logger.info("Analysis completed successfully")
 
-    # Diagram Convention Analysis (YOLO Script)
         if analyses.get('DiagramConvention'):
             logger.debug("Running YOLO script for diagram validation")
-
             try:
-                # Run script.py as a separate process
                 subprocess.run(["python", script_path], check=True)
                 response['image_validation'] = {"status": "success", "message": "YOLO script executed"}
             except subprocess.CalledProcessError as e:
                 logger.error(f"YOLO script execution failed: {str(e)}")
                 response['image_validation'] = {"status": "error", "message": "YOLO script execution failed"}
-            
-            return jsonify(response) 
+
+        return jsonify(response)
 
     except Exception as e:
         logger.error(f"Error during document processing: {str(e)}", exc_info=True)

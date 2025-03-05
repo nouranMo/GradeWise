@@ -9,9 +9,11 @@ import facebookLogo from "assets/images/facebook.svg";
 import linkedinLogo from "assets/images/linkedin.svg";
 import showImage from "assets/images/show.svg";
 import hideImage from "assets/images/hide.svg";
+import { useAuth } from "contexts/AuthContext";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -94,7 +96,7 @@ const LoginPage = () => {
   const handleGoogleLogin = async (credentialResponse) => {
     setIsGoogleLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/auth/google", {
+      const response = await fetch("http://localhost:5000/api/auth/google", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,8 +109,8 @@ const LoginPage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem("token", data.token);
-        toast.success("Successfully logged in!");
+        login(data.user); // Use the login function from AuthContext
+        toast.success("Successfully logged in with Google!");
         navigate("/dashboard");
       } else {
         throw new Error(data.message || "Login failed");

@@ -4,6 +4,10 @@ module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}", "./public/index.html"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Poppins', 'sans-serif'],
+        mono: ['Fira Code', 'monospace'],
+      },
       gridTemplateColumns: {
         13: "repeat(13, minmax(0, 1fr))",
       },

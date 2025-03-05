@@ -2,6 +2,7 @@ import { Fragment, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../Logo";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { useAuth } from "contexts/AuthContext";
 import {
   UserCircleIcon,
   Cog6ToothIcon,
@@ -37,16 +38,17 @@ const userMenuItems = [
 ];
 
 export default function NavBar() {
-  // Replace with your auth state management
-  const isAuthenticated = false; // Example: use your auth context or state
-  const userEmail = "user@example.com"; // Example: get from your auth state
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const isAuthenticated = !!user;
+  const userEmail = user?.email;
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    // Implement your sign out logic here
+    logout();
     navigate("/login");
   };
 
@@ -73,7 +75,7 @@ export default function NavBar() {
 
       {/* Desktop Menu */}
       <div className="hidden md:block">
-        {isAuthenticated ? (
+        {isAuthenticated && user ? (
           <DropdownMenu.Root
             open={isDropdownOpen}
             onOpenChange={setIsDropdownOpen}
@@ -135,7 +137,7 @@ export default function NavBar() {
       {isMobileMenuOpen && (
         <div className="absolute top-full left-0 right-0 bg-white shadow-lg md:hidden">
           <div className="p-4">
-            {isAuthenticated ? (
+            {isAuthenticated && user ? (
               <>
                 <div className="px-4 py-2 text-sm text-gray-600">
                   {userEmail}
