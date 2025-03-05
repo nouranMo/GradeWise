@@ -304,6 +304,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={!isFormValidated || isLoading}
+              onClick={() => navigate('/dashboard')}
               className={`w-full rounded-md font-medium bg-[#ff6464] text-white px-5 py-2.5 text-sm transition-all duration-500 ${
                 !isFormValidated || isLoading
                   ? "bg-gray-200 text-gray-400 border-gray-200 cursor-not-allowed"

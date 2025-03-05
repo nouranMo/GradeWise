@@ -380,6 +380,7 @@ const SignUpPage = () => {
             <button
               type="submit"
               disabled={!isFormValidated || isLoading}
+              onClick={() => navigate('/dashboard')}
               className={`w-full min-h-[44px] rounded-lg text-sm font-medium bg-[#ff6464] text-white transition-all duration-200 ${
                 !isFormValidated || isLoading
                   ? "bg-gray-200 text-gray-400 border-gray-200 cursor-not-allowed"
