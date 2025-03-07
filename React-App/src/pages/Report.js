@@ -210,7 +210,7 @@ function Report() {
             <AnalysisCard
               title="Business Value Analysis"
               data={parsingResult.business_value_analysis}
-              type="table"
+              type="text"
             />
           )}
 

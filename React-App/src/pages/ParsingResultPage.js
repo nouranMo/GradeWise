@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactMarkdown from "react-markdown";
 import { useLocation, useNavigate } from 'react-router-dom';
 
 function ParsingResult() {
@@ -162,6 +163,23 @@ function ParsingResult() {
         )}
     </div>
 )}
+
+
+{/* Business Value Analysis */}
+{parsingResult?.business_value_analysis && (
+    <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">
+            Business Value Analysis
+        </h2>
+        <div className="prose prose-lg text-gray-700 max-w-none">
+            <ReactMarkdown>
+                {parsingResult.business_value_analysis["Business Value Evaluation"]
+                    .replace(/^### Business Value Evaluation\s*/, "")}
+            </ReactMarkdown>
+        </div>
+    </div>
+)}
+
 
 
                 {/* Image Analysis */}

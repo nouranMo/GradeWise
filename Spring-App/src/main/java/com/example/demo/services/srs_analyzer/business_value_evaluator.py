@@ -51,9 +51,5 @@ def evaluate_business_value(extracted_data):
     print("\n--- Business Value Evaluation ---\n")
     print(evaluation_result)
 
-    # 🔹 Save evaluation result to a file
-    with open("business_value_evaluation.json", "w", encoding="utf-8") as file:
-        json.dump({"Business Value Evaluation": evaluation_result},
-                  file, indent=4, ensure_ascii=False)
 
-    print("\n✅ Business Value Evaluation saved to 'business_value_evaluation.json'")
+    return {"Business Value Evaluation": evaluation_result}
