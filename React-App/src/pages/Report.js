@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import Navbar from "components/layout/Navbar/Navbar";
+import ReactMarkdown from "react-markdown";
 
 function Report() {
   const location = useLocation();
@@ -21,13 +22,8 @@ function Report() {
     timestamp: new Date().toLocaleString(),
   };
 
-  useEffect(() => {
-    console.log("Location State:", location.state);
-    console.log("Document Info:", documentInfo);
-    console.log("Parsing Result:", parsingResult);
-  }, [location.state, documentInfo, parsingResult]);
-
   const [expandedSections, setExpandedSections] = useState({});
+  const [recommendations, setRecommendations] = useState(null);
 
   // Counts for summary
   const getCounts = (results) => {
@@ -47,7 +43,6 @@ function Report() {
     return { passed, failed, warnings };
   };
 
-  // Use destructuring to get the counts
   const {
     passed: passedChecks,
     failed: failedChecks,
@@ -81,15 +76,12 @@ function Report() {
       hour12: true,
     });
   };
-
   // Helper Components
   const CollapsibleSection = ({ id, title, children, status }) => {
-    console.log(`${title} status:`, status);
-
     const getStatusStyles = (status) => {
       if (!status) return "";
 
-      status = status.toLowerCase(); // Convert to lowercase for consistent comparison
+      status = status.toLowerCase();
 
       if (["success", "pass", "passed"].includes(status)) {
         return "bg-green-100 text-green-800";
@@ -142,14 +134,12 @@ function Report() {
   // Helper function to render analysis card
   const AnalysisCard = ({ title, data, type }) => {
     const renderContent = () => {
-      // Handle null or undefined data
       if (!data) {
         return <p className="text-gray-500">No data available</p>;
       }
 
       switch (type) {
         case "list":
-          // Handle reformatted_references specifically for References Validation
           if (data.reformatted_references) {
             return (
               <ul className="list-disc list-inside">
@@ -174,7 +164,6 @@ function Report() {
             );
           }
 
-          // Handle structure_validation for SRS Validation
           if (data.structure_validation) {
             return (
               <div>
@@ -250,6 +239,87 @@ function Report() {
               </table>
             </div>
           );
+        case "text":
+          if (data["Business Value Evaluation"]) {
+            return (
+              <div className="space-y-6">
+                <div className="text-gray-700 space-y-4">
+                  {data["Business Value Evaluation"]
+                    .split("\n")
+                    .filter((line) => line.trim())
+                    .map((paragraph, index) => {
+                      // Remove all asterisks and clean up the text
+                      const cleanText = paragraph
+                        .replace(/\* \*/g, "")
+                        .replace(/\*/g, "")
+                        .trim();
+
+                      // Check if this is a heading/category line
+                      if (cleanText.includes("Overall Business Value Rating")) {
+                        return (
+                          <div
+                            key={index}
+                            className="mt-6 font-semibold italic"
+                          >
+                            {cleanText}
+                          </div>
+                        );
+                      }
+
+                      if (cleanText.startsWith("Category")) {
+                        return (
+                          <div
+                            key={index}
+                            className="mt-2 font-semibold italic"
+                          >
+                            {cleanText}
+                          </div>
+                        );
+                      }
+
+                      // Handle main categories (Uniqueness, Market Usefulness, etc.)
+                      const match = cleanText.match(
+                        /^(Uniqueness|Market Usefulness|Feasibility|Profitability):(.*)/
+                      );
+
+                      if (match) {
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-start gap-2 mt-4"
+                          >
+                            <span className="text-[#ff6464] mt-1.5">•</span>
+                            <div>
+                              <span className="font-semibold">
+                                {match[1]}:{" "}
+                              </span>
+                              <span>{match[2].trim()}</span>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Return regular paragraphs
+                      return (
+                        <p
+                          key={index}
+                          className="text-gray-600 leading-relaxed"
+                        >
+                          {cleanText}
+                        </p>
+                      );
+                    })}
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div className="overflow-x-auto">
+              <pre className="whitespace-pre-wrap text-sm">
+                {JSON.stringify(data, null, 2)}
+              </pre>
+            </div>
+          );
 
         default:
           return (
@@ -264,38 +334,78 @@ function Report() {
 
     return (
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h3 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-          {title}
-          {data?.status && (
-            <span
-              className={`ml-2 px-2 py-1 text-xs rounded ${
-                data.status === "success" || data.status === "pass"
-                  ? "bg-green-100 text-green-800"
-                  : data.status === "fail" || data.status === "error"
-                  ? "bg-red-100 text-red-800"
-                  : "bg-yellow-100 text-yellow-800"
-              }`}
-            >
-              {data.status}
-            </span>
-          )}
-        </h3>
+        {/* Only show title if it's not a Business Value Analysis text type */}
+        {!(type === "text" && data["Business Value Evaluation"]) && (
+          <h3 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+            {title}
+            {data?.status && (
+              <span
+                className={`ml-2 px-2 py-1 text-xs rounded ${
+                  data.status === "success" || data.status === "pass"
+                    ? "bg-green-100 text-green-800"
+                    : data.status === "fail" || data.status === "error"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}
+              >
+                {data.status}
+              </span>
+            )}
+          </h3>
+        )}
         <div className="text-gray-600">{renderContent()}</div>
       </div>
     );
   };
 
+  // Generate recommendations using Gemini
+  const generateRecommendations = async (parsingResult) => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/generate_recommendations",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ parsingResult }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate recommendations");
+      }
+
+      const data = await response.json();
+      return {
+        status: "success",
+        recommendations: data.recommendations,
+      };
+    } catch (error) {
+      console.error("Error generating recommendations:", error);
+      return {
+        status: "error",
+        message: "Failed to generate recommendations",
+      };
+    }
+  };
+
+  // Effects
   useEffect(() => {
-    console.log(
-      "SRS Validation Status:",
-      parsingResult?.srs_validation?.status
-    );
-    console.log(
-      "Content Analysis Status:",
-      parsingResult?.content_analysis?.status
-    );
-    console.log("Full Parsing Result:", parsingResult);
+    if (parsingResult) {
+      generateRecommendations(parsingResult)
+        .then((result) => setRecommendations(result))
+        .catch((error) =>
+          console.error("Error setting recommendations:", error)
+        );
+    }
   }, [parsingResult]);
+
+  useEffect(() => {
+    console.log("Location State:", location.state);
+    console.log("Document Info:", documentInfo);
+    console.log("Parsing Result:", parsingResult);
+  }, [location.state, documentInfo, parsingResult]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -345,8 +455,8 @@ function Report() {
         </div>
 
         {/* Executive Summary */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Executive Summary</h2>
+        {/* <div className="bg-white rounded-lg shadow-md p-6 mb-8"> */}
+        {/* <h2 className="text-2xl font-semibold mb-4">Executive Summary</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="p-4 bg-green-50 rounded-lg">
               <p className="text-sm text-green-600 font-medium">
@@ -364,11 +474,131 @@ function Report() {
               <p className="text-sm text-yellow-600 font-medium">Warnings</p>
               <p className="text-2xl font-bold text-yellow-800">{warnings}</p>
             </div>
-          </div>
+          </div> */}
 
-          <div className="prose max-w-none">
-            <h3 className="text-lg font-semibold mb-2">Key Findings</h3>
-            <ul className="list-disc pl-5">
+        {/* Analysis Summary */}
+        {/* <div className="space-y-6"> */}
+        {/* Business Value Analysis */}
+        {/* {parsingResult?.business_value_analysis && (
+              <div className="border-b pb-4">
+                <h3 className="text-lg font-semibold mb-3 text-gray-800">
+                  Business Value Analysis
+                </h3>
+                <div className="space-y-2 text-gray-700">
+                  {parsingResult.business_value_analysis[
+                    "Business Value Evaluation"
+                  ]
+                    ?.split("*")
+                    .map((point, index) => {
+                      if (point.trim()) {
+                        return (
+                          <div key={index} className="flex items-start">
+                            <span className="text-[#ff6464] mr-2">•</span>
+                            <p>{point.trim()}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                </div>
+              </div>
+            )} */}
+
+        {/* SRS Structure */}
+        {/* {parsingResult?.srs_validation?.structure_validation && (
+              <div className="border-b pb-4">
+                <h3 className="text-lg font-semibold mb-3 text-gray-800">
+                  SRS Structure
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-2">
+                      Present Sections:
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {parsingResult.srs_validation.structure_validation.matching_sections.map(
+                        (section, index) => (
+                          <span
+                            key={index}
+                            className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-sm"
+                          >
+                            {section}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-2">
+                      Missing Sections:
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {parsingResult.srs_validation.structure_validation.missing_sections.map(
+                        (section, index) => (
+                          <span
+                            key={index}
+                            className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm"
+                          >
+                            {section}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )} */}
+
+        {/* References Analysis */}
+        {/* {parsingResult?.references_validation && (
+              <div className="border-b pb-4">
+                <h3 className="text-lg font-semibold mb-3 text-gray-800">
+                  References Analysis
+                </h3>
+                <p className="text-gray-700">
+                  Found{" "}
+                  {parsingResult.references_validation.reformatted_references
+                    ?.length || 0}{" "}
+                  references, with{" "}
+                  {parsingResult.references_validation.reformatted_references?.filter(
+                    (ref) => ref.errors?.length > 0
+                  ).length || 0}{" "}
+                  formatting issues.
+                </p>
+              </div>
+            )} */}
+
+        {/* Content Analysis */}
+        {/* {parsingResult?.content_analysis?.similarity_matrix && (
+              <div className="border-b pb-4">
+                <h3 className="text-lg font-semibold mb-3 text-gray-800">
+                  Content Analysis
+                </h3>
+                <p className="text-gray-700">
+                  Content similarity analysis completed successfully.
+                </p>
+              </div>
+            )} */}
+
+        {/* Image Analysis */}
+        {/* {parsingResult?.image_analysis?.processed_images && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-gray-800">
+                  Image Analysis
+                </h3>
+                <p className="text-gray-700">
+                  Analyzed{" "}
+                  {parsingResult.image_analysis.processed_images.length} images
+                  successfully.
+                </p>
+              </div>
+            )}
+          </div> */}
+
+        {/* Key Findings */}
+        {/* <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-3">Key Findings</h3>
+            <ul className="list-disc pl-5 space-y-2">
               {passedChecks > 0 && (
                 <li className="text-green-600">
                   {passedChecks}{" "}
@@ -394,8 +624,8 @@ function Report() {
                 <li className="text-gray-600">No analysis results available</li>
               )}
             </ul>
-          </div>
-        </div>
+          </div> */}
+        {/* </div> */}
 
         {/* Detailed Analysis Sections */}
         <div className="space-y-4">
@@ -403,11 +633,11 @@ function Report() {
             <CollapsibleSection
               id="srs"
               title="SRS Structure Analysis"
-              status="success" // Force success status
+              status="success"
             >
               <AnalysisCard
                 title="SRS Validation"
-                data={{ ...parsingResult.srs_validation, status: "success" }} // Add success status to data
+                data={{ ...parsingResult.srs_validation, status: "success" }}
                 type="list"
               />
             </CollapsibleSection>
@@ -431,11 +661,11 @@ function Report() {
             <CollapsibleSection
               id="content"
               title="Content Analysis"
-              status="success" // Force success status
+              status="success"
             >
               <AnalysisCard
                 title="Content Analysis"
-                data={{ ...parsingResult.content_analysis, status: "success" }} // Add success status to data
+                data={{ ...parsingResult.content_analysis, status: "success" }}
                 type="matrix"
               />
             </CollapsibleSection>
@@ -488,14 +718,32 @@ function Report() {
         <div className="bg-white rounded-lg shadow-md p-6 mt-8">
           <h2 className="text-2xl font-semibold mb-4">Recommendations</h2>
           <div className="prose max-w-none">
-            <ul className="space-y-2">
-              {/* Add dynamic recommendations based on analysis results */}
-              <li>Review and address all critical issues highlighted in red</li>
-              <li>
-                Consider implementing suggested improvements for warning items
-              </li>
-              <li>Maintain the quality of sections that passed validation</li>
-            </ul>
+            {recommendations?.status === "success" ? (
+              <ReactMarkdown className="text-gray-700">
+                {recommendations.recommendations}
+              </ReactMarkdown>
+            ) : (
+              <ul className="space-y-2">
+                {failedChecks > 0 && (
+                  <li className="text-red-600">
+                    Review and address {failedChecks} critical{" "}
+                    {failedChecks === 1 ? "issue" : "issues"}
+                  </li>
+                )}
+                {warnings > 0 && (
+                  <li className="text-amber-700">
+                    Consider implementing improvements for {warnings} warning{" "}
+                    {warnings === 1 ? "item" : "items"}
+                  </li>
+                )}
+                {passedChecks > 0 && (
+                  <li className="text-green-600">
+                    Maintain the quality of {passedChecks} validated{" "}
+                    {passedChecks === 1 ? "section" : "sections"}
+                  </li>
+                )}
+              </ul>
+            )}
           </div>
         </div>
 
@@ -517,7 +765,6 @@ function Report() {
                 ))}
               </ul>
             </div>
-            {/* Add more metadata as needed */}
           </div>
         </div>
       </div>

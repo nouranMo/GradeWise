@@ -26,6 +26,7 @@ pytesseract
 Flask
 Werkzeug
 requests
+Flask-Limiter
 
 # Progress Tracking (Optional)
 tqdm
