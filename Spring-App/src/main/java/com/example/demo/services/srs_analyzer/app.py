@@ -329,42 +329,6 @@ def analyze_document():
                         'status': 'error',
                         'message': 'Business value analysis failed'
                     }
-            # try:
-            #     # Analyze business value aspects
-            #     value_metrics = business_evaluator.evaluate_business_value(pdf_text)
-                
-            #     # Analyze cost implications
-            #     cost_analysis = business_evaluator.analyze_cost_implications(pdf_text)
-                
-            #     # Analyze market potential
-            #     market_analysis = business_evaluator.analyze_market_potential(pdf_text)
-                
-            #     # Analyze implementation feasibility
-            #     feasibility = business_evaluator.assess_implementation_feasibility(pdf_text)
-                
-            #     # Combine all business analyses
-            #     business_value_result = {
-            #         'status': 'success',
-            #         'value_metrics': value_metrics,
-            #         'cost_analysis': cost_analysis,
-            #         'market_analysis': market_analysis,
-            #         'implementation_feasibility': feasibility,
-            #         'overall_score': business_evaluator.calculate_overall_score(
-            #             value_metrics, cost_analysis, market_analysis, feasibility
-            #         ),
-            #         'recommendations': business_evaluator.generate_recommendations(
-            #             value_metrics, cost_analysis, market_analysis, feasibility
-            #         )
-            #     }
-                
-            #     response['business_value_analysis'] = business_value_result
-                
-            # except Exception as e:
-            #     logger.error(f"Business value evaluation failed: {str(e)}")
-            #     response['business_value_analysis'] = {
-            #         'status': 'error',
-            #         'message': 'Business value analysis failed'
-            #     }
 
         if analyses.get('DiagramConvention'):
             logger.debug("Running YOLO script for diagram validation")
