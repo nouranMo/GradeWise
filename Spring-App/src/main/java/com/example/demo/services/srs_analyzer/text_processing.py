@@ -1,4 +1,5 @@
 import re
+import json
 import language_tool_python
 from spellchecker import SpellChecker
 from transformers import pipeline
@@ -7,7 +8,7 @@ from PyPDF2 import PdfReader
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import functools
-from business_value_evaluator import BusinessValueEvaluator
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class TextProcessor:
         self.grammar_tool = language_tool_python.LanguageTool('en-US')
         self.spell_checker = SpellChecker()
         self.CUSTOM_TERMS = ['qanna', 'srs'] #Hopefully grammarly API and remove this
-        self.business_value_evaluator = BusinessValueEvaluator()
+        
 
         try:
             model_name = "sshleifer/distilbart-cnn-6-6"
@@ -104,30 +105,45 @@ class TextProcessor:
         return sections, figures
 
     def parse_document_sections(self, text):
-        """Parse document into logical segments based on sections."""
+        """Parse document into logical segments based on sections, handling 'Abstract' separately."""
         logger.info("Parsing document sections")
+        print("\n--- Parsing Document Sections ---\n")  # Debug message
+
         segments = []
         current_segment = ""
+        found_abstract = False  # Flag to check if 'Abstract' is detected
 
         try:
             lines = text.splitlines()
-            for line in lines:
-                if re.match(r'^\d+(\.\d+)* [A-Z]', line):  # New section/subsection
+            for line in lines:  
+                if re.match(r'^\d+(\.\d+)* [A-Z]', line):  # New section/subsection (numbered)
                     if current_segment:
                         segments.append(current_segment.strip())
+                        print(f"\nExtracted Section:\n{current_segment.strip()}\n")  # Print extracted section
                         logger.debug(f"Added segment of length: {len(current_segment)}")
                     current_segment = line + "\n"
+
+                elif line.strip().lower() == "abstract" and not found_abstract:  # Detect 'Abstract'
+                    if current_segment:  
+                        segments.append(current_segment.strip())  # Save previous section
+                    current_segment = "Abstract\n"  # Start 'Abstract' section
+                    found_abstract = True  # Mark 'Abstract' as found
+
                 else:
                     current_segment += line + "\n"
 
             if current_segment:
                 segments.append(current_segment.strip())
+                print(f"\nExtracted Section:\n{current_segment.strip()}\n")  # Print last extracted section
 
             logger.info(f"Parsed {len(segments)} sections")
+            print(f"\nTotal Sections Parsed: {len(segments)}")  # Print total sections count
             return segments
+
         except Exception as e:
             logger.error(f"Error parsing document sections: {str(e)}")
-            raise
+            print(f"Error parsing document: {str(e)}")  # Print error in terminal
+        raise
 
     def get_section_for_text(self, text, sections):
         """Helper function to find which section a given piece of text belongs to."""
@@ -240,14 +256,55 @@ class TextProcessor:
         except Exception as e:
             logger.error(f"Error in spelling/grammar check: {str(e)}")
             return {}, []
+
     @async_operation
-    def evaluate_business_value(self, text):
-        """
-        Evaluate the business value of a given text.
-        """
-        logger.info("Evaluating business value of text...")
-        try:
-            return self.business_value_evaluator.evaluate_business_value(text)
-        except Exception as e:
-            logger.error(f"Error evaluating business value: {str(e)}")
-            raise    
+    def extract_relevant_sections_for_llm(self, sections_list):
+            """Convert list of section strings to dict, match required sections, and save to JSON."""
+            
+            required_keys = {
+                "Abstract": "Abstract",
+                "1.3 Business Context": "Business Context",
+                "3.1 Problem Statement": "Problem Statement",
+                "3.3 System Scope": "System Scope",
+                "3.4 Objectives": "Objectives"
+            }
+
+            filtered_sections = {}
+            sections_dict = {}
+
+            #  Convert list of section strings to dictionary {title: content}
+            for section in sections_list:
+                lines = section.split("\n")
+                if len(lines) > 1:  # Ensure section has a title and content
+                    title = lines[0].strip()
+                    content = "\n".join(lines[1:]).strip()
+                    stripped_title = self.strip_numbering(title)  # Remove numbering like '3.1'
+                    sections_dict[stripped_title] = content
+
+            logger.debug(f"Available section keys: {list(sections_dict.keys())}")
+
+            #  Handle "Abstract" separately since it's missing
+            for i, section in enumerate(sections_list):
+                if section.lower().startswith("abstract"):
+                    lines = section.split("\n")
+                    content = "\n".join(lines[1:]).strip()
+                    filtered_sections["Abstract"] = content
+                    logger.info(f"✅ Extracted Abstract section")
+                    break  # Stop after finding the first "Abstract"
+
+            #  Match extracted sections with required keys
+            for key, expected_title in required_keys.items():
+                if expected_title in sections_dict:
+                    filtered_sections[key] = sections_dict[expected_title]
+                    logger.info(f" Extracted Section: {key}")
+
+            if not filtered_sections:
+                logger.error("No required sections found. JSON will be empty.")
+
+            # Save to JSON
+            with open("filtered_sections.json", "w", encoding="utf-8") as json_file:
+                json.dump(filtered_sections, json_file, indent=4, ensure_ascii=False)
+
+            logger.info(" Filtered sections saved to 'filtered_sections.json'")
+
+            return filtered_sections

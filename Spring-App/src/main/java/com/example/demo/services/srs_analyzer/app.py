@@ -9,13 +9,13 @@ import os
 from werkzeug.utils import secure_filename
 import logging
 import json
-from business_value_evaluator import BusinessValueEvaluator 
 import subprocess
 import sys
 import os
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from flask_cors import CORS
+from business_value_evaluator import evaluate_business_value
 
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -63,7 +63,6 @@ GOOGLE_CLIENT_ID = Config.GOOGLE_CLIENT_ID
 text_processor = TextProcessor()
 image_processor = ImageProcessor()
 similarity_analyzer = SimilarityAnalyzer()
-business_evaluator = BusinessValueEvaluator()
 
 @app.after_request
 def after_request(response):
@@ -318,41 +317,54 @@ def analyze_document():
         if analyses.get('BusinessValueAnalysis'):
             logger.debug("Performing business value analysis")
             try:
-                # Analyze business value aspects
-                value_metrics = business_evaluator.evaluate_business_value(pdf_text)
-                
-                # Analyze cost implications
-                cost_analysis = business_evaluator.analyze_cost_implications(pdf_text)
-                
-                # Analyze market potential
-                market_analysis = business_evaluator.analyze_market_potential(pdf_text)
-                
-                # Analyze implementation feasibility
-                feasibility = business_evaluator.assess_implementation_feasibility(pdf_text)
-                
-                # Combine all business analyses
-                business_value_result = {
-                    'status': 'success',
-                    'value_metrics': value_metrics,
-                    'cost_analysis': cost_analysis,
-                    'market_analysis': market_analysis,
-                    'implementation_feasibility': feasibility,
-                    'overall_score': business_evaluator.calculate_overall_score(
-                        value_metrics, cost_analysis, market_analysis, feasibility
-                    ),
-                    'recommendations': business_evaluator.generate_recommendations(
-                        value_metrics, cost_analysis, market_analysis, feasibility
-                    )
-                }
-                
-                response['business_value_analysis'] = business_value_result
-                
+                    # Parse sections only when business value analysis is enabled
+                    sections = text_processor.parse_document_sections(pdf_text)
+                    business_value_result = text_processor.extract_relevant_sections_for_llm(sections)
+                    # Call evaluate_business_value function after extracting sections
+                    evaluation_result = evaluate_business_value(business_value_result)
+                    response['business_value_analysis'] = evaluation_result
             except Exception as e:
-                logger.error(f"Business value evaluation failed: {str(e)}")
-                response['business_value_analysis'] = {
-                    'status': 'error',
-                    'message': 'Business value analysis failed'
-                }
+                    logger.error(f"Business value evaluation failed: {str(e)}")
+                    response['business_value_analysis'] = {
+                        'status': 'error',
+                        'message': 'Business value analysis failed'
+                    }
+            # try:
+            #     # Analyze business value aspects
+            #     value_metrics = business_evaluator.evaluate_business_value(pdf_text)
+                
+            #     # Analyze cost implications
+            #     cost_analysis = business_evaluator.analyze_cost_implications(pdf_text)
+                
+            #     # Analyze market potential
+            #     market_analysis = business_evaluator.analyze_market_potential(pdf_text)
+                
+            #     # Analyze implementation feasibility
+            #     feasibility = business_evaluator.assess_implementation_feasibility(pdf_text)
+                
+            #     # Combine all business analyses
+            #     business_value_result = {
+            #         'status': 'success',
+            #         'value_metrics': value_metrics,
+            #         'cost_analysis': cost_analysis,
+            #         'market_analysis': market_analysis,
+            #         'implementation_feasibility': feasibility,
+            #         'overall_score': business_evaluator.calculate_overall_score(
+            #             value_metrics, cost_analysis, market_analysis, feasibility
+            #         ),
+            #         'recommendations': business_evaluator.generate_recommendations(
+            #             value_metrics, cost_analysis, market_analysis, feasibility
+            #         )
+            #     }
+                
+            #     response['business_value_analysis'] = business_value_result
+                
+            # except Exception as e:
+            #     logger.error(f"Business value evaluation failed: {str(e)}")
+            #     response['business_value_analysis'] = {
+            #         'status': 'error',
+            #         'message': 'Business value analysis failed'
+            #     }
 
         if analyses.get('DiagramConvention'):
             logger.debug("Running YOLO script for diagram validation")
