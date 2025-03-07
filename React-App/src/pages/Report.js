@@ -378,17 +378,11 @@ function Report() {
           )}
 
           {parsingResult?.business_value_analysis && (
-            <CollapsibleSection
-              id="business"
+            <AnalysisCard
               title="Business Value Analysis"
-              status={parsingResult.business_value_analysis.status}
-            >
-              <AnalysisCard
-                title="Business Value Analysis"
-                data={parsingResult.business_value_analysis}
-                type="table"
-              />
-            </CollapsibleSection>
+              data={parsingResult.business_value_analysis}
+              type="text"
+            />
           )}
 
           {parsingResult?.image_validation && (

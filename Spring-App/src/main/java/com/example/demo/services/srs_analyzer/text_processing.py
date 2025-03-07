@@ -7,6 +7,7 @@ from PyPDF2 import PdfReader
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import functools
+<<<<<<< HEAD
 from business_value_evaluator import BusinessValueEvaluator
 from contextlib import contextmanager
 from functools import lru_cache
