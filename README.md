@@ -1,4 +1,4 @@
-# GradeWise - Automated Checking and Grading Tool
+# GradeWise - Automated Checking and Grading Tool for Technical Documentation
 
 ## 📌 Overview
 GradeWise is an AI-powered automated grading system designed to assist university professors in evaluating **Software Requirements Specification (SRS)** and **Software Design Description (SDD)** documents. It leverages **Large Language Models (LLMs)** and **Computer Vision** techniques to provide detailed, consistent, and objective assessments while significantly reducing manual effort.
