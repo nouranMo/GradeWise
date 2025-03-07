@@ -43,7 +43,7 @@ def evaluate_business_value(extracted_data):
     )
 
     # 🔹 Send the prompt to the LLM
-    model = genai.GenerativeModel("gemini-2.0-flash")  # Adjust model if needed
+    model = genai.GenerativeModel("gemini-2.0-flash") 
     response = model.generate_content(prompt)
 
     # 🔹 Extract and print LLM response
