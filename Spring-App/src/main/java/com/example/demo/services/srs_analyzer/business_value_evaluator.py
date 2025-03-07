@@ -9,13 +9,10 @@ def evaluate_business_value(extracted_data):
         print("No relevant sections found for evaluation.")
         return {"status": "error", "message": "No relevant sections found."}
 
-    # 🔹 Combine all sections into a single content block
     document_content = "\n\n".join(
     f"## {section} ##\n{content}" for section, content in extracted_data.items()
 )
 
-
-    # 🔹 Construct a refined prompt for overall evaluation
     prompt = (
         "You are an expert in evaluating Software Requirement Specifications (SRS) for business value.\n"
         "Analyze the following extracted content from an SRS document and provide a *concise overall evaluation* "
