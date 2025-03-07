@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Navbar from "layout/Navbar/Navbar";
+import Navbar from "components/layout/Navbar/Navbar";
 import { useNavigate } from "react-router-dom";
 
 function SectionExtraction() {
