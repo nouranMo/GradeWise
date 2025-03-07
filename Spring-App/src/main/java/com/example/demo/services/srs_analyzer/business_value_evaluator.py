@@ -1,5 +1,5 @@
 import json
-import google.generativeai as genai  # Or another LLM provider you are using
+import google.generativeai as genai
 
 def evaluate_business_value(extracted_data):
     """Load extracted sections, format prompt, and send to LLM for evaluation."""
