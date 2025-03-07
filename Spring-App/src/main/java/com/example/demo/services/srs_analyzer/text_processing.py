@@ -320,12 +320,3 @@ class TextProcessor:
         except Exception as e:
             logger.error(f"Error processing chunk: {str(e)}")
             return {}, []
-
-    @async_operation
-    def evaluate_business_value(self, text: str):
-        logger.info("Evaluating business value of text...")
-        try:
-            return self.business_value_evaluator.evaluate_business_value(text)
-        except Exception as e:
-            logger.error(f"Error evaluating business value: {str(e)}")
-            raise

@@ -129,6 +129,8 @@ function Dashboard() {
   };
 
   const startAnalysis = async () => {
+    const startTime = Date.now();
+
     if (!Object.values(selectedAnalyses).some((value) => value)) {
       alert("Please select at least one type of analysis.");
       return;
@@ -167,28 +169,20 @@ function Dashboard() {
       const result = await response.json();
 
       if (result.status === "success") {
-        const updatedDocuments = analyzedDocuments.map((doc) =>
-          doc.id === selectedDocument.id
-            ? {
-                ...doc,
-                status: "Completed",
-                analyzed: true,
-                analyses: selectedAnalyses,
-                results: result,
-              }
-            : doc
-        );
-
-        setAnalyzedDocuments(updatedDocuments);
-        localStorage.setItem(
-          "analyzedDocuments",
-          JSON.stringify(updatedDocuments)
-        );
-        setShowAnalysisModal(false);
-        // If Full Analysis is selected, go to Report page
         if (selectedAnalyses.FullAnalysis) {
-          console.log("Navigating to report with data:", result);
-          navigate("/report", { state: { parsingResult: result } });
+          navigate("/report", {
+            state: {
+              parsingResult: result,
+              documentInfo: {
+                name: selectedDocument.name,
+                size: selectedDocument.size,
+                date: selectedDocument.date,
+                duration: `${((Date.now() - startTime) / 1000).toFixed(
+                  1
+                )} seconds`,
+              },
+            },
+          });
         } else {
           // For individual analyses, show the parsing result overlay
           navigate("/parsing-result", { state: { parsingResult: result } });

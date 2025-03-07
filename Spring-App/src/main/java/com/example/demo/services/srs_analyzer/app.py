@@ -4,6 +4,7 @@ from image_processing import ImageProcessor
 from srs_validator import SRSValidator
 from similarity_analyzer import SimilarityAnalyzer
 from references_validation.references_validator import ReferencesValidator
+from business_value_evaluator import BusinessValueEvaluator
 from flask import request, jsonify, session
 import os
 from werkzeug.utils import secure_filename
@@ -15,7 +16,6 @@ import os
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from flask_cors import CORS
-from business_value_evaluator import evaluate_business_value
 
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -335,18 +335,15 @@ def analyze_document():
         if analyses.get('BusinessValueAnalysis'):
             logger.debug("Performing business value analysis")
             try:
-                    # Parse sections only when business value analysis is enabled
-                    sections = text_processor.parse_document_sections(pdf_text)
-                    business_value_result = text_processor.extract_relevant_sections_for_llm(sections)
-                    # Call evaluate_business_value function after extracting sections
-                    evaluation_result = evaluate_business_value(business_value_result)
-                    response['business_value_analysis'] = evaluation_result
+                evaluator = BusinessValueEvaluator()
+                evaluation_result = evaluator.evaluate_business_value(pdf_text)
+                response['business_value_analysis'] = evaluation_result
             except Exception as e:
-                    logger.error(f"Business value evaluation failed: {str(e)}")
-                    response['business_value_analysis'] = {
-                        'status': 'error',
-                        'message': 'Business value analysis failed'
-                    }
+                logger.error(f"Business value evaluation failed: {str(e)}")
+                response['business_value_analysis'] = {
+                    'status': 'error',
+                    'message': 'Business value analysis failed'
+                }
 
         if analyses.get('DiagramConvention'):
             logger.debug("Running YOLO script for diagram validation")
