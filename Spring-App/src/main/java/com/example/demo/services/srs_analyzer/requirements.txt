@@ -1,14 +1,35 @@
+# Core Machine Learning & AI
 transformers
 torch
-pdfplumber
+google-cloud-aiplatform
+google-generativeai
+
+# Text Processing & NLP
+language-tool-python
+pyspellchecker
 fuzzywuzzy
-requests
-Flask
-Werkzeug
+python-Levenshtein # Required for better fuzzywuzzy performance
+# BeautifulSoup4
+bs4
+scholarly
+
+# PDF & Document Processing
+pdfplumber
+PyPDF2
+PyMuPDF # This includes fitz
+
+# Image Processing
 opencv-python
 pytesseract
-fitz
-PyMuPDF
-bs4
-google-cloud-aiplatform
-google.generativeai
+
+# Web & API
+Flask
+Werkzeug
+requests
+
+# Progress Tracking (Optional)
+tqdm
+
+# Additional Dependencies
+beautifulsoup4 # Explicit dependency for bs4
+lxml # Required by beautifulsoup4 for better parsing

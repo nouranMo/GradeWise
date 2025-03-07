@@ -270,7 +270,7 @@ function Dashboard() {
         </div>
 
         {/* Document List */}
-        <div>
+        <div className="mb-10">
           <div className="flex gap-4 mb-4">
             <div className="relative">
               <select className="flex items-center space-x-2 border rounded-md px-3 py-1.5 pr-8 text-sm text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-200 cursor-pointer">

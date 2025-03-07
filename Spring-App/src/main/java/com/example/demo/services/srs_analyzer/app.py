@@ -222,41 +222,59 @@ def analyze_document():
                 }
 
         if analyses.get('ContentAnalysis'):
-            logger.debug("Performing content analysis")
-            sections = text_processor.parse_document_sections(pdf_text)
-            
-            # Process text sections
-            for i, section in enumerate(sections):
-                try:
-                    scope = text_processor.generate_section_scope(section)
-                    all_scopes.append(scope)
-                    scope_sources.append(f"Section {i+1}")
-                    spelling_grammar = text_processor.check_spelling_and_grammar(section)
-                    spelling_grammar_results.append(spelling_grammar)
-                except Exception as e:
-                    logger.error(f"Error processing section {i+1}: {str(e)}")
-
-            # Process images for content analysis
-            image_paths = image_processor.extract_images_from_pdf(pdf_path)
-            for i, img_path in enumerate(image_paths):
-                try:
-                    image_text = image_processor.extract_text_from_image(img_path)
-                    if image_text.strip():
-                        scope = text_processor.generate_section_scope(image_text)
+            logger.info("Starting content analysis")  # Added log
+            try:
+                logger.info("Parsing document sections")
+                sections = text_processor.parse_document_sections(pdf_text)
+                logger.info(f"Successfully parsed {len(sections)} sections")  # Added log
+                
+                logger.info("Starting section scope generation")  # Added log
+                # Process text sections
+                for i, section in enumerate(sections):
+                    try:
+                        logger.info(f"Processing section {i+1}/{len(sections)}")  # Added log
+                        scope = text_processor.generate_section_scope(section)
                         all_scopes.append(scope)
-                        scope_sources.append(f"Image {i+1}")
-                        spelling_grammar = text_processor.check_spelling_and_grammar(image_text)
-                        spelling_grammar_results.append(spelling_grammar)
-                except Exception as e:
-                    logger.error(f"Error processing image {i+1}: {str(e)}")
+                        scope_sources.append(f"Section {i+1}")
+                    except Exception as e:
+                        logger.error(f"Error processing section {i+1}: {str(e)}")
+                        continue  # Continue with next section even if one fails
 
-            similarity_matrix = similarity_analyzer.create_similarity_matrix(all_scopes)
-            response['content_analysis'] = {
-                'similarity_matrix': similarity_matrix.tolist(),
-                'scope_sources': scope_sources,
-                'scopes': all_scopes,
-                'spelling_grammar': spelling_grammar_results
-            }
+                logger.info("Starting image processing")  # Added log
+                # Process images for content analysis
+                image_paths = image_processor.extract_images_from_pdf(pdf_path)
+                logger.info(f"Found {len(image_paths)} images")  # Added log
+
+                for i, img_path in enumerate(image_paths):
+                    try:
+                        logger.info(f"Processing image {i+1}/{len(image_paths)}")  # Added log
+                        image_text = image_processor.extract_text_from_image(img_path)
+                        if image_text.strip():
+                            scope = text_processor.generate_section_scope(image_text)
+                            all_scopes.append(scope)
+                            scope_sources.append(f"Image {i+1}")
+                    except Exception as e:
+                        logger.error(f"Error processing image {i+1}: {str(e)}")
+                        continue  # Continue with next image even if one fails
+
+                logger.info("Creating similarity matrix")  # Added log
+                similarity_matrix = similarity_analyzer.create_similarity_matrix(all_scopes)
+                logger.info("Similarity matrix created successfully")  # Added log
+
+                response['content_analysis'] = {
+                    'similarity_matrix': similarity_matrix.tolist(),
+                    'scope_sources': scope_sources,
+                    'scopes': all_scopes,
+                    # 'spelling_grammar': spelling_grammar_results
+                }
+                logger.info("Content analysis completed successfully")  # Added log
+
+            except Exception as e:
+                logger.error(f"Error in content analysis: {str(e)}", exc_info=True)
+                response['content_analysis'] = {
+                    'status': 'error',
+                    'message': str(e)
+                }
 
         if analyses.get('ImageAnalysis'):
             logger.debug("Processing images for image analysis")

@@ -34,19 +34,28 @@ class CitationProcessor:
             self.model = None
 
     def verify_citation_online(self, citation):
-        """Verify citation by searching online."""
         try:
             # Extract title from citation
+            title = None
             title_match = re.search(r'"([^"]+)"', citation)
-            if not title_match:
+            if title_match:
+                title = title_match.group(1)
+            else:
                 # Try to extract title from URL-based citations
                 if 'URL:' in citation:
                     title = citation.split('URL:')[0].strip()
                 else:
-                    title_match = re.search(r'^\[\d+\]\s+(?:[^,]+,\s+)?([^,]+)', citation)
+                    title_match = re.search(r'^$$\d+$$\s+(?:[^,]+,\s+)?([^,]+)', citation)
                     title = title_match.group(1) if title_match else citation
 
-            title = re.sub(r'\s+', ' ', title).strip()  # Clean up whitespace
+            if not title:
+                return {
+                    "verified": False,
+                    "source": None,
+                    "details": {"reason": "Could not extract title"}
+                }
+
+            title = re.sub(r'\s+', ' ', title).strip()
             search_url = f"https://scholar.google.com/scholar?q={urllib.parse.quote(title)}"
 
             # Skip scholarly search to improve speed
