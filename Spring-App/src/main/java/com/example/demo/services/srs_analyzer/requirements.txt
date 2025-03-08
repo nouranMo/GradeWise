@@ -12,3 +12,4 @@ PyMuPDF
 bs4
 google-cloud-aiplatform
 google.generativeai
+scholarly

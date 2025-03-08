@@ -16,6 +16,7 @@ import os
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from flask_cors import CORS
+from simple_references_validator import SimpleReferencesValidator
 
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -210,9 +211,53 @@ def analyze_document():
 
         if analyses.get('ReferencesValidation'):
             logger.debug("Performing references validation")
-            references_results = ReferencesValidator.validate_references_in_pdf(pdf_path)
-            if references_results and 'reformatted_references' in references_results:
-                response['references_validation'] = references_results
+            references_results = SimpleReferencesValidator.validate_references_in_pdf(pdf_path)
+            
+            if references_results and 'references' in references_results:
+                # Convert to the expected format
+                reformatted_references = []
+                for ref in references_results['references']:
+                    reformatted_references.append({
+                        "original": ref['reference'],
+                        "reformatted": ref['reference'],
+                        "format_check": {
+                            "valid": ref['is_valid_format'],
+                            "errors": ref['format_validation'].get('issues', []),
+                            "format": "IEEE"
+                        },
+                        "verification": {
+                            "verified": ref['verification'].get('verified', False),
+                            "source": ref['verification'].get('source', 'Web Search'),
+                            "details": {
+                                "search_url": ref['verification'].get('url', ''),
+                                "search_term": ref['verification'].get('title', '')
+                            }
+                        },
+                        "citations": {
+                            "count": ref['citation_count'],
+                            "is_cited": ref['is_cited'],
+                            "contexts": [citation['context'] for citation in ref['citations']]
+                        }
+                    })
+                
+                response['references_validation'] = {
+                    'reformatted_references': reformatted_references,
+                    'reference_validation': {
+                        'status': 'valid' if references_results['statistics']['valid_format'] == references_results['statistics']['total'] else 'invalid',
+                        'valid_count': references_results['statistics']['valid_format'],
+                        'total_count': references_results['statistics']['total']
+                    },
+                    'statistics': {
+                        'total_references': references_results['statistics']['total'],
+                        'cited_references': references_results['statistics']['cited'],
+                        'uncited_references': references_results['statistics']['uncited'],
+                        'verified_references': references_results['statistics']['verified'],
+                        'unverified_references': references_results['statistics']['unverified'],
+                        'valid_format': references_results['statistics']['valid_format'],
+                        'invalid_format': references_results['statistics']['invalid_format']
+                    },
+                    'status': references_results['status']
+                }
             else:
                 logger.error("Invalid references validation result structure")
                 response['references_validation'] = {
