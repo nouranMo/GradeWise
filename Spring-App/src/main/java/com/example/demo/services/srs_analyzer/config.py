@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class Config:
     UPLOAD_FOLDER = './uploads'
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf'}
-    GEMINI_API_KEY = "AIzaSyBUc3r8cs1f3Bj162QReYctBwbTa9uoYPI"
+    GEMINI_API_KEY = "AIzaSyDO6WpIgBA3IynSdN3bYlisi-4xBarKFxY"
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
     SECRET_KEY = '4c1b7c3e8c5c4a3d5b2e1f6a9d8c7b4a2e5f8c9b3d6a7e0f1c4b8d2e5a9c6f3'
 
