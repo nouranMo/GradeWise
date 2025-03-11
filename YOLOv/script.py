@@ -179,7 +179,7 @@ def generate_prompt(uml_json):
 # 🔹 Step 4: Ask Gemini to Validate the Diagram
 def validate_uml(json_data):
     prompt = generate_prompt(json_data)
-    model = genai.GenerativeModel("gemini-2.0-flash")  # Using Gemini Pro model
+    model = genai.GenerativeModel("gemini-1.5-flash")
     response = model.generate_content(prompt)
     return response.text
 

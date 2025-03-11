@@ -27,6 +27,7 @@ Flask
 Werkzeug
 requests
 Flask-Limiter
+ratelimit
 
 # Progress Tracking (Optional)
 tqdm

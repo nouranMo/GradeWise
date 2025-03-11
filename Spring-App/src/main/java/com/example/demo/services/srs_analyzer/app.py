@@ -199,6 +199,8 @@ def check_session():
         }), 400
 
 @app.route('/analyze_document', methods=['POST'])
+@limiter.limit("5 per minute")
+@handle_rate_limit(max_retries=3, initial_backoff=2)
 def analyze_document():
     logger.info("Starting document analysis")
     
@@ -403,7 +405,7 @@ def analyze_document():
         }), 500
     
 @app.route('/generate_recommendations', methods=['POST'])
-@limiter.limit("10 per minute")
+@limiter.limit("5 per minute")
 @handle_rate_limit(max_retries=3, initial_backoff=2)
 def generate_recommendations():
     try:
@@ -486,7 +488,7 @@ def generate_recommendations():
         def call_gemini_with_retry(prompt, max_attempts=3):
             for attempt in range(max_attempts):
                 try:
-                    model = genai.GenerativeModel("gemini-2.0-flash")
+                    model = genai.GenerativeModel("gemini-1.5-flash")
                     response = model.generate_content(prompt)
                     return response
                 except Exception as e:
