@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 from flask_cors import CORS
 
 # Configure Gemini API
-api_key = "AIzaSyBUc3r8cs1f3Bj162QReYctBwbTa9uoYPI"
+api_key = "AIzaSyDO6WpIgBA3IynSdN3bYlisi-4xBarKFxY"
 genai.configure(api_key=api_key)
 
 app = Flask(__name__)

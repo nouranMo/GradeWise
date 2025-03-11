@@ -125,7 +125,7 @@ else:
 
 
 # 🔹 Step 1: Set up Gemini API Key
-API_KEY = "AIzaSyDQ5zYTJibmzpLtWA4dFNf1sFno7bm9Mu4"  # Replace with your actual API key
+API_KEY = "AIzaSyDO6WpIgBA3IynSdN3bYlisi-4xBarKFxY"  # Replace with your actual API key
 genai.configure(api_key=API_KEY)
 
 # 🔹 Step 2: Load JSON File (UML Diagram)
