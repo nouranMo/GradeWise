@@ -1,6 +1,6 @@
 import re
-import language_tool_python
-from spellchecker import SpellChecker
+# import language_tool_python  # Commented out for performance
+# from spellchecker import SpellChecker  # Commented out for performance
 from transformers import pipeline
 import torch
 from PyPDF2 import PdfReader
@@ -9,8 +9,12 @@ from concurrent.futures import ThreadPoolExecutor
 import functools
 
 from business_value_evaluator import BusinessValueEvaluator
+
+from section_parser import SectionParser
+
 from contextlib import contextmanager
 from functools import lru_cache
+
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +51,13 @@ class TextProcessor:
         return cls._instance
 
     def __init__(self):
+
+        logger.info("Initializing TextProcessor")
+        # Commenting out spelling and grammar tools
+        # self.grammar_tool = language_tool_python.LanguageTool('en-US')
+        # self.spell_checker = SpellChecker()
+        # self.CUSTOM_TERMS = ['qanna', 'srs']
+
         if not TextProcessor._initialized:
             logger.info("Initializing TextProcessor")
             self._initialize_tools()
@@ -57,6 +68,7 @@ class TextProcessor:
         self.grammar_tool = language_tool_python.LanguageTool('en-US')
         self.spell_checker = SpellChecker()
         self.CUSTOM_TERMS = ['qanna', 'srs']
+
         self.business_value_evaluator = BusinessValueEvaluator()
 
     def _initialize_model(self):
@@ -133,6 +145,21 @@ class TextProcessor:
 
         return sections, figures
 
+    def parse_document_sections(self, text):
+        """Parse document into logical segments based on predefined sections."""
+        logger.info("Parsing document sections")
+        
+        try:
+            # Use SectionParser to get only the main sections
+            sections_dict = SectionParser.parse_sections(text)
+            
+            # Convert dictionary to list format for compatibility
+            segments = []
+            for section_title, content in sections_dict.items():
+                segment = f"{section_title}\n{content}"
+                segments.append(segment)
+                logger.debug(f"Added section: {section_title} with length: {len(segment)}")
+
     def extract_sections_with_figures(self, text: str):
         """Process text in chunks for better memory management."""
         all_sections = []
@@ -159,41 +186,7 @@ class TextProcessor:
                 return section.splitlines()[0]
         return None
 
-    def parse_document_sections(self, text: str):
-        """Optimized parsing with chunk processing and section cap."""
-        logger.info("Parsing document sections")
-        segments = []
-        MAX_SECTIONS = 40  # Add the cap here
-        
-        try:
-            # Process in chunks
-            chunks = [text[i:i+CHUNK_SIZE] for i in range(0, len(text), CHUNK_SIZE)]
-            current_segment = ""
-            
-            for chunk in chunks:
-                lines = chunk.splitlines()
-                for line in lines:
-                    if re.match(r'^\d+(\.\d+)* [A-Z]', line):
-                        if current_segment:
-                            segments.append(current_segment.strip())
-                            # Check if we've reached the maximum sections
-                            if len(segments) >= MAX_SECTIONS:
-                                logger.info(f"Reached maximum sections limit ({MAX_SECTIONS})")
-                                return segments
-                        current_segment = line + "\n"
-                    else:
-                        current_segment += line + "\n"
-
-            # Add the last segment if we haven't reached the limit
-            if current_segment and len(segments) < MAX_SECTIONS:
-                segments.append(current_segment.strip())
-
-            logger.info(f"Parsed {len(segments)} sections (capped at {MAX_SECTIONS})")
-            return segments
-        except Exception as e:
-            logger.error(f"Error parsing document sections: {str(e)}")
-            raise
-
+    
     def parse_document_sections_with_pages(self, pdf_path: str):
         logger.info("Parsing document sections with page numbers")
         sections = []
@@ -218,104 +211,62 @@ class TextProcessor:
             raise
 
     @async_operation
-    def generate_section_scope(self, text: str):
+
+    def generate_section_scope(self, text):
+        """Generate a scope/summary for a section of text."""
+
         try:
+            # If no summarizer available, use simple truncation
             if self.summarizer is None:
                 words = text.split()
                 return ' '.join(words[:100]) + '...' if len(words) > 100 else text
 
+
+            # Clean and truncate text if too long
+            text = text.strip()
+            words = text.split()
+            if len(words) > 1000:  # Truncate to avoid model sequence length issues
+                text = ' '.join(words[:1000]) + '...'
+
+            # Calculate appropriate lengths based on input
             text_length = len(text.split())
-            max_length = min(100, text_length)  # Cap at 100 or text length
-            min_length = min(30, max_length - 1)
+            max_length = min(100, text_length)  # Never longer than input
+            min_length = min(30, max_length - 1)  # Ensure min < max
+
+            if max_length < min_length:
+                logger.warning(f"Text too short for summarization: {text_length} words")
+                return text  # Return original text if too short
 
             summary = self.summarizer(
                 text,
                 max_length=max_length,
                 min_length=min_length,
-                do_sample=False
+                do_sample=False,
+                truncation=True
             )[0]['summary_text']
 
             return summary
+
         except Exception as e:
             logger.error(f"Error generating scope: {str(e)}")
-            return text[:200] + '...' if len(text) > 200 else text
+            # Fallback to simple truncation
+            return text[:500] + '...' if len(text) > 500 else text
 
     @async_operation
-    def check_spelling_and_grammar(self, text: str):
+
+    def check_spelling_and_grammar(self, text):
+        """Check spelling and grammar with limits."""
+        logger.debug("Spelling and grammar checking disabled for performance")
+        return {}, []  # Return empty results since checking is disabled
+
+    @async_operation
+    def evaluate_business_value(self, text):
+        """
+        Evaluate the business value of a given text.
+        """
+        logger.info("Evaluating business value of text...")
         try:
-            # Split into chunks instead of truncating
-            chunks = [text[i:i+CHUNK_SIZE] for i in range(0, len(text), CHUNK_SIZE)]
-            
-            all_misspelled = {}
-            all_grammar = []
-            
-            # Process chunks in parallel
-            with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-                chunk_futures = []
-                for chunk in chunks:
-                    future = executor.submit(self._process_chunk, chunk)
-                    chunk_futures.append(future)
-                
-                # Collect results as they complete
-                for future in chunk_futures:
-                    misspelled, grammar = future.result()
-                    all_misspelled.update(misspelled)
-                    all_grammar.extend(grammar)
-
-            logger.debug(f"Found {len(all_misspelled)} spelling issues and {len(all_grammar)} grammar issues")
-            return all_misspelled, all_grammar
-
-        except Exception as e:
-            logger.error(f"Error in spelling/grammar check: {str(e)}")
-            return {}, []
-
-    def _process_chunk(self, chunk: str):
-        """Process a single chunk of text"""
-        try:
-            # Clean text
-            chunk = re.sub(r'(\w)- (\w)', r'\1\2', chunk)
-            chunk = re.sub(r'(\w)-\s+(\w)', r'\1\2', chunk)
-            clean_text = re.sub(r'[^\w\s\'-]', '', chunk)
-
-            # Cache spell checking results
-            @lru_cache(maxsize=1000)
-            def check_word(word):
-                return word.lower() in self.spell_checker.known([word.lower()])
-
-            words = clean_text.split()
-            misspelled = {
-                word: self.spell_checker.correction(word)
-                for word in words
-                if not check_word(word)
-                and word.lower() not in self.CUSTOM_TERMS 
-                and not re.match(r"\w+'s$", word)
-            }
-
-            misspelled = {word: correction
-                        for word, correction in misspelled.items()
-                        if correction is not None and word.lower() not in self.CUSTOM_TERMS}
-
-            # Add custom terms
-            for term in self.CUSTOM_TERMS:
-                if term in words:
-                    misspelled[term] = term
-
-            # Limit grammar checking to essential rules
-            grammar_issues = [
-                issue for issue in self.grammar_tool.check(chunk)
-                if not issue.message.lower().startswith("possible spelling mistake")
-                and issue.category in ['GRAMMAR', 'TYPOS', 'PUNCTUATION']
-            ]
-
-            grammar_suggestions = []
-            for issue in grammar_issues[:5]:  # Limit suggestions per chunk
-                grammar_suggestions.append({
-                    "message": issue.message,
-                    "context": issue.context[:100],  # Limit context length
-                    "replacements": issue.replacements[:3]  # Limit number of replacements
-                })
-
-            return misspelled, grammar_suggestions
+            return self.business_value_evaluator.evaluate_business_value(text)
 
         except Exception as e:
             logger.error(f"Error processing chunk: {str(e)}")
