@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
-import Navbar from '../layout/Navbar/Navbar';
-import { useNavigate } from 'react-router-dom'; // Import navigate hook
+import React, { useState } from "react";
+import Navbar from "components/layout/Navbar/Navbar";
+import { useNavigate } from "react-router-dom";
 
 function SectionExtraction() {
   const [pdfFile, setPdfFile] = useState(null);
-  const navigate = useNavigate(); // Use the navigate function
+  const navigate = useNavigate();
 
   // Handle file selection
   const handleFileChange = (e) => {
     setPdfFile(e.target.files[0]);
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '0 MB';
+    const MB = bytes / (1024 * 1024); // Convert bytes to MB
+    return `${MB.toFixed(2)} MB`; // Always show 2 decimal places
   };
 
   // Handle form submission
@@ -16,35 +22,42 @@ function SectionExtraction() {
     e.preventDefault();
 
     if (!pdfFile) {
-      alert('Please upload a PDF file');
+      alert("Please upload a PDF file");
       return;
     }
 
     const formData = new FormData();
-    formData.append('pdfFile', pdfFile);
-
-    console.log('Uploading file:', pdfFile);
+    formData.append("pdfFile", pdfFile);
 
     try {
-      const response = await fetch('http://localhost:5001/upload_pdf', {
-        method: 'POST',
+      const response = await fetch("http://localhost:5001/upload_pdf", {
+        method: "POST",
         body: formData,
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Validation Results:', data);
 
-        // Pass both parsed data and validation results using navigate
-        navigate('/report', { state: { parsedData: data.parsed_srs, validationResults: data.validation_results } });
+        // Include document info when navigating
+        navigate("/report", {
+          state: {
+            parsingResult: data.validation_results,
+            documentInfo: {
+              name: pdfFile.name,
+              size: formatFileSize(pdfFile.size),
+              date: new Date().toLocaleDateString(),
+              duration: "Just now",
+            },
+          },
+        });
       } else {
         const errorData = await response.json();
-        console.error('Error response from server:', errorData);
+        console.error("Error response from server:", errorData);
         alert(`Error: ${errorData.error}`);
       }
     } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('An error occurred while uploading the file');
+      console.error("Error uploading file:", error);
+      alert("An error occurred while uploading the file");
     }
   };
 
@@ -57,7 +70,10 @@ function SectionExtraction() {
 
       {/* Page Content */}
       <Navbar />
-      <form onSubmit={handleSubmit} className="relative z-10 flex flex-col justify-center items-center gap-6 mt-10 p-6 bg-white bg-opacity-20 rounded-lg shadow-lg w-80 mx-auto">
+      <form
+        onSubmit={handleSubmit}
+        className="relative z-10 flex flex-col justify-center items-center gap-6 mt-10 p-6 bg-white bg-opacity-20 rounded-lg shadow-lg w-80 mx-auto"
+      >
         <label className="text-sky-100 text-lg font-poppins">PDF File</label>
         <input
           type="file"

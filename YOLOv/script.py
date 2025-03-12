@@ -125,7 +125,7 @@ else:
 
 
 # 🔹 Step 1: Set up Gemini API Key
-API_KEY = "AIzaSyDQ5zYTJibmzpLtWA4dFNf1sFno7bm9Mu4"  # Replace with your actual API key
+API_KEY = "AIzaSyDO6WpIgBA3IynSdN3bYlisi-4xBarKFxY"  # Replace with your actual API key
 genai.configure(api_key=API_KEY)
 
 # 🔹 Step 2: Load JSON File (UML Diagram)
@@ -179,7 +179,7 @@ def generate_prompt(uml_json):
 # 🔹 Step 4: Ask Gemini to Validate the Diagram
 def validate_uml(json_data):
     prompt = generate_prompt(json_data)
-    model = genai.GenerativeModel("gemini-2.0-flash")  # Using Gemini Pro model
+    model = genai.GenerativeModel("gemini-1.5-flash")
     response = model.generate_content(prompt)
     return response.text
 

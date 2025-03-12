@@ -3,6 +3,41 @@ import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import Navbar from "components/layout/Navbar/Navbar";
 
+const DeleteConfirmationModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  documentName,
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
+        <h2 className="text-xl font-semibold mb-4">Confirm Deletion</h2>
+        <p className="mb-6 text-gray-600">
+          Are you sure you want to delete "{documentName}"? This action cannot
+          be undone.
+        </p>
+        <div className="flex justify-end space-x-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function Dashboard() {
   const [analyzedDocuments, setAnalyzedDocuments] = useState([]);
   const [selectedAnalyses, setSelectedAnalyses] = useState({
@@ -17,6 +52,9 @@ function Dashboard() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -74,10 +112,19 @@ function Dashboard() {
     return MB.toFixed(2) + " MB"; // Show 2 decimal places
   };
 
-  const handleDeleteDocument = (docId) => {
-    const updatedDocs = analyzedDocuments.filter((doc) => doc.id !== docId);
+  const handleDeleteClick = (doc) => {
+    setDocumentToDelete(doc);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteDocument = () => {
+    const updatedDocs = analyzedDocuments.filter(
+      (doc) => doc.id !== documentToDelete.id
+    );
     setAnalyzedDocuments(updatedDocs);
     localStorage.setItem("analyzedDocuments", JSON.stringify(updatedDocs));
+    setShowDeleteModal(false);
+    setDocumentToDelete(null);
   };
 
   const handleDocumentClick = (document) => {
@@ -86,12 +133,6 @@ function Dashboard() {
         state: { parsingResult: document.results },
       });
     }
-  };
-
-  const areAllAnalysesSelected = (analyses) => {
-    return Object.entries(analyses).every(
-      ([key, value]) => key === "FullAnalysis" || value === true
-    );
   };
 
   const handleFullAnalysisChange = (checked) => {
@@ -129,6 +170,8 @@ function Dashboard() {
   };
 
   const startAnalysis = async () => {
+    const startTime = Date.now();
+
     if (!Object.values(selectedAnalyses).some((value) => value)) {
       alert("Please select at least one type of analysis.");
       return;
@@ -167,28 +210,20 @@ function Dashboard() {
       const result = await response.json();
 
       if (result.status === "success") {
-        const updatedDocuments = analyzedDocuments.map((doc) =>
-          doc.id === selectedDocument.id
-            ? {
-                ...doc,
-                status: "Completed",
-                analyzed: true,
-                analyses: selectedAnalyses,
-                results: result,
-              }
-            : doc
-        );
-
-        setAnalyzedDocuments(updatedDocuments);
-        localStorage.setItem(
-          "analyzedDocuments",
-          JSON.stringify(updatedDocuments)
-        );
-        setShowAnalysisModal(false);
-        // If Full Analysis is selected, go to Report page
         if (selectedAnalyses.FullAnalysis) {
-          console.log("Navigating to report with data:", result);
-          navigate("/report", { state: { parsingResult: result } });
+          navigate("/report", {
+            state: {
+              parsingResult: result,
+              documentInfo: {
+                name: selectedDocument.name,
+                size: selectedDocument.size,
+                date: selectedDocument.date,
+                duration: `${((Date.now() - startTime) / 1000).toFixed(
+                  1
+                )} seconds`,
+              },
+            },
+          });
         } else {
           // For individual analyses, show the parsing result overlay
           navigate("/parsing-result", { state: { parsingResult: result } });
@@ -270,7 +305,7 @@ function Dashboard() {
         </div>
 
         {/* Document List */}
-        <div>
+        <div className="mb-10">
           <div className="flex gap-4 mb-4">
             <div className="relative">
               <select className="flex items-center space-x-2 border rounded-md px-3 py-1.5 pr-8 text-sm text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-200 cursor-pointer">
@@ -343,7 +378,7 @@ function Dashboard() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteDocument(doc.id);
+                      handleDeleteClick(doc);
                     }}
                     className="text-gray-400 hover:text-red-500 transition-colors duration-300 ease-in-out"
                   >
@@ -365,6 +400,12 @@ function Dashboard() {
               </div>
             ))
           )}
+          <DeleteConfirmationModal
+            isOpen={showDeleteModal}
+            onClose={() => setShowDeleteModal(false)}
+            onConfirm={handleDeleteDocument}
+            documentName={documentToDelete?.name}
+          />
         </div>
 
         {/* Analysis Modal */}

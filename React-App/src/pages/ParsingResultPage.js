@@ -1,10 +1,13 @@
 import React from "react";
+import ReactMarkdown from "react-markdown";
+
 import { useLocation, useNavigate } from "react-router-dom";
 
 function ParsingResult() {
   const location = useLocation();
   const navigate = useNavigate();
   const { parsingResult } = location.state || {};
+
 
   // Debug log for references validation
   React.useEffect(() => {
@@ -15,6 +18,7 @@ function ParsingResult() {
       );
     }
   }, [parsingResult]);
+
 
   if (!parsingResult || parsingResult.status === "error") {
     return (
@@ -100,6 +104,7 @@ function ParsingResult() {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
               References Analysis
             </h2>
+
 
             {/* Debug information - remove in production */}
             {process.env.NODE_ENV !== "production" && (
@@ -287,6 +292,7 @@ function ParsingResult() {
                     )}
                   </pre>
                 </div>
+
               )}
             </div>
           </div>
@@ -295,6 +301,7 @@ function ParsingResult() {
         {/* Content Analysis */}
         {parsingResult.content_analysis && (
           <div className="bg-white rounded-lg shadow-lg p-6">
+
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
               <svg
                 className="w-6 h-6 mr-2"
@@ -309,10 +316,12 @@ function ParsingResult() {
                   d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                 />
               </svg>
+
               Content Analysis
             </h2>
 
             {/* Similarity Matrix */}
+
             {parsingResult.content_analysis.similarity_matrix &&
               parsingResult.content_analysis.scope_sources && (
                 <div className="mb-8">
@@ -495,6 +504,97 @@ function ParsingResult() {
             </div>
           </div>
         )}
+
+            {/* Spelling and Grammar */}
+            {parsingResult.content_analysis.spelling_grammar &&
+              parsingResult.content_analysis.spelling_grammar.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-semibold mb-3">
+                    Spelling and Grammar
+                  </h3>
+                  {parsingResult.content_analysis.spelling_grammar.map(
+                    (result, index) => (
+                      <div
+                        key={index}
+                        className="mb-4 p-4 bg-gray-50 rounded-lg"
+                      >
+                        <h4 className="font-medium mb-2">
+                          {parsingResult.content_analysis.scope_sources[
+                            index
+                          ] || `Section ${index + 1}`}
+                        </h4>
+                        {result.misspelled &&
+                          Object.keys(result.misspelled).length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-sm font-medium text-red-600">
+                                Spelling Issues:
+                              </p>
+                              <ul className="list-disc list-inside">
+                                {Object.entries(result.misspelled).map(
+                                  ([word, suggestion], i) => (
+                                    <li key={i} className="text-sm">
+                                      {word} → {suggestion}
+                                    </li>
+                                  )
+                                )}
+                              </ul>
+                            </div>
+                          )}
+                        {result.grammar_suggestions &&
+                          result.grammar_suggestions.length > 0 && (
+                            <div>
+                              <p className="text-sm font-medium text-orange-600">
+                                Grammar Issues:
+                              </p>
+                              <ul className="list-disc list-inside">
+                                {result.grammar_suggestions.map((issue, i) => (
+                                  <li key={i} className="text-sm">
+                                    {issue.message}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+          </div>
+        )}
+        {/* Business Value Analysis */}
+        {parsingResult?.business_value_analysis && (
+          <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">
+              Business Value Analysis
+            </h2>
+            <div className="prose prose-lg text-gray-700 max-w-none">
+              <ReactMarkdown>
+                {(() => {
+                  const evaluation =
+                    parsingResult.business_value_analysis[
+                      "Business Value Evaluation"
+                    ];
+                  if (!evaluation)
+                    return "No business value evaluation available";
+                  try {
+                    return evaluation.replace(
+                      /^### Business Value Evaluation\s*/,
+                      ""
+                    );
+                  } catch (error) {
+                    console.error(
+                      "Error processing business value evaluation:",
+                      error
+                    );
+                    return String(evaluation); // Convert to string if it's not already
+                  }
+                })()}
+              </ReactMarkdown>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
@@ -516,6 +616,7 @@ function StatCard({ title, value, color }) {
 }
 
 function ReferenceCard({ reference, index }) {
+
   // Check if reference is an object or a string
   const isObject = typeof reference === "object" && reference !== null;
 
@@ -546,6 +647,7 @@ function ReferenceCard({ reference, index }) {
     setShowCitations(!showCitations);
   };
 
+
   return (
     <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-3">
@@ -556,6 +658,7 @@ function ReferenceCard({ reference, index }) {
             color={formatCheck.valid ? "green" : "red"}
           />
           <Badge
+
             text={citations.is_cited ? `Cited (${citations.count})` : "Uncited"}
             color={citations.is_cited ? "green" : "red"}
             onClick={citations.is_cited ? toggleCitations : undefined}
@@ -564,6 +667,7 @@ function ReferenceCard({ reference, index }) {
             }
           />
           <Badge
+
             text={verification.verified ? "Verified Online" : "Unverified"}
             color={verification.verified ? "green" : "yellow"}
             onClick={
@@ -575,7 +679,6 @@ function ReferenceCard({ reference, index }) {
           />
         </div>
       </div>
-
       <div className="space-y-2">
         {isObject && (
           <>
@@ -668,11 +771,13 @@ function ReferenceCard({ reference, index }) {
                   ))}
                 </div>
               )}
+
             </div>
           )}
       </div>
     </div>
   );
+
 }
 
 function EnhancedReferenceCard({ reference, validationDetails }) {

@@ -1,119 +1,128 @@
+import json
+import google.generativeai as genai
 import logging
-import openai
-from concurrent.futures import ThreadPoolExecutor
-import functools
-import time
-import random
-from functools import wraps, lru_cache
-from dotenv import load_dotenv
-import os
-
-
-load_dotenv()
-openai.api_key = os.getenv("api_key")
 
 logger = logging.getLogger(__name__)
 
-# Rate Limiting Decorator
-def rate_limited(max_per_minute):
-    """
-    Decorator to limit the number of API calls per minute.
-    """
-    min_interval = 60.0 / max_per_minute
-
-    def decorate(func):
-        last_time_called = 0.0
-
-        @wraps(func)
-        def rate_limited_function(*args, **kwargs):
-            nonlocal last_time_called
-            elapsed = time.time() - last_time_called
-            wait_time = min_interval - elapsed
-
-            if wait_time > 0:
-                time.sleep(wait_time)
-
-            last_time_called = time.time()
-            return func(*args, **kwargs)
-
-        return rate_limited_function
-
-    return decorate
-
-# Exponential Backoff Decorator
-def exponential_backoff(retries=3, initial_delay=1.0):
-    """
-    Decorator to retry a function with exponential backoff.
-    """
-    def decorate(func):
-        @wraps(func)
-        def retry_function(*args, **kwargs):
-            delay = initial_delay
-            for attempt in range(retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    if "RATE_LIMIT_EXCEEDED" in str(e) and attempt < retries - 1:
-                        time.sleep(delay + random.uniform(0, 1))  # Add jitter
-                        delay *= 2  # Double the delay
-                    else:
-                        raise
-        return retry_function
-    return decorate
-
-# Async Operation Decorator
-def async_operation(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        with ThreadPoolExecutor() as executor:
-            future = executor.submit(func, *args, **kwargs)
-            return future.result()
-    return wrapper
-
-# BusinessValueEvaluator Class
 class BusinessValueEvaluator:
     def __init__(self):
-        """
-        Initialize the BusinessValueEvaluator.
-        """
-        logger.info("Initializing BusinessValueEvaluator")
+        pass
 
-    @lru_cache(maxsize=100)  # Cache up to 100 responses
-    @rate_limited(max_per_minute=30)  # Apply rate limiting
-    @exponential_backoff(retries=3, initial_delay=1.0)  # Apply exponential backoff
-    @async_operation  # Make the function asynchronous
-    def evaluate_business_value(self, text):
+    def extract_relevant_sections_for_llm(self, text: str) -> dict:
         """
-        Evaluate the business value of a given text (e.g., system scope or document).
-        Returns a business value score and explanation.
+        Extract relevant sections from the text for business value analysis.
+        Returns a dictionary of section titles and their content.
         """
-        logger.info("Evaluating business value...")
+        logger.info("Extracting relevant sections for business value analysis")
         try:
-            prompt = (
-                f"Analyze the following text and evaluate its business value based on:\n"
-                f"1. Alignment with business goals\n"
-                f"2. Feasibility and cost-effectiveness\n"
-                f"3. Innovation and competitive advantage\n"
-                f"4. Scalability and maintainability\n"
-                f"5. Compliance with industry standards\n\n"
-                f"Text:\n"
-                f"{text}\n\n"
-                f"Provide a business value score (1-10) and a short explanation."
-            )
-            logger.debug(f"Prompt sent to OpenAI: {prompt[:200]}...")  # Log first 200 chars of prompt
+            relevant_sections = {}
+            relevant_keywords = [
+                'introduction', 'overview', 'scope', 'purpose',
+                'business', 'requirements', 'objectives', 'goals',
+                'market', 'stakeholders', 'benefits', 'value',
+                'executive summary'
+            ]
 
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",  # Use GPT-4 Turbo
-                messages=[
-                    {"role": "system", "content": "You are an expert in evaluating business documents."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7  # Adjust for creativity vs. consistency
-            )
+            # Split text into sections based on numbered headings
+            sections = text.split('\n')
+            current_section = None
+            current_content = []
 
-            result = response["choices"][0]["message"]["content"]
-            logger.info("Business value evaluation completed.")
-            return result
+            for line in sections:
+                # Check for section headers (numbered format like "1.", "1.1", etc.)
+                if any(line.strip().lower().startswith(str(i) + '.') for i in range(1, 10)):
+                    # Save previous section if exists
+                    if current_section and current_content:
+                        content = '\n'.join(current_content).strip()
+                        if content:
+                            relevant_sections[current_section] = content
+                    
+                    current_section = line.strip()
+                    current_content = []
+                else:
+                    if current_section:
+                        current_content.append(line)
+
+            # Add the last section
+            if current_section and current_content:
+                content = '\n'.join(current_content).strip()
+                if content:
+                    relevant_sections[current_section] = content
+
+            # Filter sections based on relevant keywords
+            filtered_sections = {
+                title: content
+                for title, content in relevant_sections.items()
+                if any(keyword in title.lower() for keyword in relevant_keywords)
+            }
+
+            if not filtered_sections:
+                logger.warning("No relevant sections found for business value analysis")
+                # Take first few sections if no relevant sections found
+                items = list(relevant_sections.items())[:3]
+                filtered_sections = dict(items)
+
+            logger.info(f"Extracted {len(filtered_sections)} relevant sections")
+            return filtered_sections
+
         except Exception as e:
-            logger.error(f"Error evaluating business value: {str(e)}")
-            raise RuntimeError(f"Error evaluating business value: {str(e)}")
+            logger.error(f"Error extracting relevant sections: {str(e)}")
+            return {}
+        
+    def evaluate_business_value(self, text: str):
+        """Load extracted sections, format prompt, and send to LLM for evaluation."""
+        # First extract relevant sections
+        extracted_data = self.extract_relevant_sections_for_llm(text)
+        
+        if not extracted_data:
+            logger.warning("No relevant sections found for evaluation.")
+            return {"status": "error", "message": "No relevant sections found."}
+
+        document_content = "\n\n".join(
+            f"## {section} ##\n{content}" for section, content in extracted_data.items()
+        )
+
+        prompt = (
+            "You are an expert in evaluating Software Requirement Specifications (SRS) for business value.\n"
+            "Analyze the following extracted content from an SRS document and provide a *concise overall evaluation* "
+            "with a strict limit of *2 sentences per point* based on:\n"
+            "- *Uniqueness*\n"
+            "- *Market usefulness*\n"
+            "- *Feasibility*\n"
+            "- *Profitability*\n\n"
+            "### Extracted SRS Content ###\n"
+            f"{document_content}\n\n"
+            "### Business Value Evaluation ###\n"
+            "Provide a structured evaluation as follows *(maximum 2 sentences per point)*:\n\n"
+            "* *Uniqueness:* [Brief evaluation in 2 sentences]\n"
+            "* *Market Usefulness:* [Brief evaluation in 2 sentences]\n"
+            "* *Feasibility:* [Brief evaluation in 2 sentences]\n"
+            "* *Profitability:* [Brief evaluation in 2 sentences]\n\n"
+            "Additionally:\n"
+            "- Assign an *overall business value rating (1 to 10)*, where 1 is poor and 10 is excellent.\n"
+            "- Categorize the rating as:\n"
+            "  * *Very High* (9-10)\n"
+            "  * *High* (7-8)\n"
+            "  * *Moderate* (5-6)\n"
+            "  * *Low* (3-4)\n"
+            "  * *Very Low* (1-2)\n"
+        )
+
+        try:
+            # Send the prompt to the LLM
+            model = genai.GenerativeModel("gemini-2.0-flash") 
+            response = model.generate_content(prompt)
+
+            # Extract and print LLM response
+            evaluation_result = response.text
+            logger.info("Business value evaluation completed successfully")
+            return {
+                "status": "success",
+                "Business Value Evaluation": evaluation_result
+            }
+        except Exception as e:
+            logger.error(f"Error in LLM evaluation: {str(e)}")
+            return {
+                "status": "error",
+                "message": f"Error during evaluation: {str(e)}"
+            }

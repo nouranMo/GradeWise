@@ -4,12 +4,17 @@ from image_processing import ImageProcessor
 from srs_validator import SRSValidator
 from similarity_analyzer import SimilarityAnalyzer
 from references_validation.references_validator import ReferencesValidator
+from business_value_evaluator import BusinessValueEvaluator
 from flask import request, jsonify, session
+import google.generativeai as genai
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from functools import wraps
+import time
 import os
 from werkzeug.utils import secure_filename
 import logging
 import json
-from business_value_evaluator import BusinessValueEvaluator 
 import subprocess
 import sys
 import os
@@ -45,6 +50,8 @@ spec.loader.exec_module(script)
 # Now you can use process_image from script
 process_image = script.process_image
 
+genai.configure(api_key=Config.GEMINI_API_KEY)
+
 logger = logging.getLogger(__name__)
 
 app = create_app()
@@ -64,7 +71,37 @@ GOOGLE_CLIENT_ID = Config.GOOGLE_CLIENT_ID
 text_processor = TextProcessor()
 image_processor = ImageProcessor()
 similarity_analyzer = SimilarityAnalyzer()
-business_evaluator = BusinessValueEvaluator()
+
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
+def handle_rate_limit(max_retries=3, initial_backoff=1):
+    def decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            retries = 0
+            while retries < max_retries:
+                try:
+                    return f(*args, **kwargs)
+                except Exception as e:
+                    if "RATE_LIMIT_EXCEEDED" in str(e):
+                        wait_time = initial_backoff * (2 ** retries)
+                        logger.warning(f"Rate limit exceeded. Retrying in {wait_time} seconds. Attempt {retries + 1}/{max_retries}")
+                        time.sleep(wait_time)
+                        retries += 1
+                    else:
+                        raise e
+            
+            # If we've exhausted all retries
+            return jsonify({
+                'status': 'error',
+                'message': 'Rate limit exceeded after maximum retries'
+            }), 429
+        return wrapped
+    return decorator
 
 @app.after_request
 def after_request(response):
@@ -163,6 +200,8 @@ def check_session():
         }), 400
 
 @app.route('/analyze_document', methods=['POST'])
+@limiter.limit("5 per minute")
+@handle_rate_limit(max_retries=3, initial_backoff=2)
 def analyze_document():
     logger.info("Starting document analysis")
     
@@ -267,6 +306,7 @@ def analyze_document():
                 }
 
         if analyses.get('ContentAnalysis'):
+
             logger.debug("Performing content analysis")
             sections = text_processor.parse_document_sections(pdf_text)
             
@@ -357,35 +397,9 @@ def analyze_document():
         if analyses.get('BusinessValueAnalysis'):
             logger.debug("Performing business value analysis")
             try:
-                # Analyze business value aspects
-                value_metrics = business_evaluator.evaluate_business_value(pdf_text)
-                
-                # Analyze cost implications
-                cost_analysis = business_evaluator.analyze_cost_implications(pdf_text)
-                
-                # Analyze market potential
-                market_analysis = business_evaluator.analyze_market_potential(pdf_text)
-                
-                # Analyze implementation feasibility
-                feasibility = business_evaluator.assess_implementation_feasibility(pdf_text)
-                
-                # Combine all business analyses
-                business_value_result = {
-                    'status': 'success',
-                    'value_metrics': value_metrics,
-                    'cost_analysis': cost_analysis,
-                    'market_analysis': market_analysis,
-                    'implementation_feasibility': feasibility,
-                    'overall_score': business_evaluator.calculate_overall_score(
-                        value_metrics, cost_analysis, market_analysis, feasibility
-                    ),
-                    'recommendations': business_evaluator.generate_recommendations(
-                        value_metrics, cost_analysis, market_analysis, feasibility
-                    )
-                }
-                
-                response['business_value_analysis'] = business_value_result
-                
+                evaluator = BusinessValueEvaluator()
+                evaluation_result = evaluator.evaluate_business_value(pdf_text)
+                response['business_value_analysis'] = evaluation_result
             except Exception as e:
                 logger.error(f"Business value evaluation failed: {str(e)}")
                 response['business_value_analysis'] = {
@@ -411,6 +425,124 @@ def analyze_document():
             'error': str(e),
             'status': 'error'
         }), 500
+    
+@app.route('/generate_recommendations', methods=['POST'])
+@limiter.limit("5 per minute")
+@handle_rate_limit(max_retries=3, initial_backoff=2)
+def generate_recommendations():
+    try:
+        data = request.json
+        parsing_result = data.get('parsingResult')
+        
+        if not parsing_result:
+            return jsonify({
+                'status': 'error',
+                'message': 'No parsing result provided'
+            }), 400
+        
+        current_time = time.time()
+        if hasattr(generate_recommendations, 'last_call_time'):
+            time_diff = current_time - generate_recommendations.last_call_time
+            if time_diff < 0.1:  # Minimum 100ms between API calls
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Too many requests, please slow down'
+                }), 429
+        
+        generate_recommendations.last_call_time = current_time
+
+        # Format analysis summary
+        summary = []
+        
+        # Business Value Analysis
+        if "business_value_analysis" in parsing_result:
+            summary.append("Business Value Analysis:")
+            summary.append(parsing_result["business_value_analysis"].get("Business Value Evaluation", "Not available"))
+
+        # SRS Structure
+        if "srs_validation" in parsing_result:
+            srs = parsing_result["srs_validation"]
+            if "structure_validation" in srs:
+                summary.append("\nSRS Structure:")
+                summary.append(f"Missing sections: {', '.join(srs['structure_validation'].get('missing_sections', []))}")
+                summary.append(f"Present sections: {', '.join(srs['structure_validation'].get('matching_sections', []))}")
+
+        # References
+        if "references_validation" in parsing_result:
+            summary.append("\nReferences Analysis:")
+            refs = parsing_result["references_validation"]
+            if "reformatted_references" in refs:
+                issues = sum(1 for ref in refs["reformatted_references"] if ref.get("errors"))
+                summary.append(f"Found {issues} references with formatting issues")
+
+        # Content Analysis
+        if "content_analysis" in parsing_result:
+            summary.append("\nContent Analysis:")
+            if "similarity_matrix" in parsing_result["content_analysis"]:
+                summary.append("Content similarity analysis completed")
+
+        # Image Analysis
+        if "image_analysis" in parsing_result:
+            summary.append("\nImage Analysis:")
+            images = parsing_result["image_analysis"].get("processed_images", [])
+            summary.append(f"Analyzed {len(images)} images")
+
+        analysis_summary = "\n".join(summary)
+
+        # Generate recommendations using Gemini
+        prompt = f"""
+        As an expert SRS document analyzer, review these analysis results and provide specific, actionable recommendations.
+        Focus on improvements across all analyzed aspects.
+
+        Analysis Results:
+        {analysis_summary}
+
+        Generate 3-5 specific recommendations that:
+        1. Address the most critical issues first
+        2. Suggest concrete improvements
+        3. Acknowledge strong points that should be maintained
+        4. Consider both technical and business aspects
+
+        Format each recommendation as a clear, actionable item.
+        Use markdown bullet points (*) for each recommendation.
+        """
+
+        def call_gemini_with_retry(prompt, max_attempts=3):
+            for attempt in range(max_attempts):
+                try:
+                    model = genai.GenerativeModel("gemini-1.5-flash")
+                    response = model.generate_content(prompt)
+                    return response
+                except Exception as e:
+                    if "RATE_LIMIT_EXCEEDED" in str(e):
+                        if attempt < max_attempts - 1:
+                            wait_time = 2 ** attempt
+                            logger.warning(f"Gemini API rate limit hit. Waiting {wait_time} seconds...")
+                            time.sleep(wait_time)
+                            continue
+                    raise e
+
+        response = call_gemini_with_retry(prompt)
+
+        return jsonify({
+            'status': 'success',
+            'recommendations': response.text
+        })
+
+    except Exception as e:
+        logger.error(f"Error generating recommendations: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+    
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({
+        'status': 'error',
+        'message': 'Rate limit exceeded. Please try again later.',
+        'retry_after': e.description
+    }), 429
 
 if __name__ == '__main__':
     logger.info("Starting Flask server on port 5000")
