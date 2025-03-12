@@ -7,7 +7,7 @@ from PyPDF2 import PdfReader
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import functools
-
+import google.generativeai as genai
 from business_value_evaluator import BusinessValueEvaluator
 
 from section_parser import SectionParser
@@ -15,6 +15,8 @@ from section_parser import SectionParser
 from contextlib import contextmanager
 from functools import lru_cache
 
+# Disable spell checking by default
+SPELLCHECK_ENABLED = False
 
 logger = logging.getLogger(__name__)
 
@@ -51,25 +53,21 @@ class TextProcessor:
         return cls._instance
 
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
+        # Spell checking disabled for performance
+        self.grammar_tool = None
+        self.spell_checker = None
 
         logger.info("Initializing TextProcessor")
-        # Commenting out spelling and grammar tools
-        # self.grammar_tool = language_tool_python.LanguageTool('en-US')
-        # self.spell_checker = SpellChecker()
-        # self.CUSTOM_TERMS = ['qanna', 'srs']
-
         if not TextProcessor._initialized:
             logger.info("Initializing TextProcessor")
-            self._initialize_tools()
+            # Removed spell checking initialization
             self._initialize_model()
             TextProcessor._initialized = True
         
     def _initialize_tools(self):
-        self.grammar_tool = language_tool_python.LanguageTool('en-US')
-        self.spell_checker = SpellChecker()
-        self.CUSTOM_TERMS = ['qanna', 'srs']
-
-        self.business_value_evaluator = BusinessValueEvaluator()
+        # Spell checking disabled for performance
+        pass
 
     def _initialize_model(self):
         try:
@@ -159,6 +157,11 @@ class TextProcessor:
                 segment = f"{section_title}\n{content}"
                 segments.append(segment)
                 logger.debug(f"Added section: {section_title} with length: {len(segment)}")
+            
+            return segments
+        except Exception as e:
+            logger.error(f"Error parsing document sections: {e}")
+            return []
 
     def extract_sections_with_figures(self, text: str):
         """Process text in chunks for better memory management."""
@@ -211,53 +214,48 @@ class TextProcessor:
             raise
 
     @async_operation
-
     def generate_section_scope(self, text):
-        """Generate a scope/summary for a section of text."""
-
+        """Generate a concise scope for a section of text."""
         try:
-            # If no summarizer available, use simple truncation
-            if self.summarizer is None:
-                words = text.split()
-                return ' '.join(words[:100]) + '...' if len(words) > 100 else text
-
-
-            # Clean and truncate text if too long
-            text = text.strip()
+            # Truncate text to avoid model sequence length issues
             words = text.split()
-            if len(words) > 1000:  # Truncate to avoid model sequence length issues
-                text = ' '.join(words[:1000]) + '...'
-
-            # Calculate appropriate lengths based on input
+            if len(words) > 1000:
+                text = ' '.join(words[:1000])
+                logger.warning("Text truncated to 1000 words for scope generation")
+            
+            # Calculate min and max length for summary
             text_length = len(text.split())
-            max_length = min(100, text_length)  # Never longer than input
-            min_length = min(30, max_length - 1)  # Ensure min < max
+            max_length = min(text_length, 150)  # Cap at 150 words
+            min_length = min(max_length - 50, max_length - 1)  # Ensure min < max
+            
+            if text_length < min_length:
+                logger.debug("Text too short for summarization, returning original")
+                return text
 
-            if max_length < min_length:
-                logger.warning(f"Text too short for summarization: {text_length} words")
-                return text  # Return original text if too short
-
-            summary = self.summarizer(
-                text,
-                max_length=max_length,
-                min_length=min_length,
-                do_sample=False,
-                truncation=True
-            )[0]['summary_text']
-
-            return summary
-
+            # Generate summary using model
+            model = genai.GenerativeModel('gemini-1.5-pro')
+            prompt = f"Summarize this text concisely, focusing on key points: {text}"
+            response = model.generate_content(prompt, generation_config={
+                'max_output_tokens': max_length * 4,
+                'temperature': 0.3,
+                'top_p': 0.8,
+                'top_k': 40
+            })
+            
+            return response.text
         except Exception as e:
-            logger.error(f"Error generating scope: {str(e)}")
-            # Fallback to simple truncation
-            return text[:500] + '...' if len(text) > 500 else text
+            logger.error(f"Error generating section scope: {e}")
+            # Fallback: return truncated version of original text
+            return ' '.join(text.split()[:150]) + '...'
 
     @async_operation
-
     def check_spelling_and_grammar(self, text):
-        """Check spelling and grammar with limits."""
+        """Check spelling and grammar in the given text."""
         logger.debug("Spelling and grammar checking disabled for performance")
-        return {}, []  # Return empty results since checking is disabled
+        return {
+            'misspelled': {},
+            'grammar_suggestions': []
+        }
 
     @async_operation
     def evaluate_business_value(self, text):
