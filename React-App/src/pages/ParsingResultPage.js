@@ -295,111 +295,181 @@ function ParsingResult() {
         {/* Content Analysis */}
         {parsingResult.content_analysis && (
           <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+              <svg
+                className="w-6 h-6 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
               Content Analysis
             </h2>
 
             {/* Similarity Matrix */}
-            {parsingResult.content_analysis.scope_sources &&
-              parsingResult.content_analysis.similarity_matrix && (
-                <div className="mb-6">
-                  <h3 className="text-xl font-semibold mb-3">
-                    Similarity Matrix
+            {parsingResult.content_analysis.similarity_matrix &&
+              parsingResult.content_analysis.scope_sources && (
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4 text-gray-700 flex items-center">
+                    <svg
+                      className="w-5 h-5 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                      />
+                    </svg>
+                    Section Similarity Analysis
                   </h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border border-gray-200">
-                      <thead>
-                        <tr>
-                          <th className="border p-2 bg-gray-50">Section</th>
-                          {parsingResult.content_analysis.scope_sources.map(
-                            (source, i) => (
-                              <th key={i} className="border p-2 bg-gray-50">
-                                {source}
-                              </th>
+                  <div className="bg-white p-4 rounded-lg shadow-inner">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full">
+                        <thead>
+                          <tr>
+                            <th className="p-3 bg-gray-50 rounded-tl-lg font-semibold text-gray-600 text-left min-w-[200px]">
+                              Section
+                            </th>
+                            {parsingResult.content_analysis.scope_sources.map(
+                              (source, i) => (
+                                <th
+                                  key={i}
+                                  className="p-3 bg-gray-50 font-semibold text-gray-600 text-center min-w-[100px] transform -rotate-45 origin-top-left h-32"
+                                  style={{ width: "40px" }}
+                                >
+                                  <div className="inline-block whitespace-nowrap">
+                                    {source.replace(/^\d+(\.\d+)*\s+/, "")}
+                                  </div>
+                                </th>
+                              )
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {parsingResult.content_analysis.similarity_matrix.map(
+                            (row, i) => (
+                              <tr key={i} className="hover:bg-gray-50">
+                                <td className="p-3 font-medium text-gray-700 border-t">
+                                  {parsingResult.content_analysis.scope_sources[
+                                    i
+                                  ].replace(/^\d+(\.\d+)*\s+/, "")}
+                                </td>
+                                {row.map((value, j) => {
+                                  const intensity = Math.round(value * 100);
+                                  const getColor = (intensity) => {
+                                    if (i === j) return "bg-gray-100";
+                                    const hue = 200; // Blue hue
+                                    const saturation = 90;
+                                    const lightness = 100 - intensity;
+                                    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                                  };
+
+                                  return (
+                                    <td
+                                      key={j}
+                                      className="p-3 border-t text-center relative group"
+                                      style={{
+                                        backgroundColor: getColor(intensity),
+                                        color:
+                                          intensity > 50 ? "white" : "black",
+                                      }}
+                                    >
+                                      <span className="font-medium">
+                                        {intensity}%
+                                      </span>
+                                      <div className="absolute hidden group-hover:block bg-gray-800 text-white text-sm rounded px-2 py-1 left-1/2 transform -translate-x-1/2 -translate-y-full -mt-1 z-10">
+                                        {parsingResult.content_analysis.scope_sources[
+                                          i
+                                        ].replace(/^\d+(\.\d+)*\s+/, "")}{" "}
+                                        ↔{" "}
+                                        {parsingResult.content_analysis.scope_sources[
+                                          j
+                                        ].replace(/^\d+(\.\d+)*\s+/, "")}
+                                      </div>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
                             )
                           )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {parsingResult.content_analysis.similarity_matrix.map(
-                          (row, i) => (
-                            <tr key={i}>
-                              <td className="border p-2 font-medium bg-gray-50">
-                                {
-                                  parsingResult.content_analysis.scope_sources[
-                                    i
-                                  ]
-                                }
-                              </td>
-                              {row.map((value, j) => (
-                                <td key={j} className="border p-2 text-center">
-                                  {Math.round(value * 100)}%
-                                </td>
-                              ))}
-                            </tr>
-                          )
-                        )}
-                      </tbody>
-                    </table>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+                      <div className="flex items-center">
+                        <div className="w-24 h-4 bg-gradient-to-r from-white to-blue-500 rounded mr-2"></div>
+                        <span>Similarity Scale (0-100%)</span>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span>
+                          • Diagonal cells show self-similarity (100%)
+                        </span>
+                        <span>• Hover over cells for details</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
 
-            {/* Spelling and Grammar */}
-            {parsingResult.content_analysis.spelling_grammar &&
-              parsingResult.content_analysis.spelling_grammar.length > 0 && (
-                <div>
-                  <h3 className="text-xl font-semibold mb-3">
-                    Spelling and Grammar
-                  </h3>
-                  {parsingResult.content_analysis.spelling_grammar.map(
-                    (result, index) => (
+            {/* Section Contents */}
+            {parsingResult.content_analysis.sections && (
+              <div className="mt-8">
+                <h3 className="text-xl font-semibold mb-4 text-gray-700 flex items-center">
+                  <svg
+                    className="w-5 h-5 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16m-7 6h7"
+                    />
+                  </svg>
+                  Section Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(parsingResult.content_analysis.sections).map(
+                    ([title, content], index) => (
                       <div
                         key={index}
-                        className="mb-4 p-4 bg-gray-50 rounded-lg"
+                        className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200"
                       >
-                        <h4 className="font-medium mb-2">
-                          {parsingResult.content_analysis.scope_sources[
-                            index
-                          ] || `Section ${index + 1}`}
-                        </h4>
-                        {result.misspelled &&
-                          Object.keys(result.misspelled).length > 0 && (
-                            <div className="mb-2">
-                              <p className="text-sm font-medium text-red-600">
-                                Spelling Issues:
-                              </p>
-                              <ul className="list-disc list-inside">
-                                {Object.entries(result.misspelled).map(
-                                  ([word, suggestion], i) => (
-                                    <li key={i} className="text-sm">
-                                      {word} → {suggestion}
-                                    </li>
-                                  )
-                                )}
-                              </ul>
-                            </div>
-                          )}
-                        {result.grammar_suggestions &&
-                          result.grammar_suggestions.length > 0 && (
-                            <div>
-                              <p className="text-sm font-medium text-orange-600">
-                                Grammar Issues:
-                              </p>
-                              <ul className="list-disc list-inside">
-                                {result.grammar_suggestions.map((issue, i) => (
-                                  <li key={i} className="text-sm">
-                                    {issue.message}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                        <div className="p-4 border-b bg-gray-50">
+                          <h4 className="font-medium text-lg text-gray-800">
+                            {title.replace(/^\d+(\.\d+)*\s+/, "")}
+                          </h4>
+                        </div>
+                        <div className="p-4">
+                          <div className="prose prose-sm max-h-60 overflow-y-auto">
+                            {content.split("\n").map(
+                              (paragraph, i) =>
+                                paragraph.trim() && (
+                                  <p key={i} className="text-gray-600 mb-2">
+                                    {paragraph}
+                                  </p>
+                                )
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )
                   )}
                 </div>
-              )}
+              </div>
+            )}
           </div>
         )}
 

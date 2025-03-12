@@ -271,37 +271,31 @@ def analyze_document():
             sections = text_processor.parse_document_sections(pdf_text)
             
             # Process text sections
-            for i, section in enumerate(sections):
+            sections_dict = {}
+            
+            for section in sections:
                 try:
-                    scope = text_processor.generate_section_scope(section)
-                    all_scopes.append(scope)
-                    scope_sources.append(f"Section {i+1}")
-                    spelling_grammar = text_processor.check_spelling_and_grammar(section)
-                    spelling_grammar_results.append(spelling_grammar)
+                    # Split section into title and content
+                    lines = section.splitlines()
+                    title = lines[0] if lines else "Unknown Section"
+                    content = "\n".join(lines[1:]) if len(lines) > 1 else ""
+                    
+                    # Store in dictionary
+                    sections_dict[title] = content
+                    logger.debug(f"Processed section: {title}")
                 except Exception as e:
-                    logger.error(f"Error processing section {i+1}: {str(e)}")
+                    logger.error(f"Error processing section '{title}': {str(e)}")
 
-            # Process images for content analysis
-            image_paths = image_processor.extract_images_from_pdf(pdf_path)
-            for i, img_path in enumerate(image_paths):
-                try:
-                    image_text = image_processor.extract_text_from_image(img_path)
-                    if image_text.strip():
-                        scope = text_processor.generate_section_scope(image_text)
-                        all_scopes.append(scope)
-                        scope_sources.append(f"Image {i+1}")
-                        spelling_grammar = text_processor.check_spelling_and_grammar(image_text)
-                        spelling_grammar_results.append(spelling_grammar)
-                except Exception as e:
-                    logger.error(f"Error processing image {i+1}: {str(e)}")
-
-            similarity_matrix = similarity_analyzer.create_similarity_matrix(all_scopes)
+            # Create similarity matrix
+            similarity_results = SimilarityAnalyzer.create_similarity_matrix(sections_dict)
+            
             response['content_analysis'] = {
-                'similarity_matrix': similarity_matrix.tolist(),
-                'scope_sources': scope_sources,
-                'scopes': all_scopes,
-                'spelling_grammar': spelling_grammar_results
+                'similarity_matrix': similarity_results['matrix'].tolist(),
+                'scope_sources': similarity_results['section_names'],
+                'sections': sections_dict
             }
+            
+            logger.debug(f"Content analysis completed with {len(sections_dict)} sections")
 
         if analyses.get('ImageAnalysis'):
             logger.debug("Processing images for image analysis")

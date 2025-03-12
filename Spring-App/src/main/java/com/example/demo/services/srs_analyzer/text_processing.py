@@ -1,6 +1,6 @@
 import re
-import language_tool_python
-from spellchecker import SpellChecker
+# import language_tool_python  # Commented out for performance
+# from spellchecker import SpellChecker  # Commented out for performance
 from transformers import pipeline
 import torch
 from PyPDF2 import PdfReader
@@ -8,6 +8,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import functools
 from business_value_evaluator import BusinessValueEvaluator
+from section_parser import SectionParser
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +24,10 @@ def async_operation(func):
 class TextProcessor:
     def __init__(self):
         logger.info("Initializing TextProcessor")
-        self.grammar_tool = language_tool_python.LanguageTool('en-US')
-        self.spell_checker = SpellChecker()
-        self.CUSTOM_TERMS = ['qanna', 'srs'] #Hopefully grammarly API and remove this
+        # Commenting out spelling and grammar tools
+        # self.grammar_tool = language_tool_python.LanguageTool('en-US')
+        # self.spell_checker = SpellChecker()
+        # self.CUSTOM_TERMS = ['qanna', 'srs']
         self.business_value_evaluator = BusinessValueEvaluator()
 
         try:
@@ -104,27 +106,23 @@ class TextProcessor:
         return sections, figures
 
     def parse_document_sections(self, text):
-        """Parse document into logical segments based on sections."""
+        """Parse document into logical segments based on predefined sections."""
         logger.info("Parsing document sections")
-        segments = []
-        current_segment = ""
-
+        
         try:
-            lines = text.splitlines()
-            for line in lines:
-                if re.match(r'^\d+(\.\d+)* [A-Z]', line):  # New section/subsection
-                    if current_segment:
-                        segments.append(current_segment.strip())
-                        logger.debug(f"Added segment of length: {len(current_segment)}")
-                    current_segment = line + "\n"
-                else:
-                    current_segment += line + "\n"
-
-            if current_segment:
-                segments.append(current_segment.strip())
+            # Use SectionParser to get only the main sections
+            sections_dict = SectionParser.parse_sections(text)
+            
+            # Convert dictionary to list format for compatibility
+            segments = []
+            for section_title, content in sections_dict.items():
+                segment = f"{section_title}\n{content}"
+                segments.append(segment)
+                logger.debug(f"Added section: {section_title} with length: {len(segment)}")
 
             logger.info(f"Parsed {len(segments)} sections")
             return segments
+            
         except Exception as e:
             logger.error(f"Error parsing document sections: {str(e)}")
             raise
@@ -163,83 +161,49 @@ class TextProcessor:
 
     @async_operation
     def generate_section_scope(self, text):
+        """Generate a scope/summary for a section of text."""
         try:
+            # If no summarizer available, use simple truncation
             if self.summarizer is None:
                 words = text.split()
                 return ' '.join(words[:100]) + '...' if len(words) > 100 else text
 
-            max_length = min(100, len(text.split()))  # Adjust based on input length
-            min_length = max(30, int(max_length * 0.5))  # Set min_length proportionally
+            # Clean and truncate text if too long
+            text = text.strip()
+            words = text.split()
+            if len(words) > 1000:  # Truncate to avoid model sequence length issues
+                text = ' '.join(words[:1000]) + '...'
+
+            # Calculate appropriate lengths based on input
+            text_length = len(text.split())
+            max_length = min(100, text_length)  # Never longer than input
+            min_length = min(30, max_length - 1)  # Ensure min < max
+
+            if max_length < min_length:
+                logger.warning(f"Text too short for summarization: {text_length} words")
+                return text  # Return original text if too short
 
             summary = self.summarizer(
                 text,
                 max_length=max_length,
                 min_length=min_length,
-                do_sample=False
+                do_sample=False,
+                truncation=True
             )[0]['summary_text']
 
             return summary
+
         except Exception as e:
             logger.error(f"Error generating scope: {str(e)}")
-            return text[:200] + '...' if len(text) > 200 else text
+            # Fallback to simple truncation
+            return text[:500] + '...' if len(text) > 500 else text
 
     @async_operation
     def check_spelling_and_grammar(self, text):
         """Check spelling and grammar with limits."""
-        try:
-            # Limit text length for performance
-            MAX_LENGTH = 5000
-            if len(text) > MAX_LENGTH:
-                text = text[:MAX_LENGTH]
+        logger.debug("Spelling and grammar checking disabled for performance")
+        return {}, []  # Return empty results since checking is disabled
 
-            # Join split words with a hyphen 
-            text = re.sub(r'(\w)- (\w)', r'\1\2', text)  
-            text = re.sub(r'(\w)-\s+(\w)', r'\1\2', text)  
-            clean_text = re.sub(r'[^\w\s\'-]', '', text)
-
-            words = clean_text.split()
-            misspelled = self.spell_checker.unknown(words)
-
-            misspelled = {
-                word: self.spell_checker.correction(word) 
-                for word in words 
-                if word.lower() not in self.CUSTOM_TERMS and not re.match(r"\w+'s$", word)
-                and word in self.spell_checker.unknown([word])
-            }
-
-            misspelled = {word: self.spell_checker.correction(word) 
-                         for word in misspelled 
-                         if word.lower() not in self.CUSTOM_TERMS}
-
-            for term in self.CUSTOM_TERMS:
-                if term in words:
-                    misspelled[term] = term
-
-            misspelled = {word: correction 
-                         for word, correction in misspelled.items() 
-                         if correction is not None}
-
-            grammar_issues = self.grammar_tool.check(text)
-            grammar_suggestions = []
-            for issue in grammar_issues:
-                if issue.message.lower().startswith("possible spelling mistake found"):
-                    continue
-
-                issue_text = issue.context
-                related_word = next((word for word in misspelled if word in issue_text), None)
-                if not related_word:
-                    grammar_suggestions.append({
-                        "message": issue.message,
-                        "context": issue_text,
-                        "replacements": issue.replacements
-                    })
-
-            logger.debug(f"Found {len(misspelled)} spelling issues and {len(grammar_suggestions)} grammar issues")
-            return misspelled, grammar_suggestions
-        
-        except Exception as e:
-            logger.error(f"Error in spelling/grammar check: {str(e)}")
-            return {}, []
     @async_operation
     def evaluate_business_value(self, text):
         """
