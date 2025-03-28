@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class SimilarityAnalyzer:
     @staticmethod
-    def compare_sections_with_gemini(section1, section2):
+    def compare_sections_with_gemini(section1, section2, section1_name=None, section2_name=None):
         """Compare two sections using Gemini API."""
         if not GEMINI_AVAILABLE:
             logger.warning("Gemini API not available, falling back to TF-IDF")
@@ -29,16 +29,52 @@ class SimilarityAnalyzer:
             
         try:
             model = genai.GenerativeModel('gemini-1.5-flash')
-            prompt = f"""
-            Compare these two text sections and return a similarity score between 0 and 1.
-            Only return the number, nothing else.
             
-            Section 1:
-            {section1}
+            # Check if either section is a figure
+            is_figure1 = section1_name and "Figure:" in section1_name
+            is_figure2 = section2_name and "Figure:" in section2_name
             
-            Section 2:
-            {section2}
-            """
+            if is_figure1 and is_figure2:
+                # Figure to figure comparison
+                prompt = f"""
+                Compare these two diagrams based on their extracted text and return a similarity score between 0 and 1.
+                Only return the number, nothing else.
+                
+                Diagram 1: {section1_name}
+                Text: {section1}
+                
+                Diagram 2: {section2_name}
+                Text: {section2}
+                """
+            elif is_figure1 or is_figure2:
+                # Figure to text comparison
+                figure_name = section1_name if is_figure1 else section2_name
+                figure_text = section1 if is_figure1 else section2
+                section_text = section2 if is_figure1 else section1
+                section_name = section2_name if is_figure1 else section1_name
+                
+                prompt = f"""
+                Compare this diagram text to this document section and return a similarity score between 0 and 1.
+                Only return the number, nothing else.
+                
+                Diagram: {figure_name}
+                Text: {figure_text}
+                
+                Section: {section_name}
+                Text: {section_text}
+                """
+            else:
+                # Regular section comparison (original)
+                prompt = f"""
+                Compare these two text sections and return a similarity score between 0 and 1.
+                Only return the number, nothing else.
+                
+                Section 1:
+                {section1}
+                
+                Section 2:
+                {section2}
+                """
             
             response = model.generate_content(prompt)
             score = float(response.text.strip())
@@ -67,7 +103,9 @@ class SimilarityAnalyzer:
                     else:
                         score = SimilarityAnalyzer.compare_sections_with_gemini(
                             section_contents[i], 
-                            section_contents[j]
+                            section_contents[j],
+                            section_names[i],
+                            section_names[j]
                         )
                         similarity_matrix[i][j] = score
                         similarity_matrix[j][i] = score

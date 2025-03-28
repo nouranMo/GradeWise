@@ -334,7 +334,215 @@ function ParsingResult() {
                       />
                     </svg>
                     Section Similarity Analysis
+                    {parsingResult.content_analysis.figures_included && (
+                      <span className="ml-2 text-sm text-blue-600 font-normal">
+                        (Including {parsingResult.content_analysis.figure_count}{" "}
+                        figures)
+                      </span>
+                    )}
                   </h3>
+
+                  {/* Key Anomalies Section */}
+                  <div className="bg-white p-4 rounded-lg shadow-inner mb-6">
+                    <h4 className="font-medium text-lg mb-3 text-gray-700">
+                      Key Insights
+                    </h4>
+
+                    {(() => {
+                      // Extract key insights from similarity matrix
+                      const matrix =
+                        parsingResult.content_analysis.similarity_matrix;
+                      const sections =
+                        parsingResult.content_analysis.scope_sources;
+
+                      // Skip if no data
+                      if (!matrix || !sections || matrix.length === 0) {
+                        return <p>No similarity data available</p>;
+                      }
+
+                      // Find most dissimilar and most similar pairs (excluding self-comparisons)
+                      let mostDissimilar = { i: 0, j: 1, value: 1 };
+                      let mostSimilar = { i: 0, j: 1, value: 0 };
+                      let diagramSimilarities = [];
+
+                      // Find diagram-to-section relationships
+                      let diagramRelationships = [];
+
+                      for (let i = 0; i < matrix.length; i++) {
+                        for (let j = 0; j < matrix[i].length; j++) {
+                          // Skip self-comparisons
+                          if (i === j) continue;
+
+                          const similarity = matrix[i][j];
+                          const isRow1Diagram = isFigureSection(sections[i]);
+                          const isRow2Diagram = isFigureSection(sections[j]);
+
+                          // Track most dissimilar pair
+                          if (similarity < mostDissimilar.value) {
+                            mostDissimilar = { i, j, value: similarity };
+                          }
+
+                          // Track most similar pair
+                          if (similarity > mostSimilar.value) {
+                            mostSimilar = { i, j, value: similarity };
+                          }
+
+                          // Track diagram similarities
+                          if (isRow1Diagram && isRow2Diagram) {
+                            diagramSimilarities.push({
+                              diagram1: sections[i],
+                              diagram2: sections[j],
+                              similarity,
+                            });
+                          }
+
+                          // Track diagram to section relationships
+                          if (
+                            isRow1Diagram &&
+                            !isRow2Diagram &&
+                            similarity > 0.5
+                          ) {
+                            diagramRelationships.push({
+                              diagram: sections[i],
+                              section: sections[j],
+                              similarity,
+                            });
+                          } else if (
+                            isRow2Diagram &&
+                            !isRow1Diagram &&
+                            similarity > 0.5
+                          ) {
+                            diagramRelationships.push({
+                              diagram: sections[j],
+                              section: sections[i],
+                              similarity,
+                            });
+                          }
+                        }
+                      }
+
+                      // Sort by similarity (highest first)
+                      diagramRelationships.sort(
+                        (a, b) => b.similarity - a.similarity
+                      );
+
+                      return (
+                        <div className="space-y-4">
+                          {/* Most different sections */}
+                          <div className="p-4 bg-red-50 rounded-lg border border-red-100">
+                            <h5 className="font-medium text-red-800 mb-1">
+                              Most Different Sections
+                            </h5>
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">
+                                {getCleanSectionName(
+                                  sections[mostDissimilar.i]
+                                )}
+                              </span>{" "}
+                              and{" "}
+                              <span className="font-medium">
+                                {getCleanSectionName(
+                                  sections[mostDissimilar.j]
+                                )}
+                              </span>{" "}
+                              are the least similar at{" "}
+                              <span className="font-bold text-red-700">
+                                {Math.round(mostDissimilar.value * 100)}%
+                              </span>{" "}
+                              similarity
+                            </p>
+                          </div>
+
+                          {/* Most similar sections */}
+                          <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                            <h5 className="font-medium text-green-800 mb-1">
+                              Most Similar Sections
+                            </h5>
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">
+                                {getCleanSectionName(sections[mostSimilar.i])}
+                              </span>{" "}
+                              and{" "}
+                              <span className="font-medium">
+                                {getCleanSectionName(sections[mostSimilar.j])}
+                              </span>{" "}
+                              are the most similar at{" "}
+                              <span className="font-bold text-green-700">
+                                {Math.round(mostSimilar.value * 100)}%
+                              </span>{" "}
+                              similarity
+                            </p>
+                          </div>
+
+                          {/* Diagram relationships */}
+                          {diagramRelationships.length > 0 && (
+                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                              <h5 className="font-medium text-blue-800 mb-1">
+                                Key Diagram Relationships
+                              </h5>
+                              <div className="space-y-2">
+                                {diagramRelationships
+                                  .slice(0, 3)
+                                  .map((rel, idx) => (
+                                    <p
+                                      key={idx}
+                                      className="text-sm text-gray-700"
+                                    >
+                                      <span className="inline-block mr-1">
+                                        📊
+                                      </span>
+                                      <span className="font-medium">
+                                        {getCleanSectionName(rel.diagram)}
+                                      </span>{" "}
+                                      strongly relates to{" "}
+                                      <span className="font-medium">
+                                        {getCleanSectionName(rel.section)}
+                                      </span>{" "}
+                                      with{" "}
+                                      <span className="font-bold text-blue-700">
+                                        {Math.round(rel.similarity * 100)}%
+                                      </span>{" "}
+                                      similarity
+                                    </p>
+                                  ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Analysis tip */}
+                          <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                            <h5 className="font-medium text-purple-800 mb-1">
+                              Analysis Tip
+                            </h5>
+                            <p className="text-sm text-gray-700">
+                              {mostDissimilar.value < 0.3 ? (
+                                <>
+                                  Some sections appear to have very{" "}
+                                  <strong>low similarity</strong>. Consider
+                                  reviewing the document for consistency and
+                                  proper section coverage.
+                                </>
+                              ) : mostSimilar.value > 0.8 ? (
+                                <>
+                                  Some non-identical sections have{" "}
+                                  <strong>very high similarity</strong>.
+                                  Consider reviewing for potential duplication
+                                  of content.
+                                </>
+                              ) : (
+                                <>
+                                  The document has a balanced similarity
+                                  distribution between sections, which typically
+                                  indicates good structure.
+                                </>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
                   <div className="bg-white p-4 rounded-lg shadow-inner">
                     <div className="overflow-x-auto">
                       <table className="min-w-full">
@@ -347,11 +555,17 @@ function ParsingResult() {
                               (source, i) => (
                                 <th
                                   key={i}
-                                  className="p-3 bg-gray-50 font-semibold text-gray-600 text-center min-w-[100px] transform -rotate-45 origin-top-left h-32"
+                                  className={`p-3 bg-gray-50 font-semibold text-gray-600 text-center min-w-[100px] transform -rotate-45 origin-top-left h-32 ${
+                                    isFigureSection(source)
+                                      ? "text-blue-700"
+                                      : ""
+                                  }`}
                                   style={{ width: "40px" }}
                                 >
                                   <div className="inline-block whitespace-nowrap">
-                                    {source.replace(/^\d+(\.\d+)*\s+/, "")}
+                                    {isFigureSection(source)
+                                      ? "📊 " + getCleanSectionName(source)
+                                      : getCleanSectionName(source)}
                                   </div>
                                 </th>
                               )
@@ -360,63 +574,112 @@ function ParsingResult() {
                         </thead>
                         <tbody>
                           {parsingResult.content_analysis.similarity_matrix.map(
-                            (row, i) => (
-                              <tr key={i} className="hover:bg-gray-50">
-                                <td className="p-3 font-medium text-gray-700 border-t">
-                                  {parsingResult.content_analysis.scope_sources[
-                                    i
-                                  ].replace(/^\d+(\.\d+)*\s+/, "")}
-                                </td>
-                                {row.map((value, j) => {
-                                  const intensity = Math.round(value * 100);
-                                  const getColor = (intensity) => {
-                                    if (i === j) return "bg-gray-100";
-                                    const hue = 200; // Blue hue
-                                    const saturation = 90;
-                                    const lightness = 100 - intensity;
-                                    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-                                  };
+                            (row, i) => {
+                              const isImageRow = isFigureSection(
+                                parsingResult.content_analysis.scope_sources[i]
+                              );
+                              return (
+                                <tr
+                                  key={i}
+                                  className={`hover:bg-gray-50 ${
+                                    isImageRow ? "bg-blue-50" : ""
+                                  }`}
+                                >
+                                  <td
+                                    className={`p-3 font-medium border-t ${
+                                      isImageRow
+                                        ? "text-blue-700"
+                                        : "text-gray-700"
+                                    }`}
+                                  >
+                                    {isImageRow ? "📊 " : ""}
+                                    {getCleanSectionName(
+                                      parsingResult.content_analysis
+                                        .scope_sources[i]
+                                    )}
+                                  </td>
+                                  {row.map((value, j) => {
+                                    const intensity = Math.round(value * 100);
+                                    const isImageCol = isFigureSection(
+                                      parsingResult.content_analysis
+                                        .scope_sources[j]
+                                    );
+                                    const getColor = (intensity) => {
+                                      if (i === j) return "bg-gray-100";
+                                      if (isImageRow && isImageCol) {
+                                        // Figure to Figure comparison
+                                        const hue = 260; // Purple hue for figure-to-figure
+                                        const saturation = 90;
+                                        const lightness = 100 - intensity;
+                                        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                                      } else if (isImageRow || isImageCol) {
+                                        // Figure to Section comparison
+                                        const hue = 200; // Blue hue for figure to section
+                                        const saturation = 90;
+                                        const lightness = 100 - intensity;
+                                        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                                      } else {
+                                        // Section to Section comparison (original)
+                                        const hue = 200; // Blue hue
+                                        const saturation = 90;
+                                        const lightness = 100 - intensity;
+                                        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                                      }
+                                    };
 
-                                  return (
-                                    <td
-                                      key={j}
-                                      className="p-3 border-t text-center relative group"
-                                      style={{
-                                        backgroundColor: getColor(intensity),
-                                        color:
-                                          intensity > 50 ? "white" : "black",
-                                      }}
-                                    >
-                                      <span className="font-medium">
-                                        {intensity}%
-                                      </span>
-                                      <div className="absolute hidden group-hover:block bg-gray-800 text-white text-sm rounded px-2 py-1 left-1/2 transform -translate-x-1/2 -translate-y-full -mt-1 z-10">
-                                        {parsingResult.content_analysis.scope_sources[
-                                          i
-                                        ].replace(/^\d+(\.\d+)*\s+/, "")}{" "}
-                                        ↔{" "}
-                                        {parsingResult.content_analysis.scope_sources[
-                                          j
-                                        ].replace(/^\d+(\.\d+)*\s+/, "")}
-                                      </div>
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            )
+                                    return (
+                                      <td
+                                        key={j}
+                                        className="p-3 border-t text-center relative group"
+                                        style={{
+                                          backgroundColor: getColor(intensity),
+                                          color:
+                                            intensity > 50 ? "white" : "black",
+                                        }}
+                                      >
+                                        <span className="font-medium">
+                                          {intensity}%
+                                        </span>
+                                        <div className="absolute hidden group-hover:block bg-gray-800 text-white text-sm rounded px-2 py-1 left-1/2 transform -translate-x-1/2 -translate-y-full -mt-1 z-10">
+                                          {isImageRow ? "📊 " : ""}
+                                          {getCleanSectionName(
+                                            parsingResult.content_analysis
+                                              .scope_sources[i]
+                                          )}{" "}
+                                          ↔ {isImageCol ? "📊 " : ""}
+                                          {getCleanSectionName(
+                                            parsingResult.content_analysis
+                                              .scope_sources[j]
+                                          )}
+                                        </div>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            }
                           )}
                         </tbody>
                       </table>
                     </div>
                     <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-                      <div className="flex items-center">
-                        <div className="w-24 h-4 bg-gradient-to-r from-white to-blue-500 rounded mr-2"></div>
-                        <span>Similarity Scale (0-100%)</span>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center">
+                          <div className="w-24 h-4 bg-gradient-to-r from-white to-blue-500 rounded mr-2"></div>
+                          <span>Section Similarity (0-100%)</span>
+                        </div>
+                        {parsingResult.content_analysis.figures_included && (
+                          <div className="flex items-center">
+                            <div className="w-24 h-4 bg-gradient-to-r from-white to-purple-500 rounded mr-2"></div>
+                            <span>Figure-to-Figure Similarity</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center space-x-4">
                         <span>
                           • Diagonal cells show self-similarity (100%)
                         </span>
+                        <span>• 📊 indicates figure content</span>
                         <span>• Hover over cells for details</span>
                       </div>
                     </div>
@@ -922,5 +1185,51 @@ function Badge({ text, color, onClick, className = "" }) {
     </span>
   );
 }
+
+// Add helper functions for figure detection at the end of the component
+// Return true if this is a figure section
+(() => {
+  // Helper function to determine if a section is a figure
+  window.isFigureSection = function (sectionName) {
+    if (!sectionName) return false;
+
+    // Check for common figure section patterns
+    const figureDiagrams = [
+      "System Overview",
+      "System Context",
+      "Use Case",
+      "EERD",
+      "Entity Relationship",
+      "Class Diagram",
+      "Gantt Chart",
+      "Sequence Diagram",
+      "Activity Diagram",
+      "Component Diagram",
+    ];
+
+    // Original "Figure:" prefix check
+    if (sectionName.startsWith("Figure:")) return true;
+
+    // Check against known diagram types
+    return figureDiagrams.some((diagramType) =>
+      sectionName.includes(diagramType)
+    );
+  };
+
+  // Helper function to clean up section names
+  window.getCleanSectionName = function (sectionName) {
+    if (!sectionName) return "";
+
+    // Remove "Figure:" prefix if present
+    let cleanName = sectionName.replace(/^Figure:\s*/, "");
+
+    // Remove section numbering
+    cleanName = cleanName.replace(/^\d+(\.\d+)*\s+/, "");
+
+    return cleanName;
+  };
+
+  return null; // This IIFE doesn't render anything
+})();
 
 export default ParsingResult;
