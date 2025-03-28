@@ -47,6 +47,7 @@ function Dashboard() {
     ImageAnalysis: false,
     BusinessValueAnalysis: false,
     DiagramConvention: false,
+    SpellCheck: false,
     FullAnalysis: false,
   });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
