@@ -1,6 +1,7 @@
 from config import create_app, Config
 from text_processing import TextProcessor
-from image_processing import ImageProcessor
+# Remove the global import to avoid circular dependencies
+# from image_processing import ImageProcessor
 from srs_validator import SRSValidator
 from similarity_analyzer import SimilarityAnalyzer
 from references_validation.references_validator import ReferencesValidator
@@ -69,7 +70,6 @@ CORS(app, resources={
 GOOGLE_CLIENT_ID = Config.GOOGLE_CLIENT_ID
 
 text_processor = TextProcessor()
-image_processor = ImageProcessor()
 similarity_analyzer = SimilarityAnalyzer()
 
 limiter = Limiter(
@@ -306,7 +306,6 @@ def analyze_document():
                 }
 
         if analyses.get('ContentAnalysis'):
-
             logger.debug("Performing content analysis")
             sections = text_processor.parse_document_sections(pdf_text)
             
@@ -325,6 +324,20 @@ def analyze_document():
                     logger.debug(f"Processed section: {title}")
                 except Exception as e:
                     logger.error(f"Error processing section '{title}': {str(e)}")
+                    
+            # Extract text from important figures
+            figure_texts = {}
+            try:
+                # Only import when needed to avoid circular dependencies
+                # This lets text_processing.py import ImageProcessor in its function too
+                figure_texts = text_processor.extract_figure_texts_from_sections(sections_dict, pdf_path)
+                
+                # Add figure texts to sections_dict for inclusion in similarity matrix
+                if figure_texts:
+                    logger.info(f"Adding {len(figure_texts)} figure texts to sections")
+                    sections_dict.update(figure_texts)
+            except Exception as e:
+                logger.error(f"Error extracting figure texts: {str(e)}")
 
             # Create similarity matrix
             similarity_results = SimilarityAnalyzer.create_similarity_matrix(sections_dict)
@@ -332,14 +345,20 @@ def analyze_document():
             response['content_analysis'] = {
                 'similarity_matrix': similarity_results['matrix'].tolist(),
                 'scope_sources': similarity_results['section_names'],
-                'sections': sections_dict
+                'sections': sections_dict,
+                'figures_included': bool(figure_texts),
+                'figure_count': len(figure_texts)
             }
             
-            logger.debug(f"Content analysis completed with {len(sections_dict)} sections")
+            logger.debug(f"Content analysis completed with {len(sections_dict)} sections (including {len(figure_texts)} figures)")
 
         if analyses.get('ImageAnalysis'):
             logger.debug("Processing images for image analysis")
             try:
+                # Import here to avoid circular dependencies
+                from image_processing import ImageProcessor
+                image_processor = ImageProcessor()
+                
                 # Extract images from PDF
                 image_paths = image_processor.extract_images_from_pdf(pdf_path)
                 processed_images = []

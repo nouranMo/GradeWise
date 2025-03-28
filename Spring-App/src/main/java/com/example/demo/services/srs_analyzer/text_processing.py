@@ -9,11 +9,11 @@ from concurrent.futures import ThreadPoolExecutor
 import functools
 import google.generativeai as genai
 from business_value_evaluator import BusinessValueEvaluator
-
 from section_parser import SectionParser
-
 from contextlib import contextmanager
 from functools import lru_cache
+# Remove the import at module level to avoid circular dependency
+# from image_processing import ImageProcessor
 
 # Disable spell checking by default
 SPELLCHECK_ENABLED = False
@@ -24,6 +24,17 @@ logger = logging.getLogger(__name__)
 CHUNK_SIZE = 5000
 CACHE_SIZE = 128
 MAX_WORKERS = 4
+
+# List of figure types to extract
+IMPORTANT_FIGURES = [
+    "system overview", 
+    "system context", 
+    "use case", 
+    "eerd", 
+    "entity relationship", 
+    "class diagram", 
+    "gantt chart"
+]
 
 def async_operation(func):
     @functools.wraps(func)
@@ -269,3 +280,239 @@ class TextProcessor:
         except Exception as e:
             logger.error(f"Error processing chunk: {str(e)}")
             return {}, []
+
+    def _find_figures_in_sections(self, sections_dict):
+        """Find all figures mentioned in the text and their location."""
+        figures = {}
+        
+        # Regex patterns for figure captions - making this more robust
+        figure_patterns = [
+            r'Figure\s+\d+[\.:]?\s*([^\.]+)',  # Figure 1: Title
+            r'Fig\.\s*\d+[\.:]?\s*([^\.]+)',    # Fig. 1: Title
+            r'Figure\s+\d+[^a-zA-Z0-9]*([a-zA-Z].+?)\s*(?:\n|$)', # Figure 1 Title
+            r'(?:FIGURE|Fig)[^a-zA-Z0-9]*\d+[^a-zA-Z0-9]*([a-zA-Z].+?)\s*(?:\n|$)', # FIGURE 1 Title
+            r'\bEERD\b',   # Just "EERD" 
+            r'\bEntity\s+Relationship\b',  # Entity Relationship
+            r'\bUse\s+Case\b',  # Use Case
+            r'\bClass\s+Diagram\b',  # Class Diagram
+            r'\bGantt\s+Chart\b',  # Gantt Chart
+            r'\bSystem\s+Overview\b',  # System Overview
+            r'\bSystem\s+Context\b'  # System Context
+        ]
+        
+        for section_title, content in sections_dict.items():
+            # Store the section itself if it's a potential diagram section
+            section_lower = section_title.lower()
+            for important_term in IMPORTANT_FIGURES:
+                if important_term in section_lower:
+                    clean_title = self.strip_numbering(section_title)
+                    if clean_title not in figures:
+                        figures[clean_title] = {
+                            'sections': [section_title],
+                            'mentions': 1,
+                            'is_section_title': True
+                        }
+                    break
+            
+            # Look for figure captions in content
+            for pattern in figure_patterns:
+                # Special case for single-word patterns
+                if pattern.startswith(r'\b') and pattern.endswith(r'\b'):
+                    term = pattern[2:-2]  # Extract the term between \b markers
+                    if re.search(pattern, content, re.IGNORECASE):
+                        if term not in figures:
+                            figures[term] = {
+                                'sections': [section_title],
+                                'mentions': 1
+                            }
+                        else:
+                            figures[term]['mentions'] += 1
+                            if section_title not in figures[term]['sections']:
+                                figures[term]['sections'].append(section_title)
+                    continue
+                
+                # Regular pattern matching for multi-word patterns
+                matches = re.finditer(pattern, content, re.IGNORECASE)
+                for match in matches:
+                    if pattern.startswith(r'\b'):
+                        # For the special case patterns that don't have capture groups
+                        figure_caption = match.group(0).strip()
+                    else:
+                        figure_caption = match.group(1).strip() 
+                    
+                    if figure_caption not in figures:
+                        figures[figure_caption] = {
+                            'sections': [section_title],
+                            'mentions': 1
+                        }
+                    else:
+                        figures[figure_caption]['mentions'] += 1
+                        if section_title not in figures[figure_caption]['sections']:
+                            figures[figure_caption]['sections'].append(section_title)
+        
+        # Log all figures found for debugging
+        logger.info(f"Found {len(figures)} potential figures in document")
+        for fig_name, fig_info in figures.items():
+            logger.info(f"Figure: '{fig_name}' mentioned {fig_info['mentions']} times in {len(fig_info['sections'])} sections")
+        
+        return figures
+
+    def extract_figure_texts_from_sections(self, sections_dict, pdf_path):
+        """
+        Extract text from specific figures in the document and create scopes for similarity analysis.
+        
+        Args:
+            sections_dict: Dictionary of sections {section_title: content}
+            pdf_path: Path to the PDF file to extract images from
+            
+        Returns:
+            Dictionary of figure scopes {figure_name: extracted_text_with_scope}
+        """
+        logger.info("Extracting text from important figures")
+        
+        # Import ImageProcessor here to avoid circular dependency
+        from image_processing import ImageProcessor
+        
+        # Initialize image processor
+        image_processor = ImageProcessor()
+        figure_texts = {}
+        
+        # Map of standard figure names for better display
+        figure_name_map = {
+            "system overview": "System Overview",
+            "system context": "System Context Diagram",
+            "use case": "Use Case Diagram",
+            "eerd": "EERD",
+            "entity relationship": "Entity Relationship Diagram",
+            "class diagram": "Class Diagram",
+            "gantt chart": "Gantt Chart"
+        }
+        
+        try:
+            # Find all figures mentioned in the document
+            all_figures = self._find_figures_in_sections(sections_dict)
+            
+            # Filter to only the figures we want to process - major optimization
+            important_figures = {}
+            for figure_name, figure_info in all_figures.items():
+                figure_name_lower = figure_name.lower()
+                is_important = any(
+                    important_term in figure_name_lower 
+                    for important_term in IMPORTANT_FIGURES
+                )
+                
+                if is_important:
+                    important_figures[figure_name] = figure_info
+                    logger.info(f"Will process figure: {figure_name}")
+            
+            # If no important figures found, log details and try a more general approach
+            if not important_figures:
+                logger.warning("No important figures found with exact matching, trying broader matching")
+                # Add generic figures by type
+                for important_term in IMPORTANT_FIGURES:
+                    important_figures[important_term] = {
+                        'sections': ["Generic Section"],
+                        'mentions': 1,
+                        'generic': True
+                    }
+                    logger.info(f"Added generic figure type: {important_term}")
+            
+            # Extract only the images we need based on section context
+            logger.info(f"Extracting images for {len(important_figures)} important diagrams")
+            target_names = list(important_figures.keys())
+            # Also include the important terms to ensure detection
+            target_names.extend(IMPORTANT_FIGURES)
+            logger.info(f"Target figure names: {target_names}")
+            
+            image_paths = image_processor.extract_images_from_pdf(pdf_path, 
+                                                               target_figures=target_names)
+            
+            # Match images to figures
+            for figure_name, figure_info in important_figures.items():
+                logger.info(f"Processing figure: {figure_name}")
+                
+                # Find relevant images for this figure
+                relevant_images = []
+                for image_path in image_paths:
+                    # Skip processing if we already have enough images for this figure
+                    if len(relevant_images) >= 2:
+                        break
+                    
+                    # Check if image belongs to a section that mentions this figure
+                    is_relevant = False
+                    
+                    # If this is a generic figure, be more lenient in matching
+                    if figure_info.get('generic', False):
+                        # Check if path contains any part of the figure name
+                        figure_parts = figure_name.split()
+                        is_relevant = any(part.lower() in image_path.lower() for part in figure_parts)
+                    else:
+                        # Use stricter matching for normal figures
+                        image_sections = figure_info.get('sections', [])
+                        is_relevant = any(
+                            section.lower() in image_path.lower() for section in image_sections
+                        )
+                    
+                    if is_relevant:
+                        relevant_images.append(image_path)
+                        logger.info(f"Found relevant image for {figure_name}: {image_path}")
+                
+                # If no relevant images found, try a broader approach
+                if not relevant_images:
+                    logger.warning(f"No relevant images found for {figure_name}, using broader matching")
+                    # Check for partial matches in image paths
+                    figure_parts = figure_name.lower().split()
+                    for image_path in image_paths:
+                        for part in figure_parts:
+                            if len(part) > 3 and part in image_path.lower():  # Only use parts with >3 chars
+                                relevant_images.append(image_path)
+                                logger.info(f"Found image with partial match for {figure_name}: {image_path}")
+                                break
+                        
+                        if len(relevant_images) >= 2:
+                            break
+                
+                # Only process the most relevant images for this figure
+                texts = []
+                for image_path in relevant_images:
+                    # Extract text from image
+                    image_text = image_processor.extract_text_from_image(image_path)
+                    
+                    if image_text.strip():
+                        texts.append(image_text)
+                
+                # Combine all texts for this figure type
+                if texts:
+                    combined_text = "\n".join(texts)
+                    
+                    # Generate scope from combined text
+                    figure_scope = self.generate_section_scope(combined_text)
+                    
+                    # Get a cleaner display name for this figure type
+                    display_name = None
+                    for key, mapped_name in figure_name_map.items():
+                        if key in figure_name.lower():
+                            display_name = mapped_name
+                            break
+                    
+                    # If no specific match found, use a generic cleaned version
+                    if not display_name:
+                        # Use the figure name map for the IMPORTANT_FIGURES terms
+                        for key, mapped_name in figure_name_map.items():
+                            if key in figure_name.lower():
+                                display_name = mapped_name
+                                break
+                        
+                        # If still no match, use the figure name directly
+                        if not display_name:
+                            display_name = f"Figure: {figure_name}"
+                    
+                    # Store the scope with the display name
+                    figure_texts[display_name] = figure_scope
+                    logger.info(f"Added figure scope for {display_name}")
+            
+            return figure_texts
+            
+        except Exception as e:
+            logger.error(f"Error extracting figure texts: {str(e)}")
+            return {}
