@@ -1,6 +1,6 @@
 import re
 # import language_tool_python  # Commented out for performance
-# from spellchecker import SpellChecker  # Commented out for performance
+from spellchecker import SpellChecker  # Re-enabled for quick spell checking
 from transformers import pipeline
 import torch
 from PyPDF2 import PdfReader
@@ -15,8 +15,8 @@ from functools import lru_cache
 # Remove the import at module level to avoid circular dependency
 # from image_processing import ImageProcessor
 
-# Disable spell checking by default
-SPELLCHECK_ENABLED = False
+# Enable/disable spell checking
+SPELLCHECK_ENABLED = True  # Now enabled by default
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,24 @@ IMPORTANT_FIGURES = [
     "class diagram", 
     "gantt chart"
 ]
+
+# Common technical words to ignore in spell checking
+TECHNICAL_WORDS = {
+    "api", "apis", "ui", "gui", "frontend", "backend", "http", "https", "url", "uri", 
+    "json", "xml", "html", "css", "javascript", "js", "sql", "nosql", "db", "rdbms",
+    "sdk", "api", "jwt", "oauth", "saml", "ssl", "tls", "smtp", "imap", "ftp", "sftp",
+    "tcp", "udp", "ip", "dns", "dhcp", "lan", "wan", "vpn", "iot", "srs", "uml", "erd",
+    "crud", "mvc", "mvvm", "orm", "acid", "rest", "graphql", "grpc", "websocket", "microservice",
+    "kubernetes", "docker", "aws", "azure", "gcp", "ci", "cd", "devops", "saas", "paas", "iaas",
+    "agile", "scrum", "kanban", "waterfall", "jira", "confluence"
+}
+
+# Initialize spell checker once with technical words
+def get_spell_checker():
+    spell = SpellChecker()
+    # Add technical words to dictionary
+    spell.word_frequency.load_words(TECHNICAL_WORDS)
+    return spell
 
 def async_operation(func):
     @functools.wraps(func)
@@ -261,12 +279,48 @@ class TextProcessor:
 
     @async_operation
     def check_spelling_and_grammar(self, text):
-        """Check spelling and grammar in the given text."""
-        logger.debug("Spelling and grammar checking disabled for performance")
-        return {
-            'misspelled': {},
-            'grammar_suggestions': []
-        }
+        """Perform a quick spelling check on the given text."""
+        if not SPELLCHECK_ENABLED:
+            logger.debug("Spelling and grammar checking disabled")
+            return {
+                'misspelled': {},
+                'grammar_suggestions': []
+            }
+        
+        logger.info("Performing quick spell check")
+        try:
+            # Initialize spell checker only once
+            if not hasattr(self, 'spell_checker') or self.spell_checker is None:
+                self.spell_checker = get_spell_checker()
+            
+            # Split text into words and check spelling
+            words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+            
+            # Limit to unique words for faster processing
+            unique_words = set(words)
+            
+            # Only check words with length > 3 to avoid false positives on short words
+            words_to_check = {word for word in unique_words if len(word) > 3}
+            
+            # Find misspelled words
+            misspelled = self.spell_checker.unknown(words_to_check)
+            
+            # Get corrections
+            corrections = {}
+            for word in misspelled:
+                corrections[word] = self.spell_checker.correction(word)
+            
+            logger.info(f"Quick spell check completed. Found {len(corrections)} potential misspellings")
+            return {
+                'misspelled': corrections,
+                'grammar_suggestions': []  # No grammar check in quick mode
+            }
+        except Exception as e:
+            logger.error(f"Error during quick spell check: {str(e)}")
+            return {
+                'misspelled': {},
+                'grammar_suggestions': []
+            }
 
     @async_operation
     def evaluate_business_value(self, text):

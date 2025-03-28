@@ -230,7 +230,8 @@ def analyze_document():
         pdf_text = None
         if any([analyses.get('SrsValidation'), 
                 analyses.get('ContentAnalysis'),
-                analyses.get('BusinessValueAnalysis')]):
+                analyses.get('BusinessValueAnalysis'),
+                analyses.get('SpellCheck')]):
             pdf_text = text_processor.extract_text_from_pdf(pdf_path)
 
         # Initialize these variables only if needed for ContentAnalysis
@@ -247,6 +248,36 @@ def analyze_document():
                 'structure_validation': validation_results,
                 'parsed_sections': parsed_srs
             }
+
+        # Add spelling and grammar check analysis
+        if analyses.get('SpellCheck'):
+            logger.debug("Performing quick spell check on the entire document")
+            try:
+                # Check spelling for the entire document at once (quickest approach)
+                spell_check_results = text_processor.check_spelling_and_grammar(pdf_text)
+                
+                if spell_check_results:
+                    misspelled_count = len(spell_check_results.get('misspelled', {}))
+                    logger.info(f"Found {misspelled_count} potential misspellings")
+                    
+                    # Add results to response
+                    response['spelling_check'] = {
+                        'status': 'success',
+                        'misspelled_words': spell_check_results.get('misspelled', {}),
+                        'misspelled_count': misspelled_count,
+                        'checked_text_length': len(pdf_text)
+                    }
+                else:
+                    response['spelling_check'] = {
+                        'status': 'error',
+                        'message': 'Spell check returned no results'
+                    }
+            except Exception as e:
+                logger.error(f"Error during spell checking: {str(e)}")
+                response['spelling_check'] = {
+                    'status': 'error',
+                    'message': str(e)
+                }
 
         if analyses.get('ReferencesValidation'):
             logger.debug("Performing references validation")
@@ -322,8 +353,20 @@ def analyze_document():
                     # Store in dictionary
                     sections_dict[title] = content
                     logger.debug(f"Processed section: {title}")
+                    
+                    # If spell check is also selected, include section-specific spelling results
+                    if analyses.get('SpellCheck'):
+                        try:
+                            section_spell_results = text_processor.check_spelling_and_grammar(content)
+                            spelling_grammar_results.append(section_spell_results)
+                        except Exception as e:
+                            logger.error(f"Error checking spelling for section '{title}': {str(e)}")
+                            spelling_grammar_results.append({
+                                'misspelled': {},
+                                'grammar_suggestions': []
+                            })
                 except Exception as e:
-                    logger.error(f"Error processing section '{title}': {str(e)}")
+                    logger.error(f"Error processing section: {str(e)}")
                     
             # Extract text from important figures
             figure_texts = {}
@@ -349,6 +392,10 @@ def analyze_document():
                 'figures_included': bool(figure_texts),
                 'figure_count': len(figure_texts)
             }
+            
+            # Add spelling results to content analysis if available
+            if analyses.get('SpellCheck') and spelling_grammar_results:
+                response['content_analysis']['spelling_grammar'] = spelling_grammar_results
             
             logger.debug(f"Content analysis completed with {len(sections_dict)} sections (including {len(figure_texts)} figures)")
 
