@@ -3,6 +3,46 @@ import ReactMarkdown from "react-markdown";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
+// Helper function to determine if a section is a figure
+function isFigureSection(sectionName) {
+  if (!sectionName) return false;
+
+  // Check for common figure section patterns
+  const figureDiagrams = [
+    "System Overview",
+    "System Context",
+    "Use Case",
+    "EERD",
+    "Entity Relationship",
+    "Class Diagram",
+    "Gantt Chart",
+    "Sequence Diagram",
+    "Activity Diagram",
+    "Component Diagram",
+  ];
+
+  // Original "Figure:" prefix check
+  if (sectionName.startsWith("Figure:")) return true;
+
+  // Check against known diagram types
+  return figureDiagrams.some((diagramType) =>
+    sectionName.includes(diagramType)
+  );
+}
+
+// Helper function to clean up section names
+function getCleanSectionName(sectionName) {
+  if (!sectionName) return "";
+
+  // Remove "Figure:" prefix if present
+  let cleanName = sectionName.replace(/^Figure:\s*/, "");
+
+  // Remove section numbering
+  cleanName = cleanName.replace(/^\d+(\.\d+)*\s+/, "");
+
+  return cleanName;
+}
+
 function ParsingResult() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1185,51 +1225,5 @@ function Badge({ text, color, onClick, className = "" }) {
     </span>
   );
 }
-
-// Add helper functions for figure detection at the end of the component
-// Return true if this is a figure section
-(() => {
-  // Helper function to determine if a section is a figure
-  window.isFigureSection = function (sectionName) {
-    if (!sectionName) return false;
-
-    // Check for common figure section patterns
-    const figureDiagrams = [
-      "System Overview",
-      "System Context",
-      "Use Case",
-      "EERD",
-      "Entity Relationship",
-      "Class Diagram",
-      "Gantt Chart",
-      "Sequence Diagram",
-      "Activity Diagram",
-      "Component Diagram",
-    ];
-
-    // Original "Figure:" prefix check
-    if (sectionName.startsWith("Figure:")) return true;
-
-    // Check against known diagram types
-    return figureDiagrams.some((diagramType) =>
-      sectionName.includes(diagramType)
-    );
-  };
-
-  // Helper function to clean up section names
-  window.getCleanSectionName = function (sectionName) {
-    if (!sectionName) return "";
-
-    // Remove "Figure:" prefix if present
-    let cleanName = sectionName.replace(/^Figure:\s*/, "");
-
-    // Remove section numbering
-    cleanName = cleanName.replace(/^\d+(\.\d+)*\s+/, "");
-
-    return cleanName;
-  };
-
-  return null; // This IIFE doesn't render anything
-})();
 
 export default ParsingResult;
