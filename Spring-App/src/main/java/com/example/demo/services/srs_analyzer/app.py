@@ -3,7 +3,7 @@ from text_processing import TextProcessor
 from srs_validator import SRSValidator
 from similarity_analyzer import SimilarityAnalyzer
 from business_value_evaluator import BusinessValueEvaluator
-from flask import request, jsonify, session
+from flask import request, jsonify, session, Flask, send_file
 import google.generativeai as genai
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -20,6 +20,8 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 from flask_cors import CORS
 from simple_references_validator import SimpleReferencesValidator
+from concurrent.futures import ThreadPoolExecutor
+from typing import List, Dict
 
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -74,6 +76,9 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"]
 )
+
+# Create a thread pool for CPU-bound tasks
+thread_pool = ThreadPoolExecutor(max_workers=4)
 
 def handle_rate_limit(max_retries=3, initial_backoff=1):
     def decorator(f):
@@ -196,10 +201,108 @@ def check_session():
             'message': str(e)
         }), 400
 
+def analyze_document(file_path: str, analyses: Dict) -> Dict:
+    """Analyze a single document."""
+    try:
+        # Extract text only if needed for any of the text-based analyses
+        pdf_text = None
+        if any([analyses.get('SrsValidation'), 
+                analyses.get('ContentAnalysis'),
+                analyses.get('BusinessValueAnalysis'),
+                analyses.get('SpellCheck')]):
+            pdf_text = text_processor.extract_text_from_pdf(file_path)
+
+        response = {'status': 'success'}
+
+        # Initialize these variables only if needed for ContentAnalysis
+        all_scopes = []
+        scope_sources = []
+        spelling_grammar_results = []
+
+        # Perform selected analyses
+        if analyses.get('SrsValidation'):
+            parsed_srs = SRSValidator.parse_srs(pdf_text)
+            validation_results = SRSValidator.validate_srs_structure(parsed_srs)
+            response['srs_validation'] = {
+                'structure_validation': validation_results,
+                'parsed_sections': parsed_srs
+            }
+
+        # Add spelling and grammar check analysis - only if ContentAnalysis is not selected
+        if analyses.get('SpellCheck') and not analyses.get('ContentAnalysis'):
+            spell_check_results = text_processor.check_spelling_and_grammar(pdf_text)
+            if spell_check_results:
+                misspelled_count = len(spell_check_results.get('misspelled', {}))
+                response['spelling_check'] = {
+                    'status': 'success',
+                    'misspelled_words': spell_check_results.get('misspelled', {}),
+                    'misspelled_count': misspelled_count,
+                    'checked_text_length': len(pdf_text)
+                }
+
+        if analyses.get('ReferencesValidation'):
+            references_results = SimpleReferencesValidator.validate_references_in_pdf(file_path)
+            if references_results and 'references' in references_results:
+                response['references_validation'] = references_results
+
+        if analyses.get('ContentAnalysis'):
+            sections = text_processor.parse_document_sections(pdf_text)
+            
+            sections_dict = {}
+            for section in sections:
+                try:
+                    lines = section.splitlines()
+                    title = lines[0] if lines else "Unknown Section"
+                    content = "\n".join(lines[1:]) if len(lines) > 1 else ""
+                    sections_dict[title] = content
+                    
+                    if analyses.get('SpellCheck'):
+                        section_spell_results = text_processor.check_spelling_and_grammar(content)
+                        spelling_grammar_results.append({
+                            'section_title': title,
+                            'results': section_spell_results
+                        })
+                except Exception as e:
+                    logger.error(f"Error processing section: {str(e)}")
+
+            # Extract text from important figures
+            figure_texts = text_processor.extract_figure_texts_from_sections(sections_dict, file_path)
+            
+            if figure_texts:
+                sections_dict.update(figure_texts)
+
+            # Create similarity matrix
+            similarity_results = SimilarityAnalyzer.create_similarity_matrix(sections_dict)
+            
+            response['content_analysis'] = {
+                'similarity_matrix': similarity_results['matrix'].tolist(),
+                'scope_sources': similarity_results['section_names'],
+                'sections': sections_dict,
+                'figures_included': bool(figure_texts),
+                'figure_count': len(figure_texts)
+            }
+            
+            if analyses.get('SpellCheck') and spelling_grammar_results:
+                response['content_analysis']['spelling_grammar'] = spelling_grammar_results
+
+        if analyses.get('BusinessValueAnalysis'):
+            evaluator = BusinessValueEvaluator()
+            evaluation_result = evaluator.evaluate_business_value(pdf_text)
+            response['business_value_analysis'] = evaluation_result
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Error analyzing document {file_path}: {str(e)}")
+        return {
+            'status': 'error',
+            'message': str(e)
+        }
+
 @app.route('/analyze_document', methods=['POST'])
 @limiter.limit("5 per minute")
 @handle_rate_limit(max_retries=3, initial_backoff=2)
-def analyze_document():
+def analyze_document_route():
     logger.info("Starting document analysis")
     
     if 'pdfFile' not in request.files:
@@ -214,273 +317,28 @@ def analyze_document():
             
         analyses = json.loads(analyses)
         
-        # Save PDF
+        # Save PDF with unique filename
         pdf_file = request.files['pdfFile']
-        pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(pdf_file.filename))
+        filename = secure_filename(pdf_file.filename)
+        timestamp = int(time.time())
+        unique_filename = f"{timestamp}_{filename}"
+        pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        
+        # Save the file
         pdf_file.save(pdf_path)
         logger.info(f"PDF saved to: {pdf_path}")
 
-        # Initialize response dictionary
-        response = {'status': 'success'}
-
-        # Extract text only if needed for any of the text-based analyses
-        pdf_text = None
-        if any([analyses.get('SrsValidation'), 
-                analyses.get('ContentAnalysis'),
-                analyses.get('BusinessValueAnalysis'),
-                analyses.get('SpellCheck')]):
-            pdf_text = text_processor.extract_text_from_pdf(pdf_path)
-
-        # Initialize these variables only if needed for ContentAnalysis
-        all_scopes = []
-        scope_sources = []
-        spelling_grammar_results = []
-
-        # Perform selected analyses
-        if analyses.get('SrsValidation'):
-            logger.debug("Performing SRS validation")
-            parsed_srs = SRSValidator.parse_srs(pdf_text)
-            validation_results = SRSValidator.validate_srs_structure(parsed_srs)
-            response['srs_validation'] = {
-                'structure_validation': validation_results,
-                'parsed_sections': parsed_srs
-            }
-
-        # Add spelling and grammar check analysis
-        if analyses.get('SpellCheck'):
-            logger.debug("Performing quick spell check on the entire document")
+        try:
+            # Analyze the document
+            result = analyze_document(pdf_path, analyses)
+            return jsonify(result)
+        finally:
+            # Clean up the temporary file
             try:
-                # Check spelling for the entire document at once (quickest approach)
-                spell_check_results = text_processor.check_spelling_and_grammar(pdf_text)
-                
-                if spell_check_results:
-                    misspelled_count = len(spell_check_results.get('misspelled', {}))
-                    logger.info(f"Found {misspelled_count} potential misspellings")
-                    
-                    # Add results to response
-                    response['spelling_check'] = {
-                        'status': 'success',
-                        'misspelled_words': spell_check_results.get('misspelled', {}),
-                        'misspelled_count': misspelled_count,
-                        'checked_text_length': len(pdf_text)
-                    }
-                else:
-                    response['spelling_check'] = {
-                        'status': 'error',
-                        'message': 'Spell check returned no results'
-                    }
+                os.remove(pdf_path)
+                logger.info(f"Temporary file removed: {pdf_path}")
             except Exception as e:
-                logger.error(f"Error during spell checking: {str(e)}")
-                response['spelling_check'] = {
-                    'status': 'error',
-                    'message': str(e)
-                }
-
-        if analyses.get('ReferencesValidation'):
-            logger.debug("Performing references validation")
-            references_results = SimpleReferencesValidator.validate_references_in_pdf(pdf_path)
-            
-            if references_results and 'references' in references_results:
-                # Convert to the expected format
-                reformatted_references = []
-                for ref in references_results['references']:
-                    reformatted_references.append({
-                        "original": ref['reference'],
-                        "reformatted": ref['reference'],
-                        "format_check": {
-                            "valid": ref['is_valid_format'],
-                            "errors": ref['format_validation'].get('issues', []),
-                            "format": "IEEE"
-                        },
-                        "verification": {
-                            "verified": ref['verification'].get('verified', False),
-                            "source": ref['verification'].get('source', 'Web Search'),
-                            "details": {
-                                "search_url": ref['verification'].get('url', ''),
-                                "search_term": ref['verification'].get('title', '')
-                            }
-                        },
-                        "citations": {
-                            "count": ref['citation_count'],
-                            "is_cited": ref['is_cited'],
-                            "contexts": [citation['context'] for citation in ref['citations']]
-                        }
-                    })
-                
-                response['references_validation'] = {
-                    'reformatted_references': reformatted_references,
-                    'reference_validation': {
-                        'status': 'valid' if references_results['statistics']['valid_format'] == references_results['statistics']['total'] else 'invalid',
-                        'valid_count': references_results['statistics']['valid_format'],
-                        'total_count': references_results['statistics']['total']
-                    },
-                    'statistics': {
-                        'total_references': references_results['statistics']['total'],
-                        'cited_references': references_results['statistics']['cited'],
-                        'uncited_references': references_results['statistics']['uncited'],
-                        'verified_references': references_results['statistics']['verified'],
-                        'unverified_references': references_results['statistics']['unverified'],
-                        'valid_format': references_results['statistics']['valid_format'],
-                        'invalid_format': references_results['statistics']['invalid_format']
-                    },
-                    'status': references_results['status']
-                }
-            else:
-                logger.error("Invalid references validation result structure")
-                response['references_validation'] = {
-                    'reformatted_references': [],
-                    'status': 'error',
-                    'message': 'Failed to process references'
-                }
-
-        if analyses.get('ContentAnalysis'):
-            logger.debug("Performing content analysis")
-            sections = text_processor.parse_document_sections(pdf_text)
-            
-            # Process text sections
-            sections_dict = {}
-            
-            for section in sections:
-                try:
-                    # Split section into title and content
-                    lines = section.splitlines()
-                    title = lines[0] if lines else "Unknown Section"
-                    content = "\n".join(lines[1:]) if len(lines) > 1 else ""
-                    
-                    # Store in dictionary
-                    sections_dict[title] = content
-                    logger.debug(f"Processed section: {title}")
-                    
-                    # If spell check is also selected, include section-specific spelling results
-                    if analyses.get('SpellCheck'):
-                        try:
-                            section_spell_results = text_processor.check_spelling_and_grammar(content)
-                            spelling_grammar_results.append(section_spell_results)
-                        except Exception as e:
-                            logger.error(f"Error checking spelling for section '{title}': {str(e)}")
-                            spelling_grammar_results.append({
-                                'misspelled': {},
-                                'grammar_suggestions': []
-                            })
-                except Exception as e:
-                    logger.error(f"Error processing section: {str(e)}")
-                    
-            # Extract text from important figures
-            figure_texts = {}
-            try:
-                # Only import when needed to avoid circular dependencies
-                # This lets text_processing.py import ImageProcessor in its function too
-                figure_texts = text_processor.extract_figure_texts_from_sections(sections_dict, pdf_path)
-                
-                # Add figure texts to sections_dict for inclusion in similarity matrix
-                if figure_texts:
-                    logger.info(f"Adding {len(figure_texts)} figure texts to sections")
-                    sections_dict.update(figure_texts)
-            except Exception as e:
-                logger.error(f"Error extracting figure texts: {str(e)}")
-
-            # Create similarity matrix
-            similarity_results = SimilarityAnalyzer.create_similarity_matrix(sections_dict)
-            
-            response['content_analysis'] = {
-                'similarity_matrix': similarity_results['matrix'].tolist(),
-                'scope_sources': similarity_results['section_names'],
-                'sections': sections_dict,
-                'figures_included': bool(figure_texts),
-                'figure_count': len(figure_texts)
-            }
-            
-            # Add spelling results to content analysis if available
-            if analyses.get('SpellCheck') and spelling_grammar_results:
-                response['content_analysis']['spelling_grammar'] = spelling_grammar_results
-            
-            logger.debug(f"Content analysis completed with {len(sections_dict)} sections (including {len(figure_texts)} figures)")
-
-        if analyses.get('ImageAnalysis'):
-            logger.debug("Processing images for image analysis")
-            try:
-                # Import here to avoid circular dependencies
-                from image_processing import ImageProcessor
-                image_processor = ImageProcessor()
-                
-                # Extract images from PDF
-                image_paths = image_processor.extract_images_from_pdf(pdf_path)
-                processed_images = []
-
-                for i, img_path in enumerate(image_paths):
-                    try:
-                        # Process each image
-                        image_info = {
-                            'image_index': i + 1,
-                            'path': img_path,
-                            'extracted_text': '',
-                            'analysis_results': {}
-                        }
-
-                        # Extract text from image
-                        image_text = image_processor.extract_text_from_image(img_path)
-                        if image_text.strip():
-                            image_info['extracted_text'] = image_text
-
-                        # Analyze image quality
-                        quality_metrics = image_processor.analyze_image_quality(img_path)
-                        image_info['analysis_results']['quality'] = quality_metrics
-
-                        # Detect objects in image (if applicable)
-                        objects = image_processor.detect_objects(img_path)
-                        if objects:
-                            image_info['analysis_results']['detected_objects'] = objects
-
-                        # Add any image-specific metadata
-                        metadata = image_processor.get_image_metadata(img_path)
-                        image_info['metadata'] = metadata
-
-                        processed_images.append(image_info)
-
-                    except Exception as e:
-                        logger.error(f"Error processing image {i+1}: {str(e)}")
-                        processed_images.append({
-                            'image_index': i + 1,
-                            'error': str(e)
-                        })
-
-                response['image_analysis'] = {
-                    'status': 'success',
-                    'total_images': len(image_paths),
-                    'processed_images': processed_images
-                }
-
-            except Exception as e:
-                logger.error(f"Error in image analysis: {str(e)}")
-                response['image_analysis'] = {
-                    'status': 'error',
-                    'message': str(e)
-                }
-
-        if analyses.get('BusinessValueAnalysis'):
-            logger.debug("Performing business value analysis")
-            try:
-                evaluator = BusinessValueEvaluator()
-                evaluation_result = evaluator.evaluate_business_value(pdf_text)
-                response['business_value_analysis'] = evaluation_result
-            except Exception as e:
-                logger.error(f"Business value evaluation failed: {str(e)}")
-                response['business_value_analysis'] = {
-                    'status': 'error',
-                    'message': 'Business value analysis failed'
-                }
-
-        if analyses.get('DiagramConvention'):
-            logger.debug("Running YOLO script for diagram validation")
-            try:
-                subprocess.run(["python", script_path], check=True)
-                response['image_validation'] = {"status": "success", "message": "YOLO script executed"}
-            except subprocess.CalledProcessError as e:
-                logger.error(f"YOLO script execution failed: {str(e)}")
-                response['image_validation'] = {"status": "error", "message": "YOLO script execution failed"}
-
-        logger.info("Analysis completed successfully")
-        return jsonify(response)
+                logger.warning(f"Could not remove temporary file {pdf_path}: {str(e)}")
 
     except Exception as e:
         logger.error(f"Error during document processing: {str(e)}", exc_info=True)
