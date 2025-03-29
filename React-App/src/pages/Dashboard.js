@@ -65,10 +65,13 @@ function Dashboard() {
     }
   }, []);
 
-  const onDrop = async (acceptedFiles) => {
-    const file = acceptedFiles[0];
-    console.log("Dropped file:", file);
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 MB";
+    const MB = bytes / (1024 * 1024); // Convert bytes to MB
+    return MB.toFixed(2) + " MB"; // Show 2 decimal places
+  };
 
+  const onDrop = async (acceptedFiles) => {
     const date = new Date();
     const formattedDate = date
       .toLocaleDateString("en-US", {
@@ -78,40 +81,37 @@ function Dashboard() {
       })
       .replace(/(\d+) ([A-Za-z]+), (\d+)/, "$1, $2, $3");
 
-    const newDocument = {
-      id: Date.now(),
+    // Create new documents without checking for duplicates
+    const newDocuments = acceptedFiles.map((file) => ({
+      id: Date.now() + Math.random(),
       name: file.name,
       date: formattedDate,
       size: formatFileSize(file.size),
       status: "Pending Analysis",
       analyzed: false,
-      file: file, // Store the file for later analysis
-    };
+      file: file,
+      analysisProgress: 0,
+    }));
 
-    console.log("New document object:", newDocument);
-
-    const updatedDocuments = [newDocument, ...analyzedDocuments];
+    const updatedDocuments = [...newDocuments, ...analyzedDocuments];
     setAnalyzedDocuments(updatedDocuments);
     localStorage.setItem("analyzedDocuments", JSON.stringify(updatedDocuments));
+
+    // If files are dropped, show the analysis modal
+    if (newDocuments.length > 0) {
+      setSelectedDocument(newDocuments[0]);
+      setShowAnalysisModal(true);
+    }
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       "application/pdf": [".pdf"],
-      "application/msword": [".doc"],
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        [".docx"],
     },
     maxSize: 30 * 1024 * 1024, // 30MB
-    multiple: false,
+    multiple: true, // Enable multiple file selection
   });
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return "0 MB";
-    const MB = bytes / (1024 * 1024); // Convert bytes to MB
-    return MB.toFixed(2) + " MB"; // Show 2 decimal places
-  };
 
   const handleDeleteClick = (doc) => {
     setDocumentToDelete(doc);
@@ -171,70 +171,115 @@ function Dashboard() {
   };
 
   const startAnalysis = async () => {
-    const startTime = Date.now();
-
-    if (!Object.values(selectedAnalyses).some((value) => value)) {
-      alert("Please select at least one type of analysis.");
-      return;
-    }
+    if (!selectedDocument) return;
 
     setIsAnalyzing(true);
-    const formData = new FormData();
-
-    console.log("Selected document:", selectedDocument);
-    console.log("File being uploaded:", selectedDocument.file);
-
-    // Make sure we're using the correct field name that backend expects
-    formData.append("pdfFile", selectedDocument.file);
-
-    // Remove the FullAnalysis key before sending to backend
-    const analysisToSend = { ...selectedAnalyses };
-    delete analysisToSend.FullAnalysis;
-
-    formData.append("analyses", JSON.stringify(analysisToSend));
-
-    for (let pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
-    }
+    setShowAnalysisModal(false);
 
     try {
+      // Update initial progress
+      const updatedDocuments = analyzedDocuments.map((doc) => {
+        if (doc.id === selectedDocument.id) {
+          return {
+            ...doc,
+            status: "Analyzing...",
+            analyzed: false,
+            analysisProgress: 0,
+          };
+        }
+        return doc;
+      });
+      setAnalyzedDocuments(updatedDocuments);
+
+      // Create a FormData object
+      const formData = new FormData();
+      formData.append("pdfFile", selectedDocument.file);
+      formData.append("analyses", JSON.stringify(selectedAnalyses));
+
+      // Send the request
       const response = await fetch("http://localhost:5000/analyze_document", {
         method: "POST",
         body: formData,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Analysis failed");
-      }
-
       const result = await response.json();
 
       if (result.status === "success") {
-        if (selectedAnalyses.FullAnalysis) {
-          navigate("/report", {
-            state: {
-              parsingResult: result,
-              documentInfo: {
-                name: selectedDocument.name,
-                size: selectedDocument.size,
-                date: selectedDocument.date,
-                duration: `${((Date.now() - startTime) / 1000).toFixed(
-                  1
-                )} seconds`,
-              },
-            },
-          });
-        } else {
-          // For individual analyses, show the parsing result overlay
-          navigate("/parsing-result", { state: { parsingResult: result } });
-        }
+        // Update the document status and store results
+        const updatedDocuments = analyzedDocuments.map((doc) => {
+          if (doc.id === selectedDocument.id) {
+            return {
+              ...doc,
+              status: "Analysis Complete",
+              analyzed: true,
+              results: result,
+              analysisProgress: 100,
+            };
+          }
+          return doc;
+        });
+
+        setAnalyzedDocuments(updatedDocuments);
+        localStorage.setItem(
+          "analyzedDocuments",
+          JSON.stringify(updatedDocuments)
+        );
+
+        // Navigate to the results page
+        navigate("/parsing-result", {
+          state: { parsingResult: result },
+        });
+      } else {
+        // Handle error
+        const updatedDocuments = analyzedDocuments.map((doc) => {
+          if (doc.id === selectedDocument.id) {
+            return {
+              ...doc,
+              status: "Analysis Failed",
+              analyzed: false,
+              analysisProgress: 0,
+            };
+          }
+          return doc;
+        });
+
+        setAnalyzedDocuments(updatedDocuments);
+        localStorage.setItem(
+          "analyzedDocuments",
+          JSON.stringify(updatedDocuments)
+        );
+        alert("Analysis failed. Please try again.");
       }
     } catch (error) {
-      console.error("Error analyzing document:", error);
-      alert("An error occurred while analyzing the document.");
+      console.error("Error during analysis:", error);
+      alert("An error occurred during analysis. Please try again.");
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleReanalyze = (doc) => {
+    setSelectedDocument(doc);
+    setSelectedAnalyses({
+      SrsValidation: true,
+      ReferencesValidation: true,
+      ContentAnalysis: true,
+      ImageAnalysis: true,
+      BusinessValueAnalysis: true,
+      DiagramConvention: true,
+      SpellCheck: true,
+      FullAnalysis: true,
+    });
+    setShowAnalysisModal(true);
+  };
+
+  const handleViewResults = (doc) => {
+    if (doc.results) {
+      navigate("/parsing-result", {
+        state: { parsingResult: doc.results },
+      });
+    } else {
+      alert("No results available for this document.");
     }
   };
 
@@ -288,19 +333,23 @@ function Dashboard() {
           {isAnalyzing ? (
             <div className="flex items-center justify-center space-x-3">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600" />
-              <p className="text-red-600">Analyzing document...</p>
+              <p className="text-red-600">Analyzing documents...</p>
             </div>
           ) : isDragActive ? (
             <>
-              <p className="text-red-500 mb-1">Drop the file here</p>
-              <p className="text-gray-400 text-sm">PDF, DOC, DOCX (max 30MB)</p>
+              <p className="text-red-500 mb-1">Drop PDF files here</p>
+              <p className="text-gray-400 text-sm">
+                PDF files only (max 30MB each)
+              </p>
             </>
           ) : (
             <>
               <p className="text-gray-600 mb-1">
-                Drag & drop a file here, or click to select
+                Drag & drop PDF files here, or click to select
               </p>
-              <p className="text-gray-400 text-sm">PDF, DOC, DOCX (max 30MB)</p>
+              <p className="text-gray-400 text-sm">
+                PDF files only (max 30MB each)
+              </p>
             </>
           )}
         </div>
@@ -344,25 +393,32 @@ function Dashboard() {
                 onClick={() => handleDocumentClick(doc)}
               >
                 <div className="overflow-hidden">
-                  <span
-                    className="truncate block"
-                    title={doc.name} // This creates the native tooltip
-                  >
+                  <span className="truncate block" title={doc.name}>
                     {doc.name}
                   </span>
                 </div>
                 <div>{doc.date}</div>
                 <div>{doc.size}</div>
                 <div>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      doc.analyzed
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {doc.status}
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        doc.analyzed
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {doc.status}
+                    </span>
+                    {doc.analysisProgress > 0 && doc.analysisProgress < 100 && (
+                      <div className="w-20 h-1 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 transition-all duration-300"
+                          style={{ width: `${doc.analysisProgress}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-16">
                   {!doc.analyzed && (
