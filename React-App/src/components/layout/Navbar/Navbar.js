@@ -1,15 +1,10 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../Logo";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useAuth } from "contexts/AuthContext";
 import {
-  UserCircleIcon,
-  Cog6ToothIcon,
-  BellIcon,
-  ArrowRightIcon,
   ChevronDownIcon,
-  SwatchIcon,
   Bars3Icon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";

@@ -14,7 +14,7 @@ const SignUpPage = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [setIsGoogleLoading] = useState(false);
   const [isFacebookLoading, setIsFacebookLoading] = useState(false);
   const [isLinkedInLoading, setIsLinkedInLoading] = useState(false);
 
@@ -409,7 +409,7 @@ const SignUpPage = () => {
         </div>
 
         <div className="hidden md:flex items-center justify-center translate-y-16">
-          <img src={signupImage} alt="signup image" className="w-[200px]" />
+          <img src={signupImage} alt="signup" className="w-[200px]" />
         </div>
       </div>
       <ToastContainer />

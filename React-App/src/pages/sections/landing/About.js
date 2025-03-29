@@ -1,15 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
-import CountUp from "react-countup";
 import { useInView } from "react-intersection-observer";
 
 export default function About() {
-  // Create refs for elements we want to animate when they come into view
-  const [statsRef, statsInView] = useInView({
-    triggerOnce: true,
-    threshold: 0.2,
-  });
-
   const [contentRef, contentInView] = useInView({
     triggerOnce: true,
     threshold: 0.2,

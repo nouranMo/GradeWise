@@ -19,7 +19,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [setIsGoogleLoading] = useState(false);
   const [isFacebookLoading, setIsFacebookLoading] = useState(false);
   const [isLinkedInLoading, setIsLinkedInLoading] = useState(false);
 
@@ -151,7 +151,7 @@ const LoginPage = () => {
     <div className="flex min-h-screen bg-gray-50 items-center justify-center px-4 md:px-0">
       <div className="flex items-center justify-center w-full md:w-auto md:-translate-x-20">
         <div className="hidden md:flex items-center justify-center translate-y-16">
-          <img src={loginImage} alt="login image" className="w-[160px]" />
+          <img src={loginImage} alt="login" className="w-[160px]" />
         </div>
 
         <div className="bg-white p-4 sm:p-8 rounded-lg shadow-md w-screen h-screen md:w-[600px] min-h-[650px] md:h-[700px] flex flex-col justify-center">
