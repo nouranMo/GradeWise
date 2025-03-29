@@ -1,10 +1,7 @@
 from config import create_app, Config
 from text_processing import TextProcessor
-# Remove the global import to avoid circular dependencies
-# from image_processing import ImageProcessor
 from srs_validator import SRSValidator
 from similarity_analyzer import SimilarityAnalyzer
-from references_validation.references_validator import ReferencesValidator
 from business_value_evaluator import BusinessValueEvaluator
 from flask import request, jsonify, session
 import google.generativeai as genai
