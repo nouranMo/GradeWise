@@ -1,6 +1,7 @@
 from config import create_app, Config
 from text_processing import TextProcessor
-from image_processing import ImageProcessor
+# Remove the global import to avoid circular dependencies
+# from image_processing import ImageProcessor
 from srs_validator import SRSValidator
 from similarity_analyzer import SimilarityAnalyzer
 from references_validation.references_validator import ReferencesValidator
@@ -21,6 +22,7 @@ import os
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from flask_cors import CORS
+from simple_references_validator import SimpleReferencesValidator
 
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -68,7 +70,6 @@ CORS(app, resources={
 GOOGLE_CLIENT_ID = Config.GOOGLE_CLIENT_ID
 
 text_processor = TextProcessor()
-image_processor = ImageProcessor()
 similarity_analyzer = SimilarityAnalyzer()
 
 limiter = Limiter(
@@ -229,7 +230,8 @@ def analyze_document():
         pdf_text = None
         if any([analyses.get('SrsValidation'), 
                 analyses.get('ContentAnalysis'),
-                analyses.get('BusinessValueAnalysis')]):
+                analyses.get('BusinessValueAnalysis'),
+                analyses.get('SpellCheck')]):
             pdf_text = text_processor.extract_text_from_pdf(pdf_path)
 
         # Initialize these variables only if needed for ContentAnalysis
@@ -247,11 +249,85 @@ def analyze_document():
                 'parsed_sections': parsed_srs
             }
 
+        # Add spelling and grammar check analysis
+        if analyses.get('SpellCheck'):
+            logger.debug("Performing quick spell check on the entire document")
+            try:
+                # Check spelling for the entire document at once (quickest approach)
+                spell_check_results = text_processor.check_spelling_and_grammar(pdf_text)
+                
+                if spell_check_results:
+                    misspelled_count = len(spell_check_results.get('misspelled', {}))
+                    logger.info(f"Found {misspelled_count} potential misspellings")
+                    
+                    # Add results to response
+                    response['spelling_check'] = {
+                        'status': 'success',
+                        'misspelled_words': spell_check_results.get('misspelled', {}),
+                        'misspelled_count': misspelled_count,
+                        'checked_text_length': len(pdf_text)
+                    }
+                else:
+                    response['spelling_check'] = {
+                        'status': 'error',
+                        'message': 'Spell check returned no results'
+                    }
+            except Exception as e:
+                logger.error(f"Error during spell checking: {str(e)}")
+                response['spelling_check'] = {
+                    'status': 'error',
+                    'message': str(e)
+                }
+
         if analyses.get('ReferencesValidation'):
             logger.debug("Performing references validation")
-            references_results = ReferencesValidator.validate_references_in_pdf(pdf_path)
-            if references_results and 'reformatted_references' in references_results:
-                response['references_validation'] = references_results
+            references_results = SimpleReferencesValidator.validate_references_in_pdf(pdf_path)
+            
+            if references_results and 'references' in references_results:
+                # Convert to the expected format
+                reformatted_references = []
+                for ref in references_results['references']:
+                    reformatted_references.append({
+                        "original": ref['reference'],
+                        "reformatted": ref['reference'],
+                        "format_check": {
+                            "valid": ref['is_valid_format'],
+                            "errors": ref['format_validation'].get('issues', []),
+                            "format": "IEEE"
+                        },
+                        "verification": {
+                            "verified": ref['verification'].get('verified', False),
+                            "source": ref['verification'].get('source', 'Web Search'),
+                            "details": {
+                                "search_url": ref['verification'].get('url', ''),
+                                "search_term": ref['verification'].get('title', '')
+                            }
+                        },
+                        "citations": {
+                            "count": ref['citation_count'],
+                            "is_cited": ref['is_cited'],
+                            "contexts": [citation['context'] for citation in ref['citations']]
+                        }
+                    })
+                
+                response['references_validation'] = {
+                    'reformatted_references': reformatted_references,
+                    'reference_validation': {
+                        'status': 'valid' if references_results['statistics']['valid_format'] == references_results['statistics']['total'] else 'invalid',
+                        'valid_count': references_results['statistics']['valid_format'],
+                        'total_count': references_results['statistics']['total']
+                    },
+                    'statistics': {
+                        'total_references': references_results['statistics']['total'],
+                        'cited_references': references_results['statistics']['cited'],
+                        'uncited_references': references_results['statistics']['uncited'],
+                        'verified_references': references_results['statistics']['verified'],
+                        'unverified_references': references_results['statistics']['unverified'],
+                        'valid_format': references_results['statistics']['valid_format'],
+                        'invalid_format': references_results['statistics']['invalid_format']
+                    },
+                    'status': references_results['status']
+                }
             else:
                 logger.error("Invalid references validation result structure")
                 response['references_validation'] = {
@@ -261,63 +337,75 @@ def analyze_document():
                 }
 
         if analyses.get('ContentAnalysis'):
-            logger.info("Starting content analysis")  # Added log
+            logger.debug("Performing content analysis")
+            sections = text_processor.parse_document_sections(pdf_text)
+            
+            # Process text sections
+            sections_dict = {}
+            
+            for section in sections:
+                try:
+                    # Split section into title and content
+                    lines = section.splitlines()
+                    title = lines[0] if lines else "Unknown Section"
+                    content = "\n".join(lines[1:]) if len(lines) > 1 else ""
+                    
+                    # Store in dictionary
+                    sections_dict[title] = content
+                    logger.debug(f"Processed section: {title}")
+                    
+                    # If spell check is also selected, include section-specific spelling results
+                    if analyses.get('SpellCheck'):
+                        try:
+                            section_spell_results = text_processor.check_spelling_and_grammar(content)
+                            spelling_grammar_results.append(section_spell_results)
+                        except Exception as e:
+                            logger.error(f"Error checking spelling for section '{title}': {str(e)}")
+                            spelling_grammar_results.append({
+                                'misspelled': {},
+                                'grammar_suggestions': []
+                            })
+                except Exception as e:
+                    logger.error(f"Error processing section: {str(e)}")
+                    
+            # Extract text from important figures
+            figure_texts = {}
             try:
-                logger.info("Parsing document sections")
-                sections = text_processor.parse_document_sections(pdf_text)
-                logger.info(f"Successfully parsed {len(sections)} sections")  # Added log
+                # Only import when needed to avoid circular dependencies
+                # This lets text_processing.py import ImageProcessor in its function too
+                figure_texts = text_processor.extract_figure_texts_from_sections(sections_dict, pdf_path)
                 
-                logger.info("Starting section scope generation")  # Added log
-                # Process text sections
-                for i, section in enumerate(sections):
-                    try:
-                        logger.info(f"Processing section {i+1}/{len(sections)}")  # Added log
-                        scope = text_processor.generate_section_scope(section)
-                        all_scopes.append(scope)
-                        scope_sources.append(f"Section {i+1}")
-                    except Exception as e:
-                        logger.error(f"Error processing section {i+1}: {str(e)}")
-                        continue  # Continue with next section even if one fails
-
-                logger.info("Starting image processing")  # Added log
-                # Process images for content analysis
-                image_paths = image_processor.extract_images_from_pdf(pdf_path)
-                logger.info(f"Found {len(image_paths)} images")  # Added log
-
-                for i, img_path in enumerate(image_paths):
-                    try:
-                        logger.info(f"Processing image {i+1}/{len(image_paths)}")  # Added log
-                        image_text = image_processor.extract_text_from_image(img_path)
-                        if image_text.strip():
-                            scope = text_processor.generate_section_scope(image_text)
-                            all_scopes.append(scope)
-                            scope_sources.append(f"Image {i+1}")
-                    except Exception as e:
-                        logger.error(f"Error processing image {i+1}: {str(e)}")
-                        continue  # Continue with next image even if one fails
-
-                logger.info("Creating similarity matrix")  # Added log
-                similarity_matrix = similarity_analyzer.create_similarity_matrix(all_scopes)
-                logger.info("Similarity matrix created successfully")  # Added log
-
-                response['content_analysis'] = {
-                    'similarity_matrix': similarity_matrix.tolist(),
-                    'scope_sources': scope_sources,
-                    'scopes': all_scopes,
-                    # 'spelling_grammar': spelling_grammar_results
-                }
-                logger.info("Content analysis completed successfully")  # Added log
-
+                # Add figure texts to sections_dict for inclusion in similarity matrix
+                if figure_texts:
+                    logger.info(f"Adding {len(figure_texts)} figure texts to sections")
+                    sections_dict.update(figure_texts)
             except Exception as e:
-                logger.error(f"Error in content analysis: {str(e)}", exc_info=True)
-                response['content_analysis'] = {
-                    'status': 'error',
-                    'message': str(e)
-                }
+                logger.error(f"Error extracting figure texts: {str(e)}")
+
+            # Create similarity matrix
+            similarity_results = SimilarityAnalyzer.create_similarity_matrix(sections_dict)
+            
+            response['content_analysis'] = {
+                'similarity_matrix': similarity_results['matrix'].tolist(),
+                'scope_sources': similarity_results['section_names'],
+                'sections': sections_dict,
+                'figures_included': bool(figure_texts),
+                'figure_count': len(figure_texts)
+            }
+            
+            # Add spelling results to content analysis if available
+            if analyses.get('SpellCheck') and spelling_grammar_results:
+                response['content_analysis']['spelling_grammar'] = spelling_grammar_results
+            
+            logger.debug(f"Content analysis completed with {len(sections_dict)} sections (including {len(figure_texts)} figures)")
 
         if analyses.get('ImageAnalysis'):
             logger.debug("Processing images for image analysis")
             try:
+                # Import here to avoid circular dependencies
+                from image_processing import ImageProcessor
+                image_processor = ImageProcessor()
+                
                 # Extract images from PDF
                 image_paths = image_processor.extract_images_from_pdf(pdf_path)
                 processed_images = []

@@ -22,6 +22,14 @@ PyMuPDF # This includes fitz
 opencv-python
 pytesseract
 
+fitz
+PyMuPDF
+bs4
+google-cloud-aiplatform
+google.generativeai
+scholarly
+
+
 # Web & API
 Flask
 Werkzeug
@@ -35,3 +43,4 @@ tqdm
 # Additional Dependencies
 beautifulsoup4 # Explicit dependency for bs4
 lxml # Required by beautifulsoup4 for better parsing
+
