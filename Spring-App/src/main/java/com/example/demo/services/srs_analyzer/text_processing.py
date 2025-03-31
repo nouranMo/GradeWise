@@ -7,13 +7,17 @@ from PyPDF2 import PdfReader
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import functools
-import google.generativeai as genai
+import openai
 from business_value_evaluator import BusinessValueEvaluator
 from section_parser import SectionParser
 from contextlib import contextmanager
 from functools import lru_cache
-# Remove the import at module level to avoid circular dependency
-# from image_processing import ImageProcessor
+from typing import List, Dict
+import fitz  # PyMuPDF for PDF processing
+import io
+import base64
+from PIL import Image
+import PyPDF2
 
 # Enable/disable spell checking
 SPELLCHECK_ENABLED = True  # Now enabled by default
@@ -262,16 +266,26 @@ class TextProcessor:
                 return text
 
             # Generate summary using model
-            model = genai.GenerativeModel('gemini-1.5-pro')
-            prompt = f"Summarize this text concisely, focusing on key points: {text}"
-            response = model.generate_content(prompt, generation_config={
-                'max_output_tokens': max_length * 4,
-                'temperature': 0.3,
-                'top_p': 0.8,
-                'top_k': 40
-            })
+            model = openai.ChatCompletion.create(
+                model="gpt-4-vision-preview",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Summarize this text concisely, focusing on key points: {text}"
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=max_length * 4,
+                temperature=0.3,
+                top_p=0.8,
+                top_k=40
+            )
             
-            return response.text
+            return model.choices[0].message.content
         except Exception as e:
             logger.error(f"Error generating section scope: {e}")
             # Fallback: return truncated version of original text
@@ -570,3 +584,425 @@ class TextProcessor:
         except Exception as e:
             logger.error(f"Error extracting figure texts: {str(e)}")
             return {}
+
+    def create_system_scope(self, text: str) -> str:
+        """Create a system scope from text content using OpenAI."""
+        try:
+            # Clean and normalize the text
+            cleaned_text = self.clean_text(text)
+            
+            # Truncate text if too long
+            if len(cleaned_text.split()) > 1000:
+                cleaned_text = ' '.join(cleaned_text.split()[:1000])
+            
+            # Generate system scope using OpenAI
+            prompt = f"""Create a concise system scope from this text that includes:
+            1. Main system purpose
+            2. Key components
+            3. Core functionalities
+            4. Important relationships
+            
+            Text to analyze:
+            {cleaned_text}
+            
+            Format the response as a clear, structured system scope."""
+            
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a technical document analyzer. Create clear, structured system scopes."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                max_tokens=500,
+                temperature=0.3
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            logger.error(f"Error creating system scope: {str(e)}")
+            return text  # Return original text if processing fails
+
+    def create_diagram_scope(self, diagram_result: dict) -> str:
+        """Create a system scope from diagram analysis results."""
+        try:
+            scope_elements = []
+            
+            # Extract diagram type and components
+            if 'diagram_type' in diagram_result:
+                scope_elements.append(f"Diagram Type: {diagram_result['diagram_type']}")
+            
+            # Extract components and their relationships
+            if 'components' in diagram_result:
+                components = diagram_result['components']
+                scope_elements.append("Components:")
+                for comp in components:
+                    if isinstance(comp, dict):
+                        comp_text = f"- {comp.get('type', 'Unknown')}: {comp.get('label', '')}"
+                        if 'attributes' in comp:
+                            comp_text += f" ({', '.join(comp['attributes'])})"
+                        scope_elements.append(comp_text)
+            
+            # Extract relationships
+            if 'relationships' in diagram_result:
+                relationships = diagram_result['relationships']
+                scope_elements.append("Relationships:")
+                for rel in relationships:
+                    if isinstance(rel, dict):
+                        rel_text = f"- {rel.get('type', 'Unknown')}: {rel.get('from', '')} → {rel.get('to', '')}"
+                        scope_elements.append(rel_text)
+            
+            # Create the final scope
+            diagram_scope = "\n".join(scope_elements)
+            
+            return diagram_scope
+            
+        except Exception as e:
+            logger.error(f"Error creating diagram scope: {str(e)}")
+            return "Error processing diagram"
+
+    def extract_diagrams_from_pdf(self, pdf_path):
+        """
+        Extract and analyze diagrams from the PDF using OpenAI's vision model.
+        
+        Args:
+            pdf_path: Path to the PDF file
+            
+        Returns:
+            Dictionary of diagram scopes {diagram_name: system_scope}
+        """
+        logger.info("Extracting and analyzing diagrams from PDF")
+        
+        # Import ImageProcessor here to avoid circular dependency
+        from image_processing import ImageProcessor
+        
+        # Initialize image processor
+        image_processor = ImageProcessor()
+        diagram_scopes = {}
+        
+        # Map of standard figure names for better display
+        figure_name_map = {
+            "system overview": "System Overview",
+            "system context": "System Context Diagram",
+            "use case": "Use Case Diagram",
+            "eerd": "EERD",
+            "entity relationship": "Entity Relationship Diagram",
+            "class diagram": "Class Diagram",
+            "gantt chart": "Gantt Chart"
+        }
+        
+        try:
+            # First, find all figures mentioned in the document
+            sections_dict = {}
+            with open(pdf_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page in pdf_reader.pages:
+                    text = page.extract_text()
+                    if text.strip():
+                        # Split text into sections based on headers
+                        lines = text.splitlines()
+                        current_section = None
+                        current_content = []
+                        
+                        for line in lines:
+                            if re.match(r'^\d+(\.\d+)*\s+[A-Z]', line):
+                                if current_section and current_content:
+                                    sections_dict[current_section] = '\n'.join(current_content)
+                                current_section = line.strip()
+                                current_content = []
+                            elif current_section:
+                                current_content.append(line)
+                        
+                        if current_section and current_content:
+                            sections_dict[current_section] = '\n'.join(current_content)
+            
+            # Find all figures mentioned in the document
+            all_figures = self._find_figures_in_sections(sections_dict)
+            
+            # Filter to only the figures we want to process
+            important_figures = {}
+            for figure_name, figure_info in all_figures.items():
+                figure_name_lower = figure_name.lower()
+                is_important = any(
+                    important_term in figure_name_lower 
+                    for important_term in IMPORTANT_FIGURES
+                )
+                
+                if is_important:
+                    important_figures[figure_name] = figure_info
+                    logger.info(f"Will process figure: {figure_name}")
+            
+            # If no important figures found, try a more general approach
+            if not important_figures:
+                logger.warning("No important figures found with exact matching, trying broader matching")
+                for important_term in IMPORTANT_FIGURES:
+                    important_figures[important_term] = {
+                        'sections': ["Generic Section"],
+                        'mentions': 1,
+                        'generic': True
+                    }
+                    logger.info(f"Added generic figure type: {important_term}")
+            
+            # Extract images based on section context
+            logger.info(f"Extracting images for {len(important_figures)} important diagrams")
+            target_names = list(important_figures.keys())
+            target_names.extend(IMPORTANT_FIGURES)
+            logger.info(f"Target figure names: {target_names}")
+            
+            image_paths = image_processor.extract_images_from_pdf(pdf_path, 
+                                                               target_figures=target_names)
+            
+            # Match images to figures
+            for figure_name, figure_info in important_figures.items():
+                logger.info(f"Processing figure: {figure_name}")
+                
+                # Find relevant images for this figure
+                relevant_images = []
+                for image_path in image_paths:
+                    # Skip processing if we already have enough images for this figure
+                    if len(relevant_images) >= 2:
+                        break
+                    
+                    # Check if image belongs to a section that mentions this figure
+                    is_relevant = False
+                    
+                    # If this is a generic figure, be more lenient in matching
+                    if figure_info.get('generic', False):
+                        # Check if path contains any part of the figure name
+                        figure_parts = figure_name.split()
+                        is_relevant = any(part.lower() in image_path.lower() for part in figure_parts)
+                    else:
+                        # Use stricter matching for normal figures
+                        image_sections = figure_info.get('sections', [])
+                        is_relevant = any(
+                            section.lower() in image_path.lower() for section in image_sections
+                        )
+                    
+                    if is_relevant:
+                        relevant_images.append(image_path)
+                        logger.info(f"Found relevant image for {figure_name}: {image_path}")
+                
+                # If no relevant images found, try a broader approach
+                if not relevant_images:
+                    logger.warning(f"No relevant images found for {figure_name}, using broader matching")
+                    # Check for partial matches in image paths
+                    figure_parts = figure_name.lower().split()
+                    for image_path in image_paths:
+                        for part in figure_parts:
+                            if len(part) > 3 and part in image_path.lower():  # Only use parts with >3 chars
+                                relevant_images.append(image_path)
+                                logger.info(f"Found image with partial match for {figure_name}: {image_path}")
+                                break
+                        
+                        if len(relevant_images) >= 2:
+                            break
+                
+                # Process the most relevant images with OpenAI vision model
+                for image_path in relevant_images:
+                    try:
+                        # Convert image to base64
+                        with open(image_path, "rb") as image_file:
+                            image_data = base64.b64encode(image_file.read()).decode('utf-8')
+                        
+                        # Create prompt for OpenAI vision model
+                        prompt = """
+                        Analyze this diagram and create a system scope that includes:
+                        1. Main system components and their roles
+                        2. Key relationships between components
+                        3. System boundaries and interfaces
+                        4. Critical interactions
+                        
+                        Format the scope as:
+                        System: [Main system name/description]
+                        Components: [List of main components and their roles]
+                        Relationships: [List of key relationships]
+                        Boundaries: [System boundaries and interfaces]
+                        """
+                        
+                        # Call OpenAI vision model
+                        response = openai.ChatCompletion.create(
+                            model="gpt-4o-mini",
+                            messages=[
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": prompt},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {
+                                                "url": f"data:image/jpeg;base64,{image_data}"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            max_tokens=500
+                        )
+                        
+                        # Get the analysis result
+                        analysis = response.choices[0].message.content
+                        
+                        # Get a cleaner display name for this figure type
+                        display_name = None
+                        for key, mapped_name in figure_name_map.items():
+                            if key in figure_name.lower():
+                                display_name = mapped_name
+                                break
+                        
+                        # If no specific match found, use a generic name
+                        if not display_name:
+                            display_name = f"Diagram_{len(diagram_scopes) + 1}"
+                        
+                        # Store the scope with the display name
+                        diagram_scopes[display_name] = analysis
+                        logger.info(f"Added diagram scope for {display_name}")
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing image {image_path}: {str(e)}")
+                        continue
+            
+            return diagram_scopes
+            
+        except Exception as e:
+            logger.error(f"Error extracting diagrams: {str(e)}")
+            return {}
+
+    def _extract_diagram_type(self, analysis: str) -> str:
+        """Extract diagram type from analysis text."""
+        try:
+            # Look for common diagram types in the analysis
+            diagram_types = [
+                "UML", "ERD", "Flowchart", "Class Diagram", "Sequence Diagram",
+                "Activity Diagram", "Use Case Diagram", "Component Diagram",
+                "State Diagram", "Gantt Chart", "System Context", "System Overview"
+            ]
+            
+            for diagram_type in diagram_types:
+                if diagram_type.lower() in analysis.lower():
+                    return diagram_type
+            
+            return "Technical Diagram"
+        except Exception as e:
+            logger.error(f"Error extracting diagram type: {str(e)}")
+            return "Technical Diagram"
+
+    def _extract_components(self, analysis: str) -> List[Dict]:
+        """Extract components and their attributes from analysis text."""
+        try:
+            components = []
+            # Look for component descriptions in the analysis
+            # This is a simple implementation - you might want to use more sophisticated NLP
+            lines = analysis.split('\n')
+            for line in lines:
+                if any(keyword in line.lower() for keyword in ['component', 'class', 'entity', 'node']):
+                    components.append({
+                        'type': self._get_component_type(line),
+                        'label': line.strip(),
+                        'attributes': self._extract_attributes(line)
+                    })
+            return components
+        except Exception as e:
+            logger.error(f"Error extracting components: {str(e)}")
+            return []
+
+    def _extract_relationships(self, analysis: str) -> List[Dict]:
+        """Extract relationships between components from analysis text."""
+        try:
+            relationships = []
+            # Look for relationship descriptions in the analysis
+            lines = analysis.split('\n')
+            for line in lines:
+                if any(keyword in line.lower() for keyword in ['relationship', 'connection', 'link', 'association']):
+                    relationships.append({
+                        'type': self._get_relationship_type(line),
+                        'from': self._extract_from_component(line),
+                        'to': self._extract_to_component(line)
+                    })
+            return relationships
+        except Exception as e:
+            logger.error(f"Error extracting relationships: {str(e)}")
+            return []
+
+    def _extract_functionalities(self, analysis: str) -> List[str]:
+        """Extract functionalities or processes from analysis text."""
+        try:
+            functionalities = []
+            # Look for functionality descriptions in the analysis
+            lines = analysis.split('\n')
+            for line in lines:
+                if any(keyword in line.lower() for keyword in ['function', 'process', 'operation', 'action']):
+                    functionalities.append(line.strip())
+            return functionalities
+        except Exception as e:
+            logger.error(f"Error extracting functionalities: {str(e)}")
+            return []
+
+    def _get_component_type(self, line: str) -> str:
+        """Determine the type of component from a line of text."""
+        if 'class' in line.lower():
+            return 'Class'
+        elif 'entity' in line.lower():
+            return 'Entity'
+        elif 'node' in line.lower():
+            return 'Node'
+        return 'Component'
+
+    def _get_relationship_type(self, line: str) -> str:
+        """Determine the type of relationship from a line of text."""
+        if 'inheritance' in line.lower():
+            return 'Inheritance'
+        elif 'composition' in line.lower():
+            return 'Composition'
+        elif 'association' in line.lower():
+            return 'Association'
+        return 'Relationship'
+
+    def _extract_attributes(self, line: str) -> List[str]:
+        """Extract attributes from a component description."""
+        try:
+            # Look for attributes in parentheses or after colons
+            attributes = []
+            if '(' in line and ')' in line:
+                attr_text = line[line.find('(')+1:line.find(')')]
+                attributes = [attr.strip() for attr in attr_text.split(',')]
+            elif ':' in line:
+                attr_text = line[line.find(':')+1:].strip()
+                attributes = [attr.strip() for attr in attr_text.split(',')]
+            return attributes
+        except Exception as e:
+            logger.error(f"Error extracting attributes: {str(e)}")
+            return []
+
+    def _extract_from_component(self, line: str) -> str:
+        """Extract the source component from a relationship description."""
+        try:
+            # Look for components before relationship keywords
+            words = line.split()
+            for i, word in enumerate(words):
+                if any(keyword in word.lower() for keyword in ['relationship', 'connection', 'link', 'association']):
+                    if i > 0:
+                        return words[i-1]
+            return "Unknown"
+        except Exception as e:
+            logger.error(f"Error extracting from component: {str(e)}")
+            return "Unknown"
+
+    def _extract_to_component(self, line: str) -> str:
+        """Extract the target component from a relationship description."""
+        try:
+            # Look for components after relationship keywords
+            words = line.split()
+            for i, word in enumerate(words):
+                if any(keyword in word.lower() for keyword in ['relationship', 'connection', 'link', 'association']):
+                    if i < len(words) - 1:
+                        return words[i+1]
+            return "Unknown"
+        except Exception as e:
+            logger.error(f"Error extracting to component: {str(e)}")
+            return "Unknown"
