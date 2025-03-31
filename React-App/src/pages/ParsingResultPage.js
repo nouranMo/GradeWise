@@ -747,31 +747,59 @@ function ParsingResult() {
                   Section Details
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(parsingResult.content_analysis.sections).map(
-                    ([title, content], index) => (
-                      <div
-                        key={index}
-                        className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200"
-                      >
-                        <div className="p-4 border-b bg-gray-50">
-                          <h4 className="font-medium text-lg text-gray-800">
-                            {title.replace(/^\d+(\.\d+)*\s+/, "")}
-                          </h4>
-                        </div>
-                        <div className="p-4">
-                          <div className="prose prose-sm max-h-60 overflow-y-auto">
-                            {content.split("\n").map(
-                              (paragraph, i) =>
-                                paragraph.trim() && (
-                                  <p key={i} className="text-gray-600 mb-2">
-                                    {paragraph}
-                                  </p>
-                                )
-                            )}
+                  {parsingResult.content_analysis.sections.map(
+                    (section, index) => {
+                      // Split section into title and content
+                      const [title, ...contentParts] = section.split("\n");
+                      const content = contentParts.join("\n");
+
+                      return (
+                        <div
+                          key={index}
+                          className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200"
+                        >
+                          <div className="p-4 border-b bg-gray-50">
+                            <h4 className="font-medium text-lg text-gray-800">
+                              {title.replace(/^\d+(\.\d+)*\s+/, "")}
+                            </h4>
+                          </div>
+                          <div className="p-4">
+                            <div className="prose prose-sm max-h-60 overflow-y-auto">
+                              {(() => {
+                                // Handle different content types
+                                if (typeof content === "string") {
+                                  return content.split("\n").map(
+                                    (paragraph, i) =>
+                                      paragraph.trim() && (
+                                        <p
+                                          key={i}
+                                          className="text-gray-600 mb-2"
+                                        >
+                                          {paragraph}
+                                        </p>
+                                      )
+                                  );
+                                } else if (typeof content === "object") {
+                                  // If content is an object, stringify it
+                                  return (
+                                    <p className="text-gray-600">
+                                      {JSON.stringify(content, null, 2)}
+                                    </p>
+                                  );
+                                } else {
+                                  // Fallback for other types
+                                  return (
+                                    <p className="text-gray-600">
+                                      {String(content)}
+                                    </p>
+                                  );
+                                }
+                              })()}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )
+                      );
+                    }
                   )}
                 </div>
               </div>

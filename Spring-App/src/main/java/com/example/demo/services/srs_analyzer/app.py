@@ -4,7 +4,6 @@ from srs_validator import SRSValidator
 from similarity_analyzer import SimilarityAnalyzer
 from business_value_evaluator import BusinessValueEvaluator
 from flask import request, jsonify, session, Flask, send_file
-import google.generativeai as genai
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from functools import wraps
@@ -22,6 +21,9 @@ from flask_cors import CORS
 from simple_references_validator import SimpleReferencesValidator
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import openai
 
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -49,8 +51,6 @@ spec.loader.exec_module(script)
 
 # Now you can use process_image from script
 process_image = script.process_image
-
-genai.configure(api_key=Config.GEMINI_API_KEY)
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +215,7 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
         response = {'status': 'success'}
 
         # Initialize these variables only if needed for ContentAnalysis
-        all_scopes = []
+        all_scopes = {}
         scope_sources = []
         spelling_grammar_results = []
 
@@ -245,45 +245,94 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
             if references_results and 'references' in references_results:
                 response['references_validation'] = references_results
 
-        if analyses.get('ContentAnalysis'):
-            sections = text_processor.parse_document_sections(pdf_text)
-            
-            sections_dict = {}
-            for section in sections:
-                try:
-                    lines = section.splitlines()
-                    title = lines[0] if lines else "Unknown Section"
-                    content = "\n".join(lines[1:]) if len(lines) > 1 else ""
-                    sections_dict[title] = content
+        if 'ContentAnalysis' in analyses:
+            try:
+                # Content Analysis
+                content_analysis = {
+                    "sections": [],
+                    "similarity_matrix": [],
+                    "scope_sources": [],
+                    "figures_included": False,
+                    "figure_count": 0
+                }
+
+                # Parse document sections using predefined structure
+                sections = text_processor.parse_document_sections(pdf_text)
+                content_analysis["sections"] = sections
+
+                # Create system scopes for all text sections
+                all_scopes = {}
+                
+                # Create system scopes for all sections
+                for section in sections:
+                    # Split section into title and content
+                    title, content = section.split('\n', 1)
+                    if content.strip():
+                        try:
+                            # Create system scope for this section
+                            scope = similarity_analyzer.create_system_scope_with_gpt(content)
+                            all_scopes[title] = scope
+                            logger.info(f"Created system scope for section: {title}")
+                        except Exception as e:
+                            logger.error(f"Error creating system scope for section {title}: {str(e)}")
+                            continue
+
+                # Find figures in sections and create scopes for them
+                sections_dict = {section.split('\n', 1)[0]: section.split('\n', 1)[1] for section in sections}
+                figures = text_processor._find_figures_in_sections(sections_dict)
+                
+                # Extract and analyze diagrams for each figure found
+                diagram_scopes = text_processor.extract_diagrams_from_pdf(file_path)
+                if diagram_scopes:
+                    content_analysis["figures_included"] = True
+                    content_analysis["figure_count"] = len(diagram_scopes)
+                    all_scopes.update(diagram_scopes)
+                    logger.info(f"Added {len(diagram_scopes)} diagram scopes to analysis")
+
+                # Create similarity matrix with all scopes
+                if all_scopes:
+                    # Get all section titles in order
+                    section_titles = [section.split('\n', 1)[0] for section in sections]
                     
-                    if analyses.get('SpellCheck'):
-                        section_spell_results = text_processor.check_spelling_and_grammar(content)
-                        spelling_grammar_results.append({
-                            'section_title': title,
-                            'results': section_spell_results
-                        })
-                except Exception as e:
-                    logger.error(f"Error processing section: {str(e)}")
+                    # Add diagram titles to the list
+                    if diagram_scopes:
+                        section_titles.extend(diagram_scopes.keys())
+                    
+                    # Create similarity matrix using the ordered titles
+                    content_analysis["scope_sources"] = section_titles
+                    content_analysis["similarity_matrix"] = similarity_analyzer.create_similarity_matrix(all_scopes)
+                    logger.info(f"Created similarity matrix with {len(section_titles)} scopes")
 
-            # Extract text from important figures
-            figure_texts = text_processor.extract_figure_texts_from_sections(sections_dict, file_path)
-            
-            if figure_texts:
-                sections_dict.update(figure_texts)
+                # Count diagrams and identify important diagrams
+                diagram_count = len([scope for scope in content_analysis["scope_sources"] if scope.startswith("Diagram_")])
+                important_diagrams = [scope for scope in content_analysis["scope_sources"] if any(
+                    diagram_type in scope.lower() for diagram_type in [
+                        "system overview", "system context", "use case", "eerd",
+                        "entity relationship", "class diagram", "gantt chart"
+                    ]
+                )]
 
-            # Create similarity matrix
-            similarity_results = SimilarityAnalyzer.create_similarity_matrix(sections_dict)
-            
-            response['content_analysis'] = {
-                'similarity_matrix': similarity_results['matrix'].tolist(),
-                'scope_sources': similarity_results['section_names'],
-                'sections': sections_dict,
-                'figures_included': bool(figure_texts),
-                'figure_count': len(figure_texts)
-            }
-            
-            if analyses.get('SpellCheck') and spelling_grammar_results:
-                response['content_analysis']['spelling_grammar'] = spelling_grammar_results
+                # Update response with similarity matrix and scope sources
+                response["content_analysis"] = {
+                    "similarity_matrix": content_analysis["similarity_matrix"],
+                    "scope_sources": content_analysis["scope_sources"],
+                    "figures_included": content_analysis["figures_included"],
+                    "figure_count": content_analysis["figure_count"],
+                    "important_diagrams": important_diagrams,
+                    "sections": sections,
+                    "diagram_analysis": {
+                        "total_diagrams": diagram_count,
+                        "important_diagrams": important_diagrams,
+                        "diagram_scopes": diagram_scopes
+                    }
+                }
+
+            except Exception as e:
+                logger.error(f"Error in content analysis: {str(e)}")
+                response["content_analysis"] = {
+                    "error": "An error occurred during content analysis",
+                    "details": str(e)
+                }
 
         if analyses.get('BusinessValueAnalysis'):
             evaluator = BusinessValueEvaluator()
@@ -410,7 +459,7 @@ def generate_recommendations():
 
         analysis_summary = "\n".join(summary)
 
-        # Generate recommendations using Gemini
+        # Generate recommendations using OpenAI
         prompt = f"""
         As an expert SRS document analyzer, review these analysis results and provide specific, actionable recommendations.
         Focus on improvements across all analyzed aspects.
@@ -428,26 +477,33 @@ def generate_recommendations():
         Use markdown bullet points (*) for each recommendation.
         """
 
-        def call_gemini_with_retry(prompt, max_attempts=3):
+        def call_openai_with_retry(prompt, max_attempts=3):
             for attempt in range(max_attempts):
                 try:
-                    model = genai.GenerativeModel("gemini-1.5-flash")
-                    response = model.generate_content(prompt)
-                    return response
+                    response = openai.ChatCompletion.create(
+                        model="gpt-4",
+                        messages=[
+                            {"role": "system", "content": "You are an expert SRS document analyzer. Provide clear, actionable recommendations."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        temperature=0.7,
+                        max_tokens=1000
+                    )
+                    return response.choices[0].message.content
                 except Exception as e:
-                    if "RATE_LIMIT_EXCEEDED" in str(e):
+                    if "rate_limit" in str(e).lower():
                         if attempt < max_attempts - 1:
                             wait_time = 2 ** attempt
-                            logger.warning(f"Gemini API rate limit hit. Waiting {wait_time} seconds...")
+                            logger.warning(f"OpenAI API rate limit hit. Waiting {wait_time} seconds...")
                             time.sleep(wait_time)
                             continue
                     raise e
 
-        response = call_gemini_with_retry(prompt)
+        recommendations = call_openai_with_retry(prompt)
 
         return jsonify({
             'status': 'success',
-            'recommendations': response.text
+            'recommendations': recommendations
         })
 
     except Exception as e:
