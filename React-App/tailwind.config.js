@@ -5,8 +5,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Poppins', 'sans-serif'],
-        mono: ['Fira Code', 'monospace'],
+        sans: ["Poppins", "sans-serif"],
+        mono: ["Fira Code", "monospace"],
       },
       gridTemplateColumns: {
         13: "repeat(13, minmax(0, 1fr))",
