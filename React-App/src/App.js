@@ -1,5 +1,7 @@
 import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { AuthProvider } from "contexts/AuthContext";
 
 import LandingPage from "pages/LandingPage";
 import Dashboard from "pages/Dashboard";
@@ -11,13 +13,10 @@ import UMLparsing from "components/uml/UMLparsing";
 import SectionExtraction from "components/uml/sectionExtraction";
 import ParsingResultPage from "pages/ParsingResultPage";
 import UMLReport from "components/uml/UMLReport";
-import { GoogleOAuthProvider } from "@react-oauth/google";
-import { AuthProvider } from "contexts/AuthContext";
 
 function App() {
-  console.log("Client ID:", process.env.REACT_APP_GOOGLE_CLIENT_ID);
   return (
-    <GoogleOAuthProvider clientId="296280424100-h6ufvnc9fqg0rco9rfql3o4ppt5tlpic.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
       <AuthProvider>
         <Router>
           <Routes>

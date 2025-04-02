@@ -45,7 +45,11 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "globals": {
+      "FB": "readonly",
+      "IN": "readonly"
+    }
   },
   "browserslist": {
     "production": [
@@ -66,6 +70,8 @@
     "postcss": "^8.4.31",
     "postcss-flexbugs-fixes": "^5.0.2",
     "postcss-preset-env": "^8.5.1",
-    "tailwindcss": "^3.3.0"
+    "tailwindcss": "^3.3.0",
+    "eslint": "^8.38.0",
+    "eslint-plugin-react": "^7.32.2"
   }
 }
