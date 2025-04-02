@@ -1,66 +1,31 @@
 package com.example.demo.models;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.index.Indexed;
 
 @Document(collection = "users")
 public class User {
     @Id
     private String id;
 
-    @Indexed(unique = true)
+    @NotBlank(message = "Email is required")
+    @Email(message = "Please provide a valid email")
     private String email;
+
+    @NotBlank(message = "Password is required")
     private String password;
-    private String name;
-    private String provider; // "google", "local", etc.
-    private String providerId;
+
+    @NotBlank(message = "First name is required")
+    private String firstName;
+
+    @NotBlank(message = "Last name is required")
+    private String lastName;
+
     private boolean enabled = true;
 
-    // Add constructors
-    public User() {
-    }
-
-    public User(String email, String name, String provider, String providerId) {
-        this.email = email;
-        this.name = name;
-        this.provider = provider;
-        this.providerId = providerId;
-    }
-
-    // Add getters and setters for new fields
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getProvider() {
-        return provider;
-    }
-
-    public void setProvider(String provider) {
-        this.provider = provider;
-    }
-
-    public String getProviderId() {
-        return providerId;
-    }
-
-    public void setProviderId(String providerId) {
-        this.providerId = providerId;
-    }
-
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
+    // Getters and Setters
     public String getId() {
         return id;
     }
@@ -83,5 +48,29 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

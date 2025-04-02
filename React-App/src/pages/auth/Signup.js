@@ -2,123 +2,112 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { GoogleLogin } from "@react-oauth/google";
-import facebookLogo from "assets/images/facebook.svg";
-import linkedinLogo from "assets/images/linkedin.svg";
-import signupImage from "assets/images/lean-girl.png"
+import signupImage from "assets/images/lean-girl.png";
+import { useAuth } from "../../contexts/AuthContext";
+import showImage from "assets/images/show.svg";
+import hideImage from "assets/images/hide.svg";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 
 const SignUpPage = () => {
-  const navigate = useNavigate();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isFacebookLoading, setIsFacebookLoading] = useState(false);
-  const [isLinkedInLoading, setIsLinkedInLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [errors, setErrors] = useState({
     email: "",
     password: "",
     confirmPassword: "",
-  });
-
-  const [successes, setSuccesses] = useState({
-    email: false,
-    password: false,
-    confirmPassword: false,
+    firstName: "",
+    lastName: "",
   });
 
   const [isDirty, setIsDirty] = useState({
     email: false,
     password: false,
     confirmPassword: false,
+    firstName: false,
+    lastName: false,
   });
 
   const [isFormValidated, setIsFormValidated] = useState(false);
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   useEffect(() => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmailValid = email && emailPattern.test(email);
+    const isPasswordValid = password && password.length >= 6;
+    const isConfirmPasswordValid = confirmPassword === password;
+    const isFirstNameValid = firstName.trim().length > 0;
+    const isLastNameValid = lastName.trim().length > 0;
+
+    setIsFormValidated(
+      isEmailValid &&
+        isPasswordValid &&
+        isConfirmPasswordValid &&
+        isFirstNameValid &&
+        isLastNameValid
+    );
 
     if (!email) {
       setErrors((prev) => ({ ...prev, email: "" }));
-      setSuccesses((prev) => ({ ...prev, email: false }));
-      return;
-    }
-
-    if (emailPattern.test(email)) {
+    } else if (!isEmailValid && isDirty.email) {
+      setErrors((prev) => ({
+        ...prev,
+        email: "Please enter a valid email address",
+      }));
+    } else {
       setErrors((prev) => ({ ...prev, email: "" }));
-      setSuccesses((prev) => ({ ...prev, email: true }));
-    } else if (isDirty.email) {
-      const timeoutId = setTimeout(() => {
-        setErrors((prev) => ({
-          ...prev,
-          email: "Please enter a valid email address",
-        }));
-        setSuccesses((prev) => ({ ...prev, email: false }));
-      }, 500);
-      return () => clearTimeout(timeoutId);
     }
-  }, [email, isDirty.email]);
 
-  useEffect(() => {
     if (!password) {
       setErrors((prev) => ({ ...prev, password: "" }));
-      setSuccesses((prev) => ({ ...prev, password: false }));
-      return;
-    }
-
-    const hasMinLength = password.length >= 6;
-    const hasNumber = /\d/.test(password);
-
-    if (hasMinLength && hasNumber) {
+    } else if (!isPasswordValid && isDirty.password) {
+      setErrors((prev) => ({
+        ...prev,
+        password: "Password must be at least 6 characters",
+      }));
+    } else {
       setErrors((prev) => ({ ...prev, password: "" }));
-      setSuccesses((prev) => ({ ...prev, password: true }));
-    } else if (isDirty.password) {
-      const timeoutId = setTimeout(() => {
-        setErrors((prev) => ({
-          ...prev,
-          password:
-            "Password must be at least 6 characters with a number included",
-        }));
-        setSuccesses((prev) => ({ ...prev, password: false }));
-      }, 500);
-      return () => clearTimeout(timeoutId);
     }
-  }, [password, isDirty.password]);
 
-  useEffect(() => {
     if (!confirmPassword) {
       setErrors((prev) => ({ ...prev, confirmPassword: "" }));
-      setSuccesses((prev) => ({ ...prev, confirmPassword: false }));
-      return;
-    }
-
-    if (confirmPassword === password && password !== "") {
+    } else if (!isConfirmPasswordValid && isDirty.confirmPassword) {
+      setErrors((prev) => ({
+        ...prev,
+        confirmPassword: "Passwords do not match",
+      }));
+    } else {
       setErrors((prev) => ({ ...prev, confirmPassword: "" }));
-      setSuccesses((prev) => ({ ...prev, confirmPassword: true }));
-    } else if (isDirty.confirmPassword) {
-      const timeoutId = setTimeout(() => {
-        setErrors((prev) => ({
-          ...prev,
-          confirmPassword: "Passwords do not match",
-        }));
-        setSuccesses((prev) => ({ ...prev, confirmPassword: false }));
-      }, 500);
-      return () => clearTimeout(timeoutId);
     }
-  }, [confirmPassword, password, isDirty.confirmPassword]);
 
-  useEffect(() => {
-    const isValid =
-      successes.email && successes.password && successes.confirmPassword;
+    if (!firstName) {
+      setErrors((prev) => ({ ...prev, firstName: "" }));
+    } else if (!isFirstNameValid && isDirty.firstName) {
+      setErrors((prev) => ({
+        ...prev,
+        firstName: "First name is required",
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, firstName: "" }));
+    }
 
-    const timeoutId = setTimeout(() => {
-      setIsFormValidated(isValid);
-    }, 500);
-    return () => clearTimeout(timeoutId);
-  }, [successes]);
+    if (!lastName) {
+      setErrors((prev) => ({ ...prev, lastName: "" }));
+    } else if (!isLastNameValid && isDirty.lastName) {
+      setErrors((prev) => ({
+        ...prev,
+        lastName: "Last name is required",
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, lastName: "" }));
+    }
+  }, [email, password, confirmPassword, firstName, lastName, isDirty]);
 
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
@@ -135,70 +124,55 @@ const SignUpPage = () => {
     setIsDirty((prev) => ({ ...prev, confirmPassword: true }));
   };
 
+  const handleFirstNameChange = (e) => {
+    setFirstName(e.target.value);
+    setIsDirty((prev) => ({ ...prev, firstName: true }));
+  };
+
+  const handleLastNameChange = (e) => {
+    setLastName(e.target.value);
+    setIsDirty((prev) => ({ ...prev, lastName: true }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValidated) return;
 
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success("Account created successfully!");
-      navigate("/dashboard");
-    }, 1500);
-  };
+    // Check if email ends with @miuegypt.edu.eg
+    if (!email.endsWith("@miuegypt.edu.eg") && email !== "admin@gmail.com") {
+      toast.error("Only @miuegypt.edu.eg email addresses are allowed");
+      return;
+    }
 
-  const handleGoogleLogin = async (credentialResponse) => {
-    setIsGoogleLoading(true);
+    setIsLoading(true);
     try {
-      // Add your Google sign-in logic here
-      const response = await fetch("http://localhost:5000/auth/google", {
+      const response = await fetch("http://localhost:8080/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          credential: credentialResponse.credential,
+          email,
+          password,
+          firstName,
+          lastName,
         }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem("token", data.token);
-        toast.success("Successfully signed up!");
+        login(data);
+        toast.success("Account created successfully!");
         navigate("/dashboard");
       } else {
-        throw new Error(data.message || "Signup failed");
+        throw new Error(data.message || "Registration failed");
       }
     } catch (error) {
       console.error(error);
-      toast.error(error.message || "Failed to sign up with Google");
+      toast.error(error.message || "Failed to create account");
     } finally {
-      setIsGoogleLoading(false);
-    }
-  };
-
-  const handleFacebookLogin = async () => {
-    setIsFacebookLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.info("Facebook sign up coming soon!");
-    } catch (error) {
-      toast.error("Facebook sign up failed. Please try again.");
-    } finally {
-      setIsFacebookLoading(false);
-    }
-  };
-
-  const handleLinkedInLogin = async () => {
-    setIsLinkedInLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.info("LinkedIn sign up coming soon!");
-    } catch (error) {
-      toast.error("LinkedIn sign up failed. Please try again.");
-    } finally {
-      setIsLinkedInLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -206,96 +180,67 @@ const SignUpPage = () => {
     <div className="flex min-h-screen bg-gray-50 items-center justify-center px-4 md:px-0">
       <div className="flex items-center justify-center w-full md:w-auto md:translate-x-14">
         <div className="bg-white p-4 sm:p-8 rounded-lg shadow-md w-screen h-screen md:w-[600px] min-h-[650px] md:h-[700px] flex flex-col justify-center">
-          <h2 className="text-xl sm:text-2xl text-center mb-6 sm:mb-10">
-            Sign Up
-          </h2>
-
-          {/* Social Login Buttons Container */}
-          <div className="flex flex-col gap-4 mb-6">
-            {/* Google Login Button */}
-            <div className="w-full h-[44px]">
-              <GoogleLogin
-                onSuccess={handleGoogleLogin}
-                onError={() => {
-                  toast.error("Login Failed");
-                  setIsGoogleLoading(false);
-                }}
-                useOneTap
-                type="standard"
-                theme="outline"
-                size="large"
-                width="100%"
-                text="continue_with"
-                shape="rectangular"
-              />
-            </div>
-
-            {/* Facebook Login Button */}
+          <div className="flex items-center justify-between mb-6">
             <button
-              onClick={handleFacebookLogin}
-              disabled={isFacebookLoading}
-              className="w-full h-[44px] relative bg-[#176AE6] text-white rounded-lg hover:ring-1 hover:ring-blue-400 transition-all duration-200 disabled:opacity-50"
+              onClick={() => navigate("/")}
+              className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
             >
-              {isFacebookLoading ? (
-                <div className="flex items-center justify-center w-full">
-                  <div
-                    className="w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"
-                    style={{ animationDuration: "0.6s" }}
-                  />
-                </div>
-              ) : (
-                <>
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                    <img
-                      src={facebookLogo}
-                      alt="Facebook logo"
-                      className="w-5 h-5"
-                    />
-                  </div>
-                  <div className="w-full text-center text-sm">
-                    Continue with Facebook
-                  </div>
-                </>
-              )}
+              <ArrowLeftIcon className="h-5 w-5 mr-1" />
+              Back to Home
             </button>
-
-            {/* LinkedIn Login Button */}
-            <button
-              onClick={handleLinkedInLogin}
-              disabled={isLinkedInLoading}
-              className="w-full h-[44px] relative bg-white border border-gray-300 text-gray-700 rounded-lg hover:ring-1 hover:ring-[#007bb5] transition-all duration-200 disabled:opacity-50"
-            >
-              {isLinkedInLoading ? (
-                <div className="flex items-center justify-center w-full">
-                  <div
-                    className="w-6 h-6 border-2 border-t-transparent border-[#007bb5] rounded-full animate-spin"
-                    style={{ animationDuration: "0.6s" }}
-                  />
-                </div>
-              ) : (
-                <>
-                  <div className="absolute left-2 top-1/2 -translate-y-1/2">
-                    <img
-                      src={linkedinLogo}
-                      alt="LinkedIn logo"
-                      className="w-6 h-6"
-                    />
-                  </div>
-                  <div className="w-full text-center text-sm">
-                    Continue with LinkedIn
-                  </div>
-                </>
-              )}
-            </button>
-          </div>
-
-          <div className="flex items-center mb-6">
-            <hr className="flex-grow border-t border-gray-300" />
-            <span className="mx-2 text-gray-500">Or</span>
-            <hr className="flex-grow border-t border-gray-300" />
+            <h2 className="text-xl sm:text-2xl text-center">Sign Up</h2>
+            <div className="w-24" /> {/* Spacer for alignment */}
           </div>
 
           <form onSubmit={handleSubmit} noValidate>
+            <div className="mb-4">
+              <label
+                htmlFor="firstName"
+                className="block text-sm font-medium text-gray-700"
+              >
+                First Name
+              </label>
+              <input
+                id="firstName"
+                type="text"
+                value={firstName}
+                onChange={handleFirstNameChange}
+                className={`mt-1 block w-full p-2 sm:p-3 border rounded-lg transition-all duration-200 ${
+                  errors.firstName && isDirty.firstName
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:ring-black"
+                } focus:border-none focus:ring-1`}
+                placeholder="Enter your first name"
+              />
+              {errors.firstName && isDirty.firstName && (
+                <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label
+                htmlFor="lastName"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Last Name
+              </label>
+              <input
+                id="lastName"
+                type="text"
+                value={lastName}
+                onChange={handleLastNameChange}
+                className={`mt-1 block w-full p-2 sm:p-3 border rounded-lg transition-all duration-200 ${
+                  errors.lastName && isDirty.lastName
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:ring-black"
+                } focus:border-none focus:ring-1`}
+                placeholder="Enter your last name"
+              />
+              {errors.lastName && isDirty.lastName && (
+                <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>
+              )}
+            </div>
+
             <div className="mb-4">
               <label
                 htmlFor="email"
@@ -311,10 +256,9 @@ const SignUpPage = () => {
                 className={`mt-1 block w-full p-2 sm:p-3 border rounded-lg transition-all duration-200 ${
                   errors.email && isDirty.email
                     ? "border-red-500 focus:ring-red-500"
-                    : successes.email
-                    ? "border-green-500 focus:ring-green-500"
                     : "border-gray-300 focus:ring-black"
                 } focus:border-none focus:ring-1`}
+                placeholder="example@miuegypt.edu.eg"
               />
               {errors.email && isDirty.email && (
                 <p className="mt-1 text-sm text-red-500">{errors.email}</p>
@@ -331,17 +275,26 @@ const SignUpPage = () => {
               <div className="relative">
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={handlePasswordChange}
                   className={`mt-1 block w-full p-2 sm:p-3 border rounded-lg transition-all duration-200 ${
                     errors.password && isDirty.password
                       ? "border-red-500 focus:ring-red-500"
-                      : successes.password
-                      ? "border-green-500 focus:ring-green-500"
                       : "border-gray-300 focus:ring-black"
                   } focus:border-none focus:ring-1`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  <img
+                    src={showPassword ? showImage : hideImage}
+                    alt={showPassword ? "Hide password" : "Show password"}
+                    className="w-5 h-5"
+                  />
+                </button>
               </div>
               {errors.password && isDirty.password && (
                 <p className="mt-1 text-sm text-red-500">{errors.password}</p>
@@ -358,17 +311,26 @@ const SignUpPage = () => {
               <div className="relative">
                 <input
                   id="confirmPassword"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={handleConfirmPasswordChange}
                   className={`mt-1 block w-full p-2 sm:p-3 border rounded-lg transition-all duration-200 ${
                     errors.confirmPassword && isDirty.confirmPassword
                       ? "border-red-500 focus:ring-red-500"
-                      : successes.confirmPassword
-                      ? "border-green-500 focus:ring-green-500"
                       : "border-gray-300 focus:ring-black"
                   } focus:border-none focus:ring-1`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  <img
+                    src={showPassword ? showImage : hideImage}
+                    alt={showPassword ? "Hide password" : "Show password"}
+                    className="w-5 h-5"
+                  />
+                </button>
               </div>
               {errors.confirmPassword && isDirty.confirmPassword && (
                 <p className="mt-1 text-sm text-red-500">
@@ -380,7 +342,6 @@ const SignUpPage = () => {
             <button
               type="submit"
               disabled={!isFormValidated || isLoading}
-              onClick={() => navigate('/dashboard')}
               className={`w-full min-h-[44px] rounded-lg text-sm font-medium bg-[#ff6464] text-white transition-all duration-200 ${
                 !isFormValidated || isLoading
                   ? "bg-gray-200 text-gray-400 border-gray-200 cursor-not-allowed"
