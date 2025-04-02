@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import Navbar from "components/layout/Navbar/Navbar";
 import ReactMarkdown from "react-markdown";
+import { debounce } from "lodash";
+import ReportPDF from "pages/ReportPDF";
+import { PDFDownloadLink } from "@react-pdf/renderer";
 
 function Report() {
   const location = useLocation();
@@ -76,6 +79,7 @@ function Report() {
       hour12: true,
     });
   };
+
   // Helper Components
   const CollapsibleSection = ({ id, title, children, status }) => {
     const getStatusStyles = (status) => {
@@ -262,6 +266,7 @@ function Report() {
                             className="mt-6 font-semibold italic"
                           >
                             {cleanText}
+                            <br />
                           </div>
                         );
                       }
@@ -358,47 +363,46 @@ function Report() {
     );
   };
 
-  // Generate recommendations using Gemini
-  const generateRecommendations = async (parsingResult) => {
-    try {
-      const response = await fetch(
-        "http://localhost:5000/generate_recommendations",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ parsingResult }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to generate recommendations");
-      }
-
-      const data = await response.json();
-      return {
-        status: "success",
-        recommendations: data.recommendations,
-      };
-    } catch (error) {
-      console.error("Error generating recommendations:", error);
-      return {
-        status: "error",
-        message: "Failed to generate recommendations",
-      };
-    }
-  };
-
-  // Effects
   useEffect(() => {
-    if (parsingResult) {
-      generateRecommendations(parsingResult)
-        .then((result) => setRecommendations(result))
-        .catch((error) =>
-          console.error("Error setting recommendations:", error)
+    const debouncedGenerateRecommendations = debounce(async (parsingResult) => {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/generate_recommendations",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ parsingResult }),
+          }
         );
+
+        if (!response.ok) {
+          throw new Error("Failed to generate recommendations");
+        }
+
+        const data = await response.json();
+        setRecommendations({
+          status: "success",
+          recommendations: data.recommendations,
+        });
+      } catch (error) {
+        console.error("Error generating recommendations:", error);
+        setRecommendations({
+          status: "error",
+          message: "Failed to generate recommendations",
+        });
+      }
+    }, 300); // 300ms debounce delay
+
+    if (parsingResult) {
+      debouncedGenerateRecommendations(parsingResult);
     }
+
+    // Cleanup function to cancel debounce on unmount
+    return () => {
+      debouncedGenerateRecommendations.cancel();
+    };
   }, [parsingResult]);
 
   useEffect(() => {
@@ -423,9 +427,40 @@ function Report() {
                 Generated on {formatGeneratedTime(new Date())}
               </p>
             </div>
-            <button className="px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300 ease-in-out">
-              Download Report
-            </button>
+            <PDFDownloadLink
+              document={
+                <ReportPDF
+                  parsingResult={parsingResult}
+                  documentInfo={documentInfo}
+                  recommendations={recommendations}
+                />
+              }
+              fileName="analysis-report.pdf"
+            >
+              {({ blob, url, loading, error }) => {
+                if (error) {
+                  console.error("Error generating PDF:", error);
+                  return (
+                    <button
+                      className="px-4 py-2 bg-red-500 text-white rounded-lg"
+                      disabled
+                    >
+                      Error generating PDF
+                    </button>
+                  );
+                }
+                return (
+                  <button
+                    className={`px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300 ease-in-out ${
+                      loading ? "opacity-50" : ""
+                    }`}
+                    disabled={loading}
+                  >
+                    {loading ? "Generating PDF..." : "Download Report"}
+                  </button>
+                );
+              }}
+            </PDFDownloadLink>
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-4">
@@ -454,179 +489,6 @@ function Report() {
           </div>
         </div>
 
-        {/* Executive Summary */}
-        {/* <div className="bg-white rounded-lg shadow-md p-6 mb-8"> */}
-        {/* <h2 className="text-2xl font-semibold mb-4">Executive Summary</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="p-4 bg-green-50 rounded-lg">
-              <p className="text-sm text-green-600 font-medium">
-                Passed Checks
-              </p>
-              <p className="text-2xl font-bold text-green-800">
-                {passedChecks}
-              </p>
-            </div>
-            <div className="p-4 bg-red-50 rounded-lg">
-              <p className="text-sm text-red-600 font-medium">Failed Checks</p>
-              <p className="text-2xl font-bold text-red-800">{failedChecks}</p>
-            </div>
-            <div className="p-4 bg-yellow-50 rounded-lg">
-              <p className="text-sm text-yellow-600 font-medium">Warnings</p>
-              <p className="text-2xl font-bold text-yellow-800">{warnings}</p>
-            </div>
-          </div> */}
-
-        {/* Analysis Summary */}
-        {/* <div className="space-y-6"> */}
-        {/* Business Value Analysis */}
-        {/* {parsingResult?.business_value_analysis && (
-              <div className="border-b pb-4">
-                <h3 className="text-lg font-semibold mb-3 text-gray-800">
-                  Business Value Analysis
-                </h3>
-                <div className="space-y-2 text-gray-700">
-                  {parsingResult.business_value_analysis[
-                    "Business Value Evaluation"
-                  ]
-                    ?.split("*")
-                    .map((point, index) => {
-                      if (point.trim()) {
-                        return (
-                          <div key={index} className="flex items-start">
-                            <span className="text-[#ff6464] mr-2">•</span>
-                            <p>{point.trim()}</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
-                </div>
-              </div>
-            )} */}
-
-        {/* SRS Structure */}
-        {/* {parsingResult?.srs_validation?.structure_validation && (
-              <div className="border-b pb-4">
-                <h3 className="text-lg font-semibold mb-3 text-gray-800">
-                  SRS Structure
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">
-                      Present Sections:
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {parsingResult.srs_validation.structure_validation.matching_sections.map(
-                        (section, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-sm"
-                          >
-                            {section}
-                          </span>
-                        )
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">
-                      Missing Sections:
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {parsingResult.srs_validation.structure_validation.missing_sections.map(
-                        (section, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm"
-                          >
-                            {section}
-                          </span>
-                        )
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )} */}
-
-        {/* References Analysis */}
-        {/* {parsingResult?.references_validation && (
-              <div className="border-b pb-4">
-                <h3 className="text-lg font-semibold mb-3 text-gray-800">
-                  References Analysis
-                </h3>
-                <p className="text-gray-700">
-                  Found{" "}
-                  {parsingResult.references_validation.reformatted_references
-                    ?.length || 0}{" "}
-                  references, with{" "}
-                  {parsingResult.references_validation.reformatted_references?.filter(
-                    (ref) => ref.errors?.length > 0
-                  ).length || 0}{" "}
-                  formatting issues.
-                </p>
-              </div>
-            )} */}
-
-        {/* Content Analysis */}
-        {/* {parsingResult?.content_analysis?.similarity_matrix && (
-              <div className="border-b pb-4">
-                <h3 className="text-lg font-semibold mb-3 text-gray-800">
-                  Content Analysis
-                </h3>
-                <p className="text-gray-700">
-                  Content similarity analysis completed successfully.
-                </p>
-              </div>
-            )} */}
-
-        {/* Image Analysis */}
-        {/* {parsingResult?.image_analysis?.processed_images && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3 text-gray-800">
-                  Image Analysis
-                </h3>
-                <p className="text-gray-700">
-                  Analyzed{" "}
-                  {parsingResult.image_analysis.processed_images.length} images
-                  successfully.
-                </p>
-              </div>
-            )}
-          </div> */}
-
-        {/* Key Findings */}
-        {/* <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-3">Key Findings</h3>
-            <ul className="list-disc pl-5 space-y-2">
-              {passedChecks > 0 && (
-                <li className="text-green-600">
-                  {passedChecks}{" "}
-                  {passedChecks === 1 ? "section meets" : "sections meet"}{" "}
-                  requirements
-                </li>
-              )}
-              {failedChecks > 0 && (
-                <li className="text-red-600">
-                  {failedChecks} critical{" "}
-                  {failedChecks === 1 ? "issue" : "issues"} found in document
-                  structure
-                </li>
-              )}
-              {warnings > 0 && (
-                <li className="text-yellow-600">
-                  {warnings}{" "}
-                  {warnings === 1 ? "warning requires" : "warnings require"}{" "}
-                  attention
-                </li>
-              )}
-              {passedChecks === 0 && failedChecks === 0 && warnings === 0 && (
-                <li className="text-gray-600">No analysis results available</li>
-              )}
-            </ul>
-          </div> */}
-        {/* </div> */}
-
         {/* Detailed Analysis Sections */}
         <div className="space-y-4">
           {parsingResult?.srs_validation && (
@@ -636,8 +498,7 @@ function Report() {
               status="success"
             >
               <AnalysisCard
-                title="SRS Validation"
-                data={{ ...parsingResult.srs_validation, status: "success" }}
+                data={{ ...parsingResult.srs_validation }}
                 type="list"
               />
             </CollapsibleSection>
@@ -650,7 +511,6 @@ function Report() {
               status={parsingResult.references_validation.status}
             >
               <AnalysisCard
-                title="References Validation"
                 data={parsingResult.references_validation}
                 type="list"
               />
@@ -664,8 +524,7 @@ function Report() {
               status="success"
             >
               <AnalysisCard
-                title="Content Analysis"
-                data={{ ...parsingResult.content_analysis, status: "success" }}
+                data={{ ...parsingResult.content_analysis }}
                 type="matrix"
               />
             </CollapsibleSection>
@@ -677,11 +536,7 @@ function Report() {
               title="Image Analysis"
               status={parsingResult.image_analysis.status}
             >
-              <AnalysisCard
-                title="Image Analysis"
-                data={parsingResult.image_analysis}
-                type="list"
-              />
+              <AnalysisCard data={parsingResult.image_analysis} type="list" />
             </CollapsibleSection>
           )}
 
@@ -705,11 +560,7 @@ function Report() {
               title="Diagram Convention"
               status={parsingResult.image_validation.status}
             >
-              <AnalysisCard
-                title="Diagram Convention"
-                data={parsingResult.image_validation}
-                type="list"
-              />
+              <AnalysisCard data={parsingResult.image_validation} type="list" />
             </CollapsibleSection>
           )}
         </div>

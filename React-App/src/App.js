@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 
 import LandingPage from "pages/LandingPage";
 import Dashboard from "pages/Dashboard";
+import ProfessorDashboard from "pages/ProfessorDashboard";
 import Report from "pages/Report";
 import LoginPage from "pages/auth/LoginPage";
 import Signup from "pages/auth/Signup";
@@ -23,6 +24,10 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
+
+            {/* /professor should be merged with /dashboard with a condition that checks role */}
+            <Route path="/professor" element={<ProfessorDashboard />} />
+
             <Route path="/report" element={<Report />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/umlparsing" element={<UMLparsing />} />
