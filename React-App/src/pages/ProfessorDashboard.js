@@ -71,7 +71,7 @@ function ProfessorDashboard() {
             >
               <option value="all">All Groups</option>
               <option value="swe301">SWE 301</option>
-			  <option value="swe302">SWE 302</option>
+              <option value="swe302">SWE 302</option>
               <option value="swe401">SWE 401</option>
               <option value="swe402">SWE 402</option>
             </select>
