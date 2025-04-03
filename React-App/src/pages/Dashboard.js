@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import Navbar from "components/layout/Navbar/Navbar";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { compressPDF } from "utils/pdfCompressor";
 
 const DeleteConfirmationModal = ({
   isOpen,
@@ -48,6 +51,7 @@ function Dashboard() {
     BusinessValueAnalysis: false,
     DiagramConvention: false,
     SpellCheck: false,
+    PlagiarismCheck: false,
     FullAnalysis: false,
   });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -58,11 +62,29 @@ function Dashboard() {
 
   const navigate = useNavigate();
 
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
+
   useEffect(() => {
-    const savedDocuments = localStorage.getItem("analyzedDocuments");
-    if (savedDocuments) {
-      setAnalyzedDocuments(JSON.parse(savedDocuments));
-    }
+    const fetchUserDocuments = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://localhost:8080/api/documents", {
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const documents = await response.json();
+          setAnalyzedDocuments(documents);
+        }
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+      }
+    };
+
+    fetchUserDocuments();
   }, []);
 
   const formatFileSize = (bytes) => {
@@ -71,46 +93,69 @@ function Dashboard() {
     return MB.toFixed(2) + " MB"; // Show 2 decimal places
   };
 
-  const onDrop = async (acceptedFiles) => {
-    const date = new Date();
-    const formattedDate = date
-      .toLocaleDateString("en-US", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-      .replace(/(\d+) ([A-Za-z]+), (\d+)/, "$1, $2, $3");
+  const onDrop = useCallback(
+    async (acceptedFiles) => {
+      try {
+        // Filter out files that are too large
+        const validFiles = acceptedFiles.filter(
+          (file) => file.size <= MAX_FILE_SIZE
+        );
+        if (validFiles.length !== acceptedFiles.length) {
+          toast.error("Some files were too large and were not uploaded");
+        }
 
-    // Create new documents without checking for duplicates
-    const newDocuments = acceptedFiles.map((file) => ({
-      id: Date.now() + Math.random(),
-      name: file.name,
-      date: formattedDate,
-      size: formatFileSize(file.size),
-      status: "Pending Analysis",
-      analyzed: false,
-      file: file,
-      analysisProgress: 0,
-    }));
+        if (validFiles.length === 0) return;
 
-    const updatedDocuments = [...newDocuments, ...analyzedDocuments];
-    setAnalyzedDocuments(updatedDocuments);
-    localStorage.setItem("analyzedDocuments", JSON.stringify(updatedDocuments));
+        const file = validFiles[0];
+        console.log("Uploading file:", file.name);
 
-    // If files are dropped, show the analysis modal
-    if (newDocuments.length > 0) {
-      setSelectedDocument(newDocuments[0]);
-      setShowAnalysisModal(true);
-    }
-  };
+        // Create FormData
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("analyses", JSON.stringify(selectedAnalyses));
+
+        // Get JWT token
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Not authenticated");
+          return;
+        }
+
+        // Upload file
+        const response = await fetch("http://localhost:8080/api/documents", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Upload failed");
+        }
+
+        const data = await response.json();
+        console.log("Upload response:", data);
+
+        // Update documents list
+        setAnalyzedDocuments((prev) => [...prev, data.document]);
+        toast.success("Document uploaded successfully");
+      } catch (error) {
+        console.error("Upload error:", error);
+        toast.error(error.message || "Failed to upload document");
+      }
+    },
+    [selectedAnalyses]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       "application/pdf": [".pdf"],
     },
-    maxSize: 30 * 1024 * 1024, // 30MB
-    multiple: true, // Enable multiple file selection
+    maxSize: MAX_FILE_SIZE,
+    multiple: true,
   });
 
   const handleDeleteClick = (doc) => {
@@ -118,14 +163,31 @@ function Dashboard() {
     setShowDeleteModal(true);
   };
 
-  const handleDeleteDocument = () => {
-    const updatedDocs = analyzedDocuments.filter(
-      (doc) => doc.id !== documentToDelete.id
-    );
-    setAnalyzedDocuments(updatedDocs);
-    localStorage.setItem("analyzedDocuments", JSON.stringify(updatedDocs));
-    setShowDeleteModal(false);
-    setDocumentToDelete(null);
+  const handleDeleteDocument = async (doc) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:8080/api/documents/${doc.id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const updatedDocs = analyzedDocuments.filter((d) => d.id !== doc.id);
+        setAnalyzedDocuments(updatedDocs);
+      } else {
+        alert("Failed to delete document. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      alert("An error occurred while deleting the document.");
+    }
   };
 
   const handleDocumentClick = (document) => {
@@ -170,91 +232,60 @@ function Dashboard() {
     setShowAnalysisModal(true);
   };
 
-  const startAnalysis = async () => {
-    if (!selectedDocument) return;
-
-    setIsAnalyzing(true);
-    setShowAnalysisModal(false);
-
+  const startAnalysis = async (documentId) => {
     try {
-      // Update initial progress
-      const updatedDocuments = analyzedDocuments.map((doc) => {
-        if (doc.id === selectedDocument.id) {
-          return {
-            ...doc,
-            status: "Analyzing...",
-            analyzed: false,
-            analysisProgress: 0,
-          };
-        }
-        return doc;
-      });
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication token not found");
+        return;
+      }
+
+      // Update document status to "Analyzing"
+      const updatedDocuments = analyzedDocuments.map((doc) =>
+        doc.id === documentId ? { ...doc, status: "Analyzing" } : doc
+      );
       setAnalyzedDocuments(updatedDocuments);
 
-      // Create a FormData object
-      const formData = new FormData();
-      formData.append("pdfFile", selectedDocument.file);
-      formData.append("analyses", JSON.stringify(selectedAnalyses));
+      // Send request to Spring backend with selected analyses
+      const response = await fetch(
+        `http://localhost:8080/api/documents/${documentId}/analyze`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ analyses: selectedAnalyses }),
+        }
+      );
 
-      // Send the request
-      const response = await fetch("http://localhost:5000/analyze_document", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (result.status === "success") {
-        // Update the document status and store results
-        const updatedDocuments = analyzedDocuments.map((doc) => {
-          if (doc.id === selectedDocument.id) {
-            return {
-              ...doc,
-              status: "Analysis Complete",
-              analyzed: true,
-              results: result,
-              analysisProgress: 100,
-            };
-          }
-          return doc;
-        });
-
-        setAnalyzedDocuments(updatedDocuments);
-        localStorage.setItem(
-          "analyzedDocuments",
-          JSON.stringify(updatedDocuments)
-        );
-
-        // Navigate to the results page
-        navigate("/parsing-result", {
-          state: { parsingResult: result },
-        });
-      } else {
-        // Handle error
-        const updatedDocuments = analyzedDocuments.map((doc) => {
-          if (doc.id === selectedDocument.id) {
-            return {
-              ...doc,
-              status: "Analysis Failed",
-              analyzed: false,
-              analysisProgress: 0,
-            };
-          }
-          return doc;
-        });
-
-        setAnalyzedDocuments(updatedDocuments);
-        localStorage.setItem(
-          "analyzedDocuments",
-          JSON.stringify(updatedDocuments)
-        );
-        alert("Analysis failed. Please try again.");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Analysis failed");
       }
+
+      const data = await response.json();
+      console.log("Analysis response:", data);
+
+      // Update document status
+      const updatedDocs = analyzedDocuments.map((doc) =>
+        doc.id === documentId
+          ? { ...doc, status: "Analyzing", analyzed: false }
+          : doc
+      );
+      setAnalyzedDocuments(updatedDocs);
+      toast.success("Analysis started successfully");
     } catch (error) {
-      console.error("Error during analysis:", error);
-      alert("An error occurred during analysis. Please try again.");
-    } finally {
-      setIsAnalyzing(false);
+      console.error("Analysis error:", error);
+      toast.error(error.message || "Failed to start analysis");
+
+      // Update document status to failed
+      const updatedDocs = analyzedDocuments.map((doc) =>
+        doc.id === documentId
+          ? { ...doc, status: "Failed", analyzed: false }
+          : doc
+      );
+      setAnalyzedDocuments(updatedDocs);
     }
   };
 
@@ -286,6 +317,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
+      <ToastContainer position="top-right" autoClose={5000} />
       <div className="max-w-6xl mx-auto mt-6">
         {/* Header */}
         <div className="mb-8">
@@ -339,7 +371,7 @@ function Dashboard() {
             <>
               <p className="text-red-500 mb-1">Drop PDF files here</p>
               <p className="text-gray-400 text-sm">
-                PDF files only (max 30MB each)
+                PDF files only (max 100MB each)
               </p>
             </>
           ) : (
@@ -348,7 +380,7 @@ function Dashboard() {
                 Drag & drop PDF files here, or click to select
               </p>
               <p className="text-gray-400 text-sm">
-                PDF files only (max 30MB each)
+                PDF files only (max 100MB each)
               </p>
             </>
           )}
@@ -460,7 +492,7 @@ function Dashboard() {
           <DeleteConfirmationModal
             isOpen={showDeleteModal}
             onClose={() => setShowDeleteModal(false)}
-            onConfirm={handleDeleteDocument}
+            onConfirm={() => handleDeleteDocument(documentToDelete)}
             documentName={documentToDelete?.name}
           />
         </div>
@@ -517,7 +549,7 @@ function Dashboard() {
                   Cancel
                 </button>
                 <button
-                  onClick={startAnalysis}
+                  onClick={() => startAnalysis(selectedDocument.id)}
                   disabled={
                     !Object.values(selectedAnalyses).some((value) => value) ||
                     isAnalyzing

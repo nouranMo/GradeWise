@@ -2,6 +2,7 @@ package com.example.demo.config;
 
 import com.example.demo.security.JwtAuthenticationFilter;
 import com.example.demo.security.JwtTokenProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +26,9 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
+	@Autowired
+	private JwtTokenProvider jwtTokenProvider;
+
 	@Bean
 	public JwtAuthenticationFilter jwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider,
 			UserDetailsService userDetailsService) {
@@ -32,19 +36,20 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
-			throws Exception {
+	public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenProvider jwtTokenProvider,
+			UserDetailsService userDetailsService) throws Exception {
 		http
 				.csrf(csrf -> csrf.disable())
 				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(new AntPathRequestMatcher("/api/auth/**")).permitAll()
-						.anyRequest().authenticated())
-				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-				.formLogin(form -> form.disable())
-				.httpBasic(basic -> basic.disable())
-				.logout(logout -> logout.disable());
+						.requestMatchers(new AntPathRequestMatcher("/error")).permitAll()
+						.requestMatchers(new AntPathRequestMatcher("/api/documents/**")).authenticated()
+						.anyRequest().permitAll())
+				.sessionManagement(session -> session
+						.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.addFilterBefore(jwtAuthenticationFilter(jwtTokenProvider, userDetailsService),
+						UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
 	}
@@ -54,9 +59,9 @@ public class SecurityConfig {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-		configuration.setAllowedHeaders(Arrays.asList("*"));
+		configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
 		configuration.setAllowCredentials(true);
-		configuration.setMaxAge(3600L); // 1 hour
+		configuration.setMaxAge(3600L);
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
