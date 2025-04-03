@@ -18,7 +18,6 @@ const SignUpPage = () => {
 
   const [showPassword, setShowPassword] = useState(false);
 
-
   const [errors, setErrors] = useState({
     email: "",
     password: "",
@@ -181,17 +180,16 @@ const SignUpPage = () => {
   return (
     <div className="flex min-h-screen bg-gray-50 items-center justify-center px-4 md:px-0">
       <div className="flex items-center justify-center w-full md:w-auto md:translate-x-14">
-        <div className="bg-white p-4 sm:p-8 rounded-lg shadow-md w-screen h-screen md:w-[600px] min-h-[650px] md:h-[700px] flex flex-col justify-center">
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={() => navigate("/")}
-              className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <ArrowLeftIcon className="h-5 w-5 mr-1" />
-              Back to Home
-            </button>
+        <div className="relative bg-white p-4 sm:p-8 rounded-lg shadow-md w-screen h-screen md:w-[600px] min-h-[650px] md:h-[700px] flex flex-col justify-center">
+          <button
+            onClick={() => navigate("/")}
+            className="absolute top-8 left-5 flex items-center text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            <ArrowLeftIcon className="h-5 w-5 mr-1" />
+            Back to Home
+          </button>
+          <div className="flex items-center justify-center mb-6">
             <h2 className="text-xl sm:text-2xl text-center">Sign Up</h2>
-            <div className="w-24" /> {/* Spacer for alignment */}
           </div>
 
           <form onSubmit={handleSubmit} noValidate>
