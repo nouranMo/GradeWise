@@ -955,6 +955,154 @@ function ParsingResult() {
           </div>
         )}
 
+        {/* Plagiarism Check Results */}
+        {parsingResult.plagiarism_check && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              Plagiarism Check Results
+            </h2>
+
+            {/* Debug information */}
+            {process.env.NODE_ENV !== "production" && (
+              <div className="p-2 bg-yellow-50 border border-yellow-200 rounded mb-4 text-xs">
+                <p>Debug information:</p>
+                <pre className="overflow-auto max-h-40">
+                  {JSON.stringify(parsingResult.plagiarism_check, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            {/* Statistics */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <StatCard
+                title="Total Phrases Checked"
+                value={
+                  parsingResult.plagiarism_check.total_phrases_checked || 0
+                }
+                color="blue"
+              />
+              <StatCard
+                title="Similar Matches Found"
+                value={
+                  parsingResult.plagiarism_check.similar_matches_found || 0
+                }
+                color={
+                  parsingResult.plagiarism_check.similar_matches_found > 0
+                    ? "red"
+                    : "green"
+                }
+              />
+            </div>
+
+            {/* Phrases Checked */}
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-gray-700 mb-3">
+                Phrases Checked
+              </h3>
+              <div className="space-y-2">
+                {parsingResult.plagiarism_check.phrases_checked?.map(
+                  (phrase, index) => (
+                    <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-gray-800">{phrase}</p>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Search Results */}
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-gray-700 mb-3">
+                Search Results
+              </h3>
+              <div className="space-y-4">
+                {parsingResult.plagiarism_check.search_results?.map(
+                  (result, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="text-lg font-medium text-gray-800">
+                          Search {index + 1}
+                        </h4>
+                        <Badge
+                          text={`${Math.round(
+                            result.similarity * 100
+                          )}% Similar`}
+                          color={result.similarity > 0.7 ? "red" : "yellow"}
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">
+                            Search Query:
+                          </p>
+                          <p className="text-gray-800">{result.query}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">
+                            Search URL:
+                          </p>
+                          <a
+                            href={result.search_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 break-all"
+                          >
+                            {result.search_url}
+                          </a>
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">
+                            Found on Page:
+                          </p>
+                          <a
+                            href={result.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 break-all"
+                          >
+                            {result.url}
+                          </a>
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">
+                            Page Title:
+                          </p>
+                          <p className="text-gray-800">{result.title}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">
+                            Matching Content:
+                          </p>
+                          <div className="bg-gray-50 p-3 rounded-lg">
+                            <p className="text-gray-800 whitespace-pre-wrap">
+                              {result.matched_content}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* No Matches Found */}
+            {(!parsingResult.plagiarism_check.results ||
+              parsingResult.plagiarism_check.results.length === 0) && (
+              <div className="text-center py-8">
+                <p className="text-green-600 font-medium">
+                  No significant plagiarism matches found
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Business Value Analysis */}
         {parsingResult?.business_value_analysis && (
           <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">

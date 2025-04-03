@@ -24,6 +24,14 @@ from typing import List, Dict
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import openai
+import PyPDF2
+import docx
+import nltk
+from nltk.tokenize import sent_tokenize
+from bs4 import BeautifulSoup
+import requests
+import random
+import re
 
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -217,10 +225,39 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
         if any([analyses.get('SrsValidation'), 
                 analyses.get('ContentAnalysis'),
                 analyses.get('BusinessValueAnalysis'),
-                analyses.get('SpellCheck')]):
+                analyses.get('SpellCheck'),
+                analyses.get('PlagiarismCheck')]):
             print("\nExtracting text for analyses...")
             pdf_text = text_processor.extract_text_from_pdf(file_path)
             print(f"Extracted text length: {len(pdf_text)}")
+
+        # Check if plagiarism check is selected
+        if analyses.get('PlagiarismCheck'):
+            print("\nSTARTING PLAGIARISM CHECK")
+            print("-"*30)
+            
+            try:
+                # Run plagiarism check
+                plagiarism_results = check_plagiarism(pdf_text)
+                print("\nPlagiarism check results:")
+                print(json.dumps(plagiarism_results, indent=2))
+                
+                # Add all plagiarism check data to response
+                response['plagiarism_check'] = {
+                    'status': plagiarism_results.get('status', 'success'),
+                    'total_phrases_checked': plagiarism_results.get('total_phrases_checked', 0),
+                    'similar_matches_found': plagiarism_results.get('similar_matches_found', 0),
+                    'phrases_checked': plagiarism_results.get('phrases_checked', []),
+                    'search_results': plagiarism_results.get('search_results', []),
+                    'results': plagiarism_results.get('results', [])
+                }
+                print("Plagiarism check completed")
+            except Exception as e:
+                print(f"Error in plagiarism check: {str(e)}")
+                response['plagiarism_check'] = {
+                    'status': 'error',
+                    'message': str(e)
+                }
 
         # Check if reference validation is selected
         if analyses.get('ReferencesValidation'):
@@ -434,6 +471,86 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
             'message': str(e)
         }
 
+def extract_random_phrases(text: str, num_phrases: int = 5, min_length: int = 20) -> List[str]:
+    """Extract random phrases from the text."""
+    # Split text into sentences
+    sentences = text.split('.')
+    # Filter out short sentences
+    sentences = [s.strip() for s in sentences if len(s.strip()) >= min_length]
+    # Randomly select phrases
+    import random
+    return random.sample(sentences, min(num_phrases, len(sentences)))
+
+def search_google(query):
+    """Search Google using requests and BeautifulSoup."""
+    try:
+        print(f"\nSearching Google for phrase: '{query}'")
+        
+        # Create a search URL
+        search_url = f"https://www.google.com/search?q={query}"
+        
+        # Set headers to mimic a browser
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        # Make the request
+        print(f"Making request to: {search_url}")
+        response = requests.get(search_url, headers=headers, timeout=10)
+        print(f"Response status code: {response.status_code}")
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Extract search results
+        results = []
+        for result in soup.find_all('div', class_='g'):
+            try:
+                # Get the title and link
+                title_elem = result.find('h3')
+                link_elem = result.find('a')
+                
+                if title_elem and link_elem:
+                    title = title_elem.get_text()
+                    link = link_elem.get('href')
+                    
+                    # Skip Google's own links
+                    if link and not link.startswith('/search?') and not link.startswith('https://www.google.com/'):
+                        print(f"Found result: {title} - {link}")
+                        results.append({
+                            'title': title,
+                            'link': link
+                        })
+                        
+                        # Limit to top 5 results
+                        if len(results) >= 5:
+                            print("Reached maximum results limit (5)")
+                            break
+            except Exception as e:
+                print(f"Error parsing search result: {str(e)}")
+                continue
+        
+        print(f"Total results found: {len(results)}")
+        return results
+    except Exception as e:
+        print(f"Error searching Google: {str(e)}")
+        return []
+
+def calculate_similarity(text1: str, text2: str) -> float:
+    """Calculate similarity between two texts using TF-IDF and cosine similarity."""
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    
+    # Create TF-IDF vectors
+    vectorizer = TfidfVectorizer()
+    try:
+        tfidf_matrix = vectorizer.fit_transform([text1, text2])
+        # Calculate cosine similarity
+        similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+        return float(similarity)
+    except Exception as e:
+        print(f"Error calculating similarity: {str(e)}")
+        return 0.0
+
 @app.route('/analyze_document', methods=['POST'])
 def analyze_document_route():
     print("\n" + "="*50)
@@ -482,6 +599,10 @@ def analyze_document_route():
             results = analyze_document(save_path, analyses)
             print("\nAnalysis completed successfully")
             print(f"Final response: {json.dumps(results, indent=2)}")
+            
+            # Debug: Print the complete response
+            print("\nComplete response being sent:")
+            print(json.dumps(results, indent=2))
             
             return jsonify(results)
         finally:
@@ -625,37 +746,120 @@ def ratelimit_handler(e):
         'retry_after': e.description
     }), 429
 
-def check_plagiarism(text, reference_docs):
-    """
-    Check plagiarism using TF-IDF and cosine similarity
-    """
+def check_plagiarism(text):
+    """Check for plagiarism in the given text."""
     try:
-        # Combine the input text with reference documents
-        all_docs = [text] + reference_docs
+        print("\n=== Starting Plagiarism Check ===")
         
-        # Create TF-IDF vectorizer
-        vectorizer = TfidfVectorizer(stop_words='english')
+        # Extract random phrases
+        phrases = extract_random_phrases(text)
+        print(f"\nExtracted {len(phrases)} random phrases to check:")
+        for i, phrase in enumerate(phrases, 1):
+            print(f"{i}. {phrase}")
         
-        # Transform documents into TF-IDF vectors
-        tfidf_matrix = vectorizer.fit_transform(all_docs)
+        matches = []
+        search_results = []
         
-        # Calculate cosine similarity between the input text and reference documents
-        similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:])
+        for phrase in phrases:
+            print(f"\n=== Checking phrase: '{phrase}' ===")
+            
+            # Create search URL
+            search_url = f"https://www.google.com/search?q={requests.utils.quote(phrase)}"
+            print(f"Search URL: {search_url}")
+            
+            # Search Google for the phrase
+            results = search_google(phrase)
+            
+            if not results:
+                print("No search results found for this phrase")
+                continue
+                
+            for result in results:
+                try:
+                    print(f"\nAnalyzing result: {result['title']}")
+                    print(f"URL: {result['link']}")
+                    
+                    # Get the content from the URL
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                    print("Fetching page content...")
+                    response = requests.get(result["link"], headers=headers, timeout=10)
+                    print(f"Response status code: {response.status_code}")
+                    
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    
+                    # Remove unwanted elements
+                    for element in soup(['script', 'style', 'header', 'footer', 'nav', 'iframe']):
+                        element.decompose()
+                    
+                    # Get the main content
+                    content = soup.get_text()
+                    content = ' '.join(content.split())  # Clean up whitespace
+                    
+                    if not content:
+                        print("No content found on the page")
+                        continue
+                        
+                    print("Calculating similarity...")
+                    # Calculate similarity
+                    similarity = calculate_similarity(phrase, content)
+                    print(f"Similarity score: {similarity:.2%}")
+                    
+                    # Add to search results regardless of similarity
+                    search_result = {
+                        "query": phrase,
+                        "search_url": search_url,
+                        "url": result["link"],
+                        "title": result["title"],
+                        "similarity": float(similarity),
+                        "matched_content": content[:500] + "..."  # First 500 chars
+                    }
+                    search_results.append(search_result)
+                    
+                    if similarity > 0.3:  # 30% similarity threshold
+                        print("Match found! Adding to results")
+                        match_data = {
+                            "phrase": phrase,
+                            "similarity": float(similarity),
+                            "url": result["link"],
+                            "title": result["title"],
+                            "matched_content": content[:500] + "..."  # First 500 chars
+                        }
+                        print(f"Match data: {json.dumps(match_data, indent=2)}")
+                        matches.append(match_data)
+                    else:
+                        print("Similarity below threshold (30%)")
+                        
+                except Exception as e:
+                    print(f"Error processing result: {str(e)}")
+                    continue
+                
+            # Add a delay to avoid rate limiting
+            print("Waiting 2 seconds before next search...")
+            time.sleep(2)
         
-        # Get the maximum similarity score
-        max_similarity = similarities.max()
+        print("\n=== Plagiarism Check Complete ===")
+        print(f"Total phrases checked: {len(phrases)}")
+        print(f"Similar matches found: {len(matches)}")
         
-        return {
-            'similarity_score': float(max_similarity),
-            'is_plagiarized': max_similarity > 0.7,  # Threshold of 70% similarity
-            'message': 'High similarity detected' if max_similarity > 0.7 else 'No significant similarity found'
+        result_data = {
+            "status": "success",
+            "total_phrases_checked": len(phrases),
+            "similar_matches_found": len(matches),
+            "phrases_checked": phrases,
+            "search_results": search_results,
+            "results": matches
         }
+        
+        print(f"Returning data: {json.dumps(result_data, indent=2)}")
+        return result_data
+        
     except Exception as e:
+        print(f"Error in plagiarism check: {str(e)}")
         return {
-            'error': str(e),
-            'similarity_score': 0,
-            'is_plagiarized': False,
-            'message': 'Error during plagiarism check'
+            "status": "error",
+            "message": str(e)
         }
 
 @app.route('/check_plagiarism', methods=['POST'])
@@ -680,19 +884,8 @@ def check_plagiarism_route():
             # Extract text from PDF
             pdf_text = text_processor.extract_text_from_pdf(pdf_path)
             
-            # Get reference documents from a predefined directory
-            reference_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'reference_docs')
-            reference_docs = []
-            
-            if os.path.exists(reference_dir):
-                for ref_file in os.listdir(reference_dir):
-                    if ref_file.endswith('.pdf'):
-                        ref_path = os.path.join(reference_dir, ref_file)
-                        ref_text = text_processor.extract_text_from_pdf(ref_path)
-                        reference_docs.append(ref_text)
-            
             # Check plagiarism
-            result = check_plagiarism(pdf_text, reference_docs)
+            result = check_plagiarism(pdf_text)
             
             return jsonify(result)
             
