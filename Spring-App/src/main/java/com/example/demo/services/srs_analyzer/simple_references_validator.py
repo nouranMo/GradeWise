@@ -6,6 +6,7 @@ from fuzzywuzzy import fuzz
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
+import json
 
 # Load environment variables
 load_dotenv()
@@ -267,14 +268,23 @@ class SimpleReferencesValidator:
     @staticmethod
     def validate_references_in_pdf(pdf_path):
         """Validate references in a PDF file."""
-        logger.info(f"Validating references in PDF: {pdf_path}")
+        print("\n" + "="*50)
+        print("VALIDATING REFERENCES IN PDF")
+        print("="*50)
+        print(f"PDF path: {pdf_path}")
+        
         try:
-            # Extract text from PDF
+            print("\nExtracting text from PDF...")
             text = SimpleReferencesValidator.extract_text_from_pdf(pdf_path)
+            print(f"Extracted text length: {len(text)}")
+            print("First 200 chars of text:", text[:200])
             
-            # Extract references
+            print("\nExtracting references...")
             references = SimpleReferencesValidator.extract_references(text)
+            print(f"Found {len(references)} references")
+            
             if not references:
+                print("WARNING: No references found in the document")
                 return {
                     "status": "warning",
                     "message": "No references found",
@@ -288,21 +298,31 @@ class SimpleReferencesValidator:
                     }
                 }
             
-            # Process each reference
+            print("\nProcessing each reference...")
             reference_details = []
-            for ref in references:
+            for i, ref in enumerate(references, 1):
+                print(f"\nProcessing reference {i}/{len(references)}")
+                print(f"Reference text: {ref}")
+                
                 # Extract reference number
                 ref_num_match = re.match(r'\[(\d+)\]', ref)
                 ref_num = ref_num_match.group(1) if ref_num_match else "?"
+                print(f"Reference number: {ref_num}")
                 
                 # Find citations
+                print("Finding citations...")
                 citations = SimpleReferencesValidator.find_citations(text, ref_num)
+                print(f"Found {len(citations)} citations")
                 
                 # Verify reference online
+                print("Verifying reference online...")
                 verification = SimpleReferencesValidator.verify_reference_online(ref)
+                print(f"Verification result: {verification}")
                 
                 # Validate IEEE format
+                print("Validating IEEE format...")
                 format_validation = SimpleReferencesValidator.validate_ieee_format(ref)
+                print(f"Format validation result: {format_validation}")
                 
                 # Add to results
                 reference_details.append({
@@ -323,8 +343,14 @@ class SimpleReferencesValidator:
             verified = sum(1 for ref in reference_details if ref["is_verified"])
             valid_format = sum(1 for ref in reference_details if ref["is_valid_format"])
             
+            print("\nFinal Statistics:")
+            print(f"Total references: {total}")
+            print(f"Cited references: {cited}")
+            print(f"Verified references: {verified}")
+            print(f"Valid format references: {valid_format}")
+            
             # Create response
-            return {
+            result = {
                 "status": "success",
                 "references": reference_details,
                 "statistics": {
@@ -338,8 +364,17 @@ class SimpleReferencesValidator:
                 }
             }
             
+            print("\nValidation completed successfully!")
+            print("Result:", json.dumps(result, indent=2))
+            return result
+            
         except Exception as e:
-            logger.error(f"Error validating references: {str(e)}")
+            print("\nERROR IN REFERENCE VALIDATION:")
+            print(f"Exception type: {type(e)}")
+            print(f"Exception message: {str(e)}")
+            import traceback
+            print("Traceback:")
+            traceback.print_exc()
             return {
                 "status": "error",
                 "message": str(e),

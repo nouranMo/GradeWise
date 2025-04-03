@@ -12,11 +12,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -32,47 +34,61 @@ public class UserController {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody User user) {
+    public ResponseEntity<?> register(@RequestBody User user) {
         try {
-            // Check if email ends with @miuegypt.edu.eg or is admin@gmail.com
+            System.out.println("Registering user: " + user.getEmail());
+
+            // Check email domain
             if (!user.getEmail().endsWith("@miuegypt.edu.eg") && !user.getEmail().equals("admin@gmail.com")) {
-                Map<String, String> response = new HashMap<>();
-                response.put("message", "Only @miuegypt.edu.eg email addresses are allowed");
-                return ResponseEntity.badRequest().body(response);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Only @miuegypt.edu.eg email addresses are allowed"));
             }
 
-            // Register the user with first name and last name
-            User registeredUser = userService.registerUser(
-                    user.getEmail(),
-                    user.getPassword(),
-                    user.getFirstName(),
-                    user.getLastName());
+            // Check if user already exists
+            if (userService.findByEmail(user.getEmail()) != null) {
+                System.out.println("User already exists: " + user.getEmail());
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Email already registered"));
+            }
 
-            // Create UserDetails object
-            UserDetails userDetails = org.springframework.security.core.userdetails.User
-                    .withUsername(registeredUser.getEmail())
-                    .password(registeredUser.getPassword())
-                    .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
-                    .build();
+            // Create new user
+            User newUser = new User();
+            newUser.setEmail(user.getEmail());
+            newUser.setPassword(passwordEncoder.encode(user.getPassword()));
+            newUser.setFirstName(user.getFirstName());
+            newUser.setLastName(user.getLastName());
+            newUser.setEnabled(true);
+
+            // Save user
+            User savedUser = userService.save(newUser);
+            System.out.println("User registered successfully: " + savedUser.getEmail());
+
+            // Create UserDetails
+            UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+                    savedUser.getEmail(),
+                    savedUser.getPassword(),
+                    Collections.emptyList());
 
             // Generate JWT token
-            String token = jwtTokenProvider.generateToken(userDetails);
+            String token = jwtTokenProvider.generateTokenFromUserDetails(userDetails);
 
             // Return response with token
-            Map<String, Object> response = new HashMap<>();
-            response.put("token", token);
-            response.put("user", registeredUser);
-
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Registration successful",
+                    "token", token,
+                    "user", Map.of(
+                            "email", savedUser.getEmail(),
+                            "firstName", savedUser.getFirstName(),
+                            "lastName", savedUser.getLastName())));
         } catch (Exception e) {
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "An error occurred during registration");
-            return ResponseEntity.internalServerError().body(response);
+            System.out.println("Error during registration: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Registration failed: " + e.getMessage()));
         }
     }
 
@@ -96,7 +112,7 @@ public class UserController {
                     .build();
 
             // Generate JWT token
-            String token = jwtTokenProvider.generateToken(userDetails);
+            String token = jwtTokenProvider.generateTokenFromUserDetails(userDetails);
 
             // Return response with token
             Map<String, Object> response = new HashMap<>();
