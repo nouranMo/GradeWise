@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import loginImage from "assets/images/lean-girl.png";
+import loginImage from "assets/images/lean-guy.png";
 import { useAuth } from "../../contexts/AuthContext";
 import showImage from "assets/images/show.svg";
 import hideImage from "assets/images/hide.svg";
@@ -210,10 +210,6 @@ const LoginPage = () => {
               Sign up here
             </Link>
           </p>
-        </div>
-
-        <div className="hidden md:flex items-center justify-center translate-y-16">
-          <img src={loginImage} alt="login image" className="w-[200px]" />
         </div>
       </div>
       <ToastContainer />
