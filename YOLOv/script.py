@@ -14,7 +14,7 @@ print(f"BASE_DIR: {BASE_DIR}")
 print(f"PROJECT_ROOT: {PROJECT_ROOT}")
 
 # Define paths relative to the script directory
-YOLO_MODEL_PATH = os.path.join(BASE_DIR, "runs", "detect", "train5", "weights", "best.pt")
+YOLO_MODEL_PATH = os.path.join(BASE_DIR, "runs", "detect", "train", "weights", "best.pt")
 IMAGE_FOLDER = os.path.join(PROJECT_ROOT, "Spring-App", "src", "main", "java", "com", "example", "demo", "services", "srs_analyzer","uploads","System Functions")
 # IMAGE_FOLDER = os.path.join(PROJECT_ROOT, "uploads","System Functions")
 OUTPUT_FOLDER = os.path.join(BASE_DIR,  "output_results")
