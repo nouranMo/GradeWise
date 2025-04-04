@@ -62,11 +62,19 @@ spec = importlib.util.spec_from_file_location("DiagramConvention", diagram_conve
 diagram_convention = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(diagram_convention)
 
+LLMValidation_path = os.path.join(YOLO_PATH, "LLMValidation.py")
+spec = importlib.util.spec_from_file_location("LLMValidation", LLMValidation_path)
+LLMValidation_ = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(LLMValidation_)
+
 # Now you can use process_diagrams from diagram_convention
 process_diagrams = diagram_convention.process_diagrams
 
 # Now you can use process_image from script
 process_image = script.process_image
+
+
+validate_diagram=LLMValidation_.validate_diagrams
 
 logger = logging.getLogger(__name__)
 
@@ -642,8 +650,13 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
                     output_base="output_results",
                     model_path=os.path.join(YOLO_PATH, "runs/detect/train/weights/best.pt")
                 )
-                response['diagram_convention'] = diagram_results
+                # Validate diagram conventions using Gemini
+                validation_results = validate_diagram(output_base="output_results")
                 
+                response['diagram_convention'] = {
+                    "processing_results": diagram_results,
+                    "validation_results": validation_results
+                }
             except Exception as e:
                 response['diagram_convention'] = {
                     "status": "error",
@@ -799,7 +812,52 @@ def analyze_document_route():
             results = analyze_document(save_path, analyses)
             print("\nAnalysis completed successfully")
             print(f"Final response: {json.dumps(results, indent=2)}")
-            
+            print("\n" + "="*50)
+            print("SUMMARY OF ANALYSIS RESULTS")
+            print("="*50)
+            print(f"Overall Status: {results.get('status', 'unknown')}")
+
+            if 'diagram_convention' in results:
+                print("\nDiagram Convention Analysis:")
+                print("-" * 30)
+
+                # Processing Results Summary
+                proc_results = results['diagram_convention'].get('processing_results', {})
+                print("Processed Diagrams:")
+                for diagram_type in ['use_case_diagrams', 'class_diagrams', 'sequence_diagrams']:
+                    diagrams = proc_results.get(diagram_type, {})
+                    if diagrams:
+                        print(f"  {diagram_type.replace('_diagrams', '').title()} Diagrams:")
+                        for img, path in diagrams.items():
+                            print(f"    - {img} -> {path}")
+                if proc_results.get('issues'):
+                    print("  Issues:", proc_results['issues'])
+                else:
+                    print("  Issues: None")
+
+                # Validation Results Summary
+                val_results = results['diagram_convention'].get('validation_results', {})
+                print("\nValidation Results:")
+                print("-" * 30)
+                for diagram_key, validation_text in val_results.get('validation_results', {}).items():
+                    # Extract the validation status from the text
+                    status_line = [line for line in validation_text.split('\n') if "Final Validation Status" in line]
+                    status = status_line[0].split("**")[-2].strip() if status_line else "Unknown"
+                    print(f"  {diagram_key}: {status}")
+                    # Optionally truncate the validation text for the terminal
+                    validation_summary = validation_text[:500] + "..." if len(validation_text) > 500 else validation_text
+                    print(f"    Details (truncated): {validation_summary}")
+                if val_results.get('issues'):
+                    print("  Issues:", val_results['issues'])
+                else:
+                    print("  Issues: None")
+
+            print("\n" + "="*50)
+            print("FULL RESPONSE (for reference)")
+            print("="*50)
+            print(json.dumps(results, indent=2))
+
+            return jsonify(results)
             # Debug: Print the complete response
             print("\nComplete response being sent:")
             print(json.dumps(results, indent=2))
