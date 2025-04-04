@@ -7,6 +7,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 function isFigureSection(sectionName) {
   if (!sectionName) return false;
 
+  // Convert section name to lowercase for case-insensitive matching
+  const lowerName = sectionName.toLowerCase();
+
   // Check for common figure section patterns
   const figureDiagrams = [
     "System Overview",
@@ -21,13 +24,30 @@ function isFigureSection(sectionName) {
     "Component Diagram",
   ];
 
+  // Check against known diagram types (case insensitive)
+  for (const diagram of figureDiagrams) {
+    if (lowerName.includes(diagram.toLowerCase())) {
+      console.log(`Found diagram match: ${sectionName} matches ${diagram}`);
+      return true;
+    }
+  }
+
   // Original "Figure:" prefix check
   if (sectionName.startsWith("Figure:")) return true;
 
-  // Check against known diagram types
-  return figureDiagrams.some((diagramType) =>
-    sectionName.includes(diagramType)
-  );
+  // Additional common diagram patterns
+  if (
+    lowerName.includes("diagram") ||
+    lowerName.includes("chart") ||
+    lowerName.includes("model") ||
+    lowerName.includes("uml")
+  ) {
+    console.log(`Found diagram by pattern: ${sectionName}`);
+    return true;
+  }
+
+  // No match found
+  return false;
 }
 
 // Helper function to clean up section names
@@ -58,6 +78,23 @@ function ParsingResult() {
     }
   }, [parsingResult]);
 
+  // Determine which dashboard to go back to
+  const handleBackClick = () => {
+    // Use document_type to determine which dashboard to go back to
+    const documentType = parsingResult?.document_type || "";
+
+    if (
+      documentType.toLowerCase().includes("professor") ||
+      documentType.toLowerCase() === "professor_document"
+    ) {
+      console.log("Navigating back to professor dashboard");
+      navigate("/professor");
+    } else {
+      console.log("Navigating back to student dashboard");
+      navigate("/dashboard");
+    }
+  };
+
   if (!parsingResult || parsingResult.status === "error") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
@@ -65,7 +102,7 @@ function ParsingResult() {
           {parsingResult?.message || "No Parsing Result Found"}
         </h2>
         <button
-          onClick={() => navigate("/dashboard")}
+          onClick={handleBackClick}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700"
         >
           Go Back to Dashboard
@@ -81,7 +118,7 @@ function ParsingResult() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-800">Analysis Results</h1>
           <button
-            onClick={() => navigate("/dashboard")}
+            onClick={handleBackClick}
             className="px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300 ease-in-out"
           >
             Back to Dashboard
@@ -950,154 +987,6 @@ function ParsingResult() {
                     </div>
                   )
                 )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Plagiarism Check Results */}
-        {parsingResult.plagiarism_check && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Plagiarism Check Results
-            </h2>
-
-            {/* Debug information */}
-            {process.env.NODE_ENV !== "production" && (
-              <div className="p-2 bg-yellow-50 border border-yellow-200 rounded mb-4 text-xs">
-                <p>Debug information:</p>
-                <pre className="overflow-auto max-h-40">
-                  {JSON.stringify(parsingResult.plagiarism_check, null, 2)}
-                </pre>
-              </div>
-            )}
-
-            {/* Statistics */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <StatCard
-                title="Total Phrases Checked"
-                value={
-                  parsingResult.plagiarism_check.total_phrases_checked || 0
-                }
-                color="blue"
-              />
-              <StatCard
-                title="Similar Matches Found"
-                value={
-                  parsingResult.plagiarism_check.similar_matches_found || 0
-                }
-                color={
-                  parsingResult.plagiarism_check.similar_matches_found > 0
-                    ? "red"
-                    : "green"
-                }
-              />
-            </div>
-
-            {/* Phrases Checked */}
-            <div className="mb-6">
-              <h3 className="text-xl font-semibold text-gray-700 mb-3">
-                Phrases Checked
-              </h3>
-              <div className="space-y-2">
-                {parsingResult.plagiarism_check.phrases_checked?.map(
-                  (phrase, index) => (
-                    <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-gray-800">{phrase}</p>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-
-            {/* Search Results */}
-            <div className="mb-6">
-              <h3 className="text-xl font-semibold text-gray-700 mb-3">
-                Search Results
-              </h3>
-              <div className="space-y-4">
-                {parsingResult.plagiarism_check.search_results?.map(
-                  (result, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="text-lg font-medium text-gray-800">
-                          Search {index + 1}
-                        </h4>
-                        <Badge
-                          text={`${Math.round(
-                            result.similarity * 100
-                          )}% Similar`}
-                          color={result.similarity > 0.7 ? "red" : "yellow"}
-                        />
-                      </div>
-
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
-                            Search Query:
-                          </p>
-                          <p className="text-gray-800">{result.query}</p>
-                        </div>
-
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
-                            Search URL:
-                          </p>
-                          <a
-                            href={result.search_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 break-all"
-                          >
-                            {result.search_url}
-                          </a>
-                        </div>
-
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
-                            Found on Page:
-                          </p>
-                          <a
-                            href={result.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 break-all"
-                          >
-                            {result.url}
-                          </a>
-                        </div>
-
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
-                            Page Title:
-                          </p>
-                          <p className="text-gray-800">{result.title}</p>
-                        </div>
-
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
-                            Matching Content:
-                          </p>
-                          <div className="bg-gray-50 p-3 rounded-lg">
-                            <p className="text-gray-800 whitespace-pre-wrap">
-                              {result.matched_content}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-
-            {/* No Matches Found */}
-            {(!parsingResult.plagiarism_check.results ||
-              parsingResult.plagiarism_check.results.length === 0) && (
-              <div className="text-center py-8">
-                <p className="text-green-600 font-medium">
-                  No significant plagiarism matches found
-                </p>
               </div>
             )}
           </div>

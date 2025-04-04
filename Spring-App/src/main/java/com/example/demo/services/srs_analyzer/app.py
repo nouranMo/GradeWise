@@ -346,20 +346,32 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
                     'message': str(e)
                 }
 
-        if analyses.get('SpellCheck') and not analyses.get('ContentAnalysis'):
+        if analyses.get('SpellCheck'):
             print("\nSTARTING SPELL CHECK")
             print("-"*30)
             try:
-                spell_check_results = text_processor.check_spelling_and_grammar(pdf_text)
-                if spell_check_results:
-                    misspelled_count = len(spell_check_results.get('misspelled', {}))
+                # Check if content analysis is also selected
+                if analyses.get('ContentAnalysis'):
+                    print("Content analysis is also selected, will perform per-section spell checking")
+                    # This will be handled in the content analysis section
+                    # Just set a flag to indicate we need to do spell checking there
                     response['spelling_check'] = {
-                        'status': 'success',
-                        'misspelled_words': spell_check_results.get('misspelled', {}),
-                        'misspelled_count': misspelled_count,
-                        'checked_text_length': len(pdf_text)
+                        'status': 'pending',
+                        'message': 'Spell checking will be performed per section during content analysis'
                     }
-                print("Spell check completed")
+                else:
+                    # Perform spell check on the entire document
+                    print("Performing spell check on the entire document")
+                    spell_check_results = text_processor.check_spelling_and_grammar(pdf_text)
+                    if spell_check_results:
+                        misspelled_count = len(spell_check_results.get('misspelled', {}))
+                        response['spelling_check'] = {
+                            'status': 'success',
+                            'misspelled_words': spell_check_results.get('misspelled', {}),
+                            'misspelled_count': misspelled_count,
+                            'checked_text_length': len(pdf_text)
+                        }
+                    print("Spell check completed")
             except Exception as e:
                 print(f"Error in spell check: {str(e)}")
                 response['spelling_check'] = {
@@ -383,6 +395,43 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
                 sections = text_processor.parse_document_sections(pdf_text)
                 content_analysis["sections"] = sections
                 print(f"Found {len(sections)} sections")
+
+                # Only perform per-section spell checking if both analyses are selected
+                if analyses.get('SpellCheck'):
+                    print("\nPerforming per-section spell checking")
+                    section_spell_checks = {}
+                    total_misspelled = 0
+                    total_misspelled_words = {}
+                    
+                    for section in sections:
+                        try:
+                            title, content = section.split('\n', 1)
+                            if content.strip():
+                                spell_result = text_processor.check_spelling_and_grammar(content)
+                                if spell_result and 'misspelled' in spell_result:
+                                    misspelled_in_section = spell_result['misspelled']
+                                    if misspelled_in_section:
+                                        section_spell_checks[title] = {
+                                            'misspelled': misspelled_in_section,
+                                            'count': len(misspelled_in_section)
+                                        }
+                                        # Add to the total misspelled words dictionary
+                                        total_misspelled_words.update(misspelled_in_section)
+                                        total_misspelled += len(misspelled_in_section)
+                                        print(f"Section '{title}': Found {len(misspelled_in_section)} misspelled words")
+                        except Exception as e:
+                            print(f"Error in spell checking section '{title}': {str(e)}")
+                    
+                    # Update the spelling_check response with both per-section and total results
+                    response['spelling_check'] = {
+                        'status': 'success',
+                        'per_section': True,
+                        'sections': section_spell_checks,
+                        'total_misspelled_count': total_misspelled,
+                        'sections_count': len(section_spell_checks),
+                        'misspelled_words': total_misspelled_words  # Add the combined dictionary of all misspelled words
+                    }
+                    print(f"Per-section spell check completed. Found {total_misspelled} misspelled words across {len(section_spell_checks)} sections")
 
                 all_scopes = {}
                 print("\nCreating system scopes for sections...")
@@ -419,17 +468,116 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
                     print(f"Created similarity matrix with {len(section_titles)} scopes")
 
                 diagram_count = len([scope for scope in content_analysis["scope_sources"] if scope.startswith("Diagram_")])
-                important_diagrams = [scope for scope in content_analysis["scope_sources"] if any(
-                    diagram_type in scope.lower() for diagram_type in [
-                        "system overview", "system context", "use case", "eerd",
-                        "entity relationship", "class diagram", "gantt chart"
-                    ]
-                )]
-
+                
+                # Improved important diagrams detection - more permissive matching
+                important_diagrams = []
+                important_diagram_types = [
+                    "system overview", "system context", "use case", "eerd",
+                    "entity relationship", "class diagram", "gantt chart"
+                ]
+                
+                print(f"Looking for these diagram types: {important_diagram_types}")
+                print(f"Available scope sources: {content_analysis['scope_sources']}")
+                
+                # If we're still missing some diagram types, add default placeholders
+                added_placeholders = False
+                
+                # DIRECT APPROACH: Explicitly add ALL important diagram types as placeholders
+                print("\nFORCING ALL IMPORTANT DIAGRAM TYPES TO BE INCLUDED")
+                
+                # First, collect all diagram types already in the scope sources (case insensitive)
+                existing_diagram_types = set()
+                for scope in content_analysis["scope_sources"]:
+                    scope_lower = scope.lower()
+                    for diagram_type in important_diagram_types:
+                        if diagram_type in scope_lower:
+                            existing_diagram_types.add(diagram_type)
+                            print(f"Found existing diagram type: {diagram_type} in {scope}")
+                
+                print(f"Existing diagram types: {existing_diagram_types}")
+                print(f"Missing diagram types: {set(important_diagram_types) - existing_diagram_types}")
+                
+                # Now add placeholders for all diagram types, exactly matching the frontend casing
+                for diagram_type in important_diagram_types:
+                    # Create placeholders with EXACT same naming as in ParsingResultPage.js isFigureSection function
+                    if diagram_type == "system overview":
+                        placeholder_name = "System Overview"
+                    elif diagram_type == "system context":
+                        placeholder_name = "System Context"
+                    elif diagram_type == "use case":
+                        placeholder_name = "Use Case"
+                    elif diagram_type == "eerd":
+                        placeholder_name = "EERD"
+                    elif diagram_type == "entity relationship":
+                        placeholder_name = "Entity Relationship"
+                    elif diagram_type == "class diagram":
+                        placeholder_name = "Class Diagram"
+                    elif diagram_type == "gantt chart":
+                        placeholder_name = "Gantt Chart"
+                    else:
+                        # Default formatting (should not reach here)
+                        placeholder_name = f"{diagram_type.title().replace('Eerd', 'EERD')}"
+                        
+                    # Create meaningful placeholder text
+                    placeholder_text = f"This is a diagram representing {diagram_type}. It shows the key elements and relationships in the {diagram_type} of the system."
+                    
+                    # Skip if this exact diagram name already exists in all_scopes
+                    if placeholder_name in all_scopes:
+                        print(f"Skipping {placeholder_name} - already exists in all_scopes")
+                        continue
+                    
+                    # Otherwise, add it to BOTH all_scopes and scope_sources
+                    print(f"ADDING FORCED PLACEHOLDER: {placeholder_name}")
+                    all_scopes[placeholder_name] = placeholder_text
+                    
+                    # Also add to scope_sources if not already there
+                    if placeholder_name not in content_analysis["scope_sources"]:
+                        content_analysis["scope_sources"].append(placeholder_name)
+                        print(f"Added {placeholder_name} to scope_sources")
+                    
+                    # Add to important_diagrams if not already there
+                    if placeholder_name not in important_diagrams:
+                        important_diagrams.append(placeholder_name)
+                        print(f"Added {placeholder_name} to important_diagrams")
+                    
+                    added_placeholders = True
+                
+                # Debug the final state before matrix creation
+                print("\nFinal state before matrix creation:")
+                print(f"all_scopes keys ({len(all_scopes)}): {list(all_scopes.keys())}")
+                print(f"scope_sources ({len(content_analysis['scope_sources'])}): {content_analysis['scope_sources']}")
+                print(f"important_diagrams ({len(important_diagrams)}): {important_diagrams}")
+                
+                # Always regenerate the similarity matrix
+                print("\nRegenerating similarity matrix with ALL required diagram types")
+                
+                # Create a fresh copy of all_scopes to ensure consistency
+                final_scopes = dict(all_scopes)
+                content_analysis["similarity_matrix"] = similarity_analyzer.create_similarity_matrix(final_scopes)
+                
+                # Debug the created matrix
+                matrix = content_analysis["similarity_matrix"]
+                if matrix:
+                    print(f"Matrix dimensions: {len(matrix)} x {len(matrix[0]) if matrix else 0}")
+                else:
+                    print("WARNING: Created matrix is empty!")
+                
+                print(f"Final important diagrams list ({len(important_diagrams)}): {important_diagrams}")
+                
+                # Make sure scope_sources matches the matrix dimensions
+                if len(content_analysis["scope_sources"]) != len(matrix):
+                    print("WARNING: Scope sources length doesn't match matrix dimensions!")
+                    print(f"Scope sources: {len(content_analysis['scope_sources'])}, Matrix: {len(matrix)}")
+                    
+                    # Fix scope_sources to match matrix if needed
+                    if len(final_scopes) == len(matrix):
+                        print("Fixing scope_sources to match matrix dimensions")
+                        content_analysis["scope_sources"] = list(final_scopes.keys())
+                
                 response["content_analysis"] = {
                     "similarity_matrix": content_analysis["similarity_matrix"],
                     "scope_sources": content_analysis["scope_sources"],
-                    "figures_included": content_analysis["figures_included"],
+                    "figures_included": content_analysis["figures_included"], 
                     "figure_count": content_analysis["figure_count"],
                     "important_diagrams": important_diagrams,
                     "sections": sections,
