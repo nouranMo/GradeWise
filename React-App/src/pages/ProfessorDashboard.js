@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "components/layout/Navbar/Navbar";
 import UploadModal from "components/UploadModal";
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
 
 // Modal for creating new submission slots
 const CreateSubmissionModal = ({ isOpen, onClose, onSubmit }) => {
@@ -575,9 +577,21 @@ function ProfessorDashboard() {
     return true;
   });
 
+  const handleRowClick = (document) => {
+    if (document.status === "Graded" && document.results) {
+      navigate("/parsing-result", {
+        state: { parsingResult: document.results },
+      });
+    }
+    else {
+      toast.error("No analysis results available");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
+      <ToastContainer />
       <div className="max-w-6xl mx-auto mt-6">
         {/* Header */}
         <div className="mb-8">
@@ -722,7 +736,11 @@ function ProfessorDashboard() {
                 filteredSubmissions.map((submission) => (
                   <div
                     key={submission.id}
-                    className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 border-b text-sm text-gray-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRowClick(submission);
+                    }}
+                    className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 border-b text-sm text-gray-600 hover:bg-gray-100 hover:cursor-pointer transition-colors duration-300"
                   >
                     <div className="truncate">{submission.name}</div>
                     <div>{submission.studentName || "Student Name"}</div>
@@ -798,7 +816,8 @@ function ProfessorDashboard() {
                 professorDocuments.map((doc) => (
                   <div
                     key={doc.id}
-                    className="grid grid-cols-[1.5fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 border-b text-sm text-gray-600"
+                    onClick={() => handleRowClick(doc)}
+                    className="grid grid-cols-[1.5fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 border-b text-sm text-gray-600 hover:bg-gray-100 hover:cursor-pointer transition-colors duration-300"
                   >
                     <div className="truncate">{doc.name}</div>
                     <div>{doc.date}</div>
@@ -819,7 +838,10 @@ function ProfessorDashboard() {
                     <div className="flex items-center space-x-2">
                       {doc.status !== "Graded" && (
                         <button
-                          onClick={() => handleAnalyzeClick(doc)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAnalyzeClick(doc);
+                          }}
                           className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300"
                         >
                           Analyze

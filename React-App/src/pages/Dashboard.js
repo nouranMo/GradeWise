@@ -263,7 +263,7 @@ function Dashboard() {
             documents.map((doc) => (
               <div
                 key={doc.id}
-                className="grid grid-cols-7 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50"
+                className="grid grid-cols-7 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-100 hover:cursor-pointer transition-colors duration-300"
               >
                 <div className="overflow-hidden">
                   <span className="truncate block" title={doc.name}>
