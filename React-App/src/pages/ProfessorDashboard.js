@@ -1,50 +1,427 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "components/layout/Navbar/Navbar";
+import UploadModal from "components/UploadModal";
+
+// Modal for creating new submission slots
+const CreateSubmissionModal = ({ isOpen, onClose, onSubmit }) => {
+  const initialFormData = {
+    name: "",
+    description: "",
+    deadline: "",
+    deadlineTime: "",
+    course: "",
+  };
+
+  const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState({});
+
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setErrors({});
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  // Get minimum date (today) in YYYY-MM-DD format
+  const getMinDate = () => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  };
+
+  // Get current time in HH:mm format
+  const getCurrentTime = () => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(
+      now.getMinutes()
+    ).padStart(2, "0")}`;
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = "Submission name is required";
+    }
+
+    if (!formData.deadline) {
+      newErrors.deadline = "Deadline date is required";
+    }
+
+    if (!formData.deadlineTime) {
+      newErrors.deadlineTime = "Deadline time is required";
+    }
+
+    if (!formData.course) {
+      newErrors.course = "Course selection is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (validateForm()) {
+      // Combine date and time for deadline
+      const combinedDeadline = new Date(
+        `${formData.deadline}T${formData.deadlineTime}`
+      );
+      onSubmit({
+        ...formData,
+        deadline: combinedDeadline.toISOString(),
+      });
+      resetForm(); // Reset the form after successful submission
+    }
+  };
+
+  const isFormValid = () => {
+    return (
+      formData.name.trim() !== "" &&
+      formData.deadline !== "" &&
+      formData.deadlineTime !== "" &&
+      formData.course !== ""
+    );
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
+        <h2 className="text-xl font-semibold mb-4">Create New Submission</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Submission Name*
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value });
+                if (errors.name) {
+                  setErrors({ ...errors, name: "" });
+                }
+              }}
+              className={`w-full border rounded-lg px-3 py-2 ${
+                errors.name ? "border-red-500" : "border-gray-300"
+              }`}
+              placeholder="e.g., SRS Document Submission"
+            />
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              className="w-full border rounded-lg px-3 py-2"
+              rows="3"
+              placeholder="Enter submission details..."
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Deadline Date*
+              </label>
+              <input
+                type="date"
+                value={formData.deadline}
+                min={getMinDate()}
+                onChange={(e) => {
+                  setFormData({ ...formData, deadline: e.target.value });
+                  if (errors.deadline) {
+                    setErrors({ ...errors, deadline: "" });
+                  }
+                }}
+                className={`w-full border rounded-lg px-3 py-2 ${
+                  errors.deadline ? "border-red-500" : "border-gray-300"
+                } text-gray-500 [&::-webkit-datetime-edit-text]:text-gray-500 [&::-webkit-datetime-edit]:text-gray-500`}
+              />
+              {errors.deadline && (
+                <p className="mt-1 text-sm text-red-500">{errors.deadline}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Deadline Time*
+              </label>
+              <input
+                type="time"
+                value={formData.deadlineTime}
+                onChange={(e) => {
+                  setFormData({ ...formData, deadlineTime: e.target.value });
+                  if (errors.deadlineTime) {
+                    setErrors({ ...errors, deadlineTime: "" });
+                  }
+                }}
+                className={`w-full border rounded-lg px-3 py-2 ${
+                  errors.deadlineTime ? "border-red-500" : "border-gray-300"
+                } text-gray-500 [&::-webkit-datetime-edit-text]:text-gray-500 [&::-webkit-datetime-edit]:text-gray-500`}
+              />
+              {errors.deadlineTime && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.deadlineTime}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Course*
+            </label>
+            <select
+              value={formData.course}
+              onChange={(e) =>
+                setFormData({ ...formData, course: e.target.value })
+              }
+              className={`w-full border rounded-lg px-3 py-2 ${
+                errors.course ? "border-red-500" : "border-gray-300"
+              } ${!formData.course ? "text-gray-500" : "text-gray-900"}`}
+              required
+            >
+              <option value="" hidden className="text-gray-500">
+                Select a course
+              </option>
+              <option value="SWE301" className="text-black">
+                SWE 301
+              </option>
+              <option value="SWE302" className="text-black">
+                SWE 302
+              </option>
+              <option value="SWE401" className="text-black">
+                SWE 401
+              </option>
+              <option value="SWE402" className="text-black">
+                SWE 402
+              </option>
+            </select>
+            {errors.course && (
+              <p className="mt-1 text-sm text-red-500">{errors.course}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-4 mt-6">
+          <button
+            onClick={handleClose}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-300"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!isFormValid()}
+            className="px-4 py-2 bg-[#ff6464] text-white rounded-md hover:bg-[#ff4444] disabled:hover:bg-[#ff6464] disabled:opacity-50 transition-colors duration-300"
+          >
+            Create Submission
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function ProfessorDashboard() {
   const [submissions, setSubmissions] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
-  const [selectedClass, setSelectedClass] = useState("all");
+  const [selectedCourse, setSelectedCourse] = useState("all");
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showCreateSubmissionModal, setShowCreateSubmissionModal] =
+    useState(false);
+  const [submissionSlots, setSubmissionSlots] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [deleteType, setDeleteType] = useState(null); // 'submission' or 'slot'
+  const [professorDocuments, setProfessorDocuments] = useState([]);
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get the documents from localStorage that were uploaded in the student dashboard
-    const analyzedDocuments = JSON.parse(
-      localStorage.getItem("analyzedDocuments") || "[]"
+    // Get the documents from localStorage that were uploaded by students
+    const studentDocuments = JSON.parse(
+      localStorage.getItem("studentDocuments") || "[]"
     );
+    setSubmissions(studentDocuments);
 
-    // Transform the documents into the submission format
-    const transformedSubmissions = analyzedDocuments.map((doc) => ({
-      id: doc.id,
-      studentName: "Student", // This would come from auth in a real app
-      documentName: doc.name,
-      documentType: doc.name.includes("SRS") ? "SRS" : "SDD",
-      submissionDate: doc.date,
-      status: doc.analyzed ? "Reviewed" : "Pending Review",
-      autoCheckScore: doc.results?.overallScore || 0,
-      feedback: "",
-      file: doc.file, // Keep the file reference if you need it
-      results: doc.results, // Keep the analysis results
-    }));
+    // Get submission slots
+    const savedSlots = JSON.parse(
+      localStorage.getItem("submissionSlots") || "[]"
+    );
+    setSubmissionSlots(savedSlots);
 
-    setSubmissions(transformedSubmissions);
+    const savedProfessorDocs = JSON.parse(
+      localStorage.getItem("professorDocuments") || "[]"
+    );
+    setProfessorDocuments(savedProfessorDocs);
   }, []);
 
-  const handleViewSubmission = (submission) => {
-    if (submission.results) {
-      navigate("/parsing-result", {
-        state: { parsingResult: submission.results },
+  const handleProfessorUpload = (uploadData) => {
+    const newDocument = {
+      id: Date.now(),
+      name: uploadData.name,
+      size: formatFileSize(uploadData.size),
+      date: new Date().toLocaleDateString(),
+      status: "Uploaded",
+      type: "professor_document",
+    };
+
+    const updatedDocs = [...professorDocuments, newDocument];
+    setProfessorDocuments(updatedDocs);
+    localStorage.setItem("professorDocuments", JSON.stringify(updatedDocs));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 MB";
+    const MB = bytes / (1024 * 1024);
+    return MB.toFixed(2) + " MB";
+  };
+
+  const handleCreateSubmissionSlot = (formData) => {
+    const newSlot = {
+      id: Date.now(),
+      ...formData,
+      status: "Open",
+      submissionsCount: 0,
+    };
+
+    const updatedSlots = [...submissionSlots, newSlot];
+    setSubmissionSlots(updatedSlots);
+    localStorage.setItem("submissionSlots", JSON.stringify(updatedSlots));
+    setShowCreateSubmissionModal(false);
+  };
+
+  const handleAnalyzeSubmission = async (submission) => {
+    try {
+      // Here you would implement the analysis logic
+      // For now, we'll just simulate it
+      const updatedSubmissions = submissions.map((sub) => {
+        if (sub.id === submission.id) {
+          return {
+            ...sub,
+            status: "Graded",
+            grade: Math.floor(Math.random() * 30) + 70, // Random grade between 70-100
+            feedback: "Analysis completed successfully.",
+          };
+        }
+        return sub;
       });
-    } else {
-      alert("No analysis results available for this document.");
+
+      setSubmissions(updatedSubmissions);
+      localStorage.setItem(
+        "studentDocuments",
+        JSON.stringify(updatedSubmissions)
+      );
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      alert("Failed to analyze submission. Please try again.");
     }
   };
 
-  const handleProvideFeedback = (submission) => {
-    // Implement feedback functionality
+  const handleDeleteClick = (item, type) => {
+    setItemToDelete(item);
+    setDeleteType(type);
+    setShowDeleteModal(true);
   };
+
+  const handleDelete = () => {
+    if (deleteType === "submission") {
+      const updatedSubmissions = submissions.filter(
+        (sub) => sub.id !== itemToDelete.id
+      );
+      setSubmissions(updatedSubmissions);
+      localStorage.setItem(
+        "studentDocuments",
+        JSON.stringify(updatedSubmissions)
+      );
+    } else if (deleteType === "professor_document") {
+      // Make sure this matches the deleteType you're passing
+      const updatedDocs = professorDocuments.filter(
+        (doc) => doc.id !== itemToDelete.id
+      );
+      setProfessorDocuments(updatedDocs);
+      localStorage.setItem("professorDocuments", JSON.stringify(updatedDocs));
+    } else if (deleteType === "slot") {
+      const updatedSlots = submissionSlots.filter(
+        (slot) => slot.id !== itemToDelete.id
+      );
+      setSubmissionSlots(updatedSlots);
+      localStorage.setItem("submissionSlots", JSON.stringify(updatedSlots));
+    }
+    setShowDeleteModal(false);
+    setItemToDelete(null);
+    setDeleteType(null);
+  };
+
+  const DeleteConfirmationModal = () => {
+    if (!showDeleteModal) return null;
+
+    const itemName = itemToDelete?.name;
+
+    const itemType =
+      deleteType === "submission"
+        ? "submission"
+        : deleteType === "professor_document"
+        ? "document"
+        : "submission slot";
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
+          <h2 className="text-xl font-semibold mb-4">Confirm Deletion</h2>
+          <p className="mb-6 text-gray-600">
+            Are you sure you want to delete this {itemType}: "{itemName}"? This
+            action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-4">
+            <button
+              onClick={() => {
+                setShowDeleteModal(false);
+                setItemToDelete(null);
+                setDeleteType(null);
+              }}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const filteredSubmissions = submissions.filter((submission) => {
+    if (
+      selectedFilter !== "all" &&
+      submission.status.toLowerCase() !== selectedFilter
+    ) {
+      return false;
+    }
+    if (selectedCourse !== "all" && submission.course !== selectedCourse) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-white">
@@ -56,112 +433,264 @@ function ProfessorDashboard() {
             Professor Dashboard
           </h1>
           <p className="text-gray-500">
-            {submissions.length} submissions pending review
+            {submissions.filter((s) => s.status === "Submitted").length}{" "}
+            submissions pending review
           </p>
         </div>
 
-        {/* Filters and Controls */}
-        {/* Filters and Controls */}
-        <div className="flex gap-4 mb-6">
-          <div className="relative">
-            <select
-              className="appearance-none bg-white border rounded-lg px-6 py-3 pr-12 text-xs font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#ff6464] focus:border-transparent cursor-pointer"
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-            >
-              <option value="all">All Groups</option>
-              <option value="swe301">SWE 301</option>
-              <option value="swe302">SWE 302</option>
-              <option value="swe401">SWE 401</option>
-              <option value="swe402">SWE 402</option>
-            </select>
+        {/* Action Cards */}
+        <div className="grid grid-cols-3 gap-6 mb-8">
+          {/* Upload Document Card */}
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <h2 className="text-lg font-semibold mb-4">Upload Document</h2>
+            <UploadModal onUploadComplete={handleProfessorUpload} />
           </div>
 
-          <div className="relative">
-            <select
-              className="appearance-none bg-white border rounded-lg px-6 py-3 pr-12 text-xs font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#ff6464] focus:border-transparent cursor-pointer"
-              value={selectedFilter}
-              onChange={(e) => setSelectedFilter(e.target.value)}
+          {/* Create Submission Slot Card */}
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <h2 className="text-lg font-semibold mb-4">Create Submission</h2>
+            <button
+              onClick={() => setShowCreateSubmissionModal(true)}
+              className="w-full py-3 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300"
             >
-              <option value="all">All Submissions</option>
-              <option value="pending">Pending Review</option>
-              <option value="reviewed">Reviewed</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Submissions Table */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="grid grid-cols-7 gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-            <div>STUDENT NAME</div>
-            <div>DOCUMENT</div>
-            <div>TYPE</div>
-            <div>SUBMITTED</div>
-            <div>AUTO-CHECK SCORE</div>
-            <div>STATUS</div>
-            <div>ACTIONS</div>
+              Create New Submission
+            </button>
           </div>
 
-          {submissions.map((submission) => (
-            <div
-              key={submission.id}
-              className="grid grid-cols-7 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50"
-            >
-              <div>{submission.studentName}</div>
-              <div className="truncate" title={submission.documentName}>
-                {submission.documentName}
-              </div>
-              <div>{submission.documentType}</div>
-              <div>{submission.submissionDate}</div>
-              <div>{submission.autoCheckScore}%</div>
+          {/* Active Submissions Card */}
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <h2 className="text-lg font-semibold mb-4">Active Submissions</h2>
+            <div className="space-y-3">
+              {submissionSlots
+                .filter((slot) => slot.status === "Open")
+                .map((slot) => (
+                  <div key={slot.id} className="border-b pb-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-gray-800">{slot.name}</p>
+                        <p className="text-sm text-gray-500">
+                          Due: {new Date(slot.deadline).toLocaleDateString()}
+                          {" • "}
+                          {new Date(slot.deadline).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteClick(slot, "slot")}
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Quick Stats Card */}
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <h2 className="text-lg font-semibold mb-4">Overview</h2>
+            <div className="space-y-3">
               <div>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    submission.status === "Reviewed"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
-                >
-                  {submission.status}
-                </span>
+                <p className="text-sm text-gray-500">Total Submissions</p>
+                <p className="text-2xl font-semibold text-[#ff6464]">
+                  {submissions.length}
+                </p>
               </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleViewSubmission(submission)}
-                  className="px-2 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
-                >
-                  View
-                </button>
-                <button
-                  onClick={() => handleProvideFeedback(submission)}
-                  className="px-2 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  Feedback
-                </button>
+              <div>
+                <p className="text-sm text-gray-500">Pending Review</p>
+                <p className="text-2xl font-semibold text-[#ff6464]">
+                  {submissions.filter((s) => s.status === "Submitted").length}
+                </p>
               </div>
             </div>
-          ))}
+          </div>
         </div>
 
-        {/* Statistics Section */}
-        <div className="grid grid-cols-4 gap-4 mt-8">
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-md font-medium">Pending Review</h3>
-            <p className="text-lg font-bold text-[#ff6464]">12</p>
+        {/* Filters */}
+        <div className="flex gap-4 mb-6">
+          <select
+            className="border rounded-lg py-2 text-sm max-w-56 truncate"
+            value={selectedCourse}
+            onChange={(e) => setSelectedCourse(e.target.value)}
+          >
+            <option value="all">All Courses</option>
+            <option value="SWE301">SWE 301</option>
+            <option value="SWE302">SWE 302</option>
+            <option value="SWE401">SWE 401</option>
+            <option value="SWE402">SWE 402</option>
+          </select>
+
+          <select
+            className="border rounded-lg py-2 text-sm max-w-56 truncate"
+            value={selectedFilter}
+            onChange={(e) => setSelectedFilter(e.target.value)}
+          >
+            <option value="all">All Status</option>
+            <option value="submitted">Pending Review</option>
+            <option value="graded">Reviewed</option>
+          </select>
+        </div>
+
+        {/* Tables Section */}
+        <div className="space-y-8">
+          {/* Student Submissions Table */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Student Submissions</h2>
+            <div className="bg-white rounded-lg shadow mb-8">
+              <div className="grid grid-cols-7 gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+                <div>STUDENT</div>
+                <div>DOCUMENT</div>
+                <div>SUBMISSION TYPE</div>
+                <div>SUBMITTED</div>
+                <div>STATUS</div>
+                <div>GRADE</div>
+                <div>ACTIONS</div>
+              </div>
+
+              {filteredSubmissions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No student submissions found
+                </div>
+              ) : (
+                filteredSubmissions.map((submission) => (
+                  <div
+                    key={submission.id}
+                    className="grid grid-cols-7 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    <div>{submission.studentName || "Student Name"}</div>
+                    <div className="truncate">{submission.name}</div>
+                    <div>{submission.submissionType}</div>
+                    <div>{submission.date}</div>
+                    <div>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          submission.status === "Graded"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {submission.status}
+                      </span>
+                    </div>
+                    <div>{submission.grade ? `${submission.grade}%` : "-"}</div>
+                    <div className="flex items-center justify-between">
+                      {submission.status !== "Graded" && (
+                        <button
+                          onClick={() => handleAnalyzeSubmission(submission)}
+                          className="px-3 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
+                        >
+                          Analyze
+                        </button>
+                      )}
+                      <button
+                        onClick={() =>
+                          handleDeleteClick(submission, "submission")
+                        }
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-md font-medium">Reviewed Today</h3>
-            <p className="text-lg font-bold text-[#ff6464]">5</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-md font-medium">Average Score</h3>
-            <p className="text-lg font-bold text-[#ff6464]">85%</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-md font-medium">Number of Students</h3>
-            <p className="text-lg font-bold text-[#ff6464]">45</p>
+
+          {/* Professor Documents Table */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Uploaded Documents</h2>
+            <div className="bg-white rounded-lg shadow mb-8">
+              <div className="grid grid-cols-5 gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+                <div>DOCUMENT NAME</div>
+                <div>UPLOADED DATE</div>
+                <div>SIZE</div>
+                <div>STATUS</div>
+                <div>ACTIONS</div>
+              </div>
+
+              {professorDocuments.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No documents uploaded
+                </div>
+              ) : (
+                professorDocuments.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="grid grid-cols-5 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    <div className="truncate">{doc.name}</div>
+                    <div>{doc.date}</div>
+                    <div>{doc.size}</div>
+                    <div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {doc.status}
+                      </span>
+                    </div>
+                    <div>
+                      <button
+                        onClick={() =>
+                          handleDeleteClick(doc, "professor_document")
+                        }
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Modals */}
+        <CreateSubmissionModal
+          isOpen={showCreateSubmissionModal}
+          onClose={() => setShowCreateSubmissionModal(false)}
+          onSubmit={handleCreateSubmissionSlot}
+        />
+
+        <DeleteConfirmationModal />
       </div>
     </div>
   );

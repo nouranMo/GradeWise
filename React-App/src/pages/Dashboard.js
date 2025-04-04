@@ -1,475 +1,304 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDropzone } from "react-dropzone";
 import Navbar from "components/layout/Navbar/Navbar";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { compressPDF } from "utils/pdfCompressor";
-
-const DeleteConfirmationModal = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  documentName,
-}) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
-        <h2 className="text-xl font-semibold mb-4">Confirm Deletion</h2>
-        <p className="mb-6 text-gray-600">
-          Are you sure you want to delete "{documentName}"? This action cannot
-          be undone.
-        </p>
-        <div className="flex justify-end space-x-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+import UploadModal from "components/UploadModal";
 
 function Dashboard() {
-  const [analyzedDocuments, setAnalyzedDocuments] = useState([]);
-  const [selectedAnalyses, setSelectedAnalyses] = useState({
-    SrsValidation: false,
-    ReferencesValidation: false,
-    ContentAnalysis: false,
-    ImageAnalysis: false,
-    BusinessValueAnalysis: false,
-    DiagramConvention: false,
-    SpellCheck: false,
-    PlagiarismCheck: false,
-    FullAnalysis: false,
-  });
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [documents, setDocuments] = useState([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState(null);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+
+  const handleSubmitClick = (doc) => {
+    setSelectedDocument(doc);
+    setShowSubmitModal(true);
+  };
+
+  const handleSubmitDocument = (submissionId) => {
+    const submission = availableSubmissions.find((s) => s.id === submissionId);
+
+    const updatedDocuments = documents.map((doc) => {
+      if (doc.id === selectedDocument.id) {
+        return {
+          ...doc,
+          status: "Submitted",
+          submissionType: submission.name,
+          submissionId: submission.id,
+          submissionDate: new Date().toISOString(),
+        };
+      }
+      return doc;
+    });
+
+    setDocuments(updatedDocuments);
+    localStorage.setItem("studentDocuments", JSON.stringify(updatedDocuments));
+
+    // Store submitted documents separately
+    const submittedDocs = JSON.parse(
+      localStorage.getItem("submittedDocuments") || "[]"
+    );
+    submittedDocs.push({
+      ...selectedDocument,
+      status: "Submitted",
+      submissionType: submission.name,
+      submissionId: submission.id,
+      submissionDate: new Date().toISOString(),
+    });
+    localStorage.setItem("submittedDocuments", JSON.stringify(submittedDocs));
+
+    setShowSubmitModal(false);
+    setSelectedDocument(null);
+  };
+
+  // Mock data for available submissions - this would come from API/backend
+  const availableSubmissions = [
+    {
+      id: "1",
+      name: "SRS Document - SWE301",
+      deadline: "2024-02-01",
+      description: "Software Requirements Specification Document",
+    },
+    {
+      id: "2",
+      name: "SDD Document - SWE301",
+      deadline: "2024-02-15",
+      description: "Software Design Document",
+    },
+  ];
 
   const navigate = useNavigate();
 
-  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
-
   useEffect(() => {
-    const fetchUserDocuments = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await fetch("http://localhost:8080/api/documents", {
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (response.ok) {
-          const documents = await response.json();
-          setAnalyzedDocuments(documents);
-        }
-      } catch (error) {
-        console.error("Error fetching documents:", error);
-      }
+    const savedDocuments = localStorage.getItem("studentDocuments");
+    if (savedDocuments) {
+      setDocuments(JSON.parse(savedDocuments));
+    }
+  }, []);
+
+  const handleStudentUpload = (uploadData) => {
+    const newDocument = {
+      id: Date.now(),
+      name: uploadData.name,
+      submissionType: null,
+      date: new Date().toLocaleDateString(),
+      size: formatFileSize(uploadData.size),
+      status: "Uploaded",
+      grade: null,
+      feedback: null,
     };
 
-    fetchUserDocuments();
-  }, []);
+    const updatedDocuments = [newDocument, ...documents];
+    setDocuments(updatedDocuments);
+    localStorage.setItem("studentDocuments", JSON.stringify(updatedDocuments));
+  };
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return "0 MB";
-    const MB = bytes / (1024 * 1024); // Convert bytes to MB
-    return MB.toFixed(2) + " MB"; // Show 2 decimal places
+    const MB = bytes / (1024 * 1024);
+    return MB.toFixed(2) + " MB";
   };
-
-  const onDrop = useCallback(
-    async (acceptedFiles) => {
-      try {
-        // Filter out files that are too large
-        const validFiles = acceptedFiles.filter(
-          (file) => file.size <= MAX_FILE_SIZE
-        );
-        if (validFiles.length !== acceptedFiles.length) {
-          toast.error("Some files were too large and were not uploaded");
-        }
-
-        if (validFiles.length === 0) return;
-
-        const file = validFiles[0];
-        console.log("Uploading file:", file.name);
-
-        // Create FormData
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("analyses", JSON.stringify(selectedAnalyses));
-
-        // Get JWT token
-        const token = localStorage.getItem("token");
-        if (!token) {
-          toast.error("Not authenticated");
-          return;
-        }
-
-        // Upload file
-        const response = await fetch("http://localhost:8080/api/documents", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Upload failed");
-        }
-
-        const data = await response.json();
-        console.log("Upload response:", data);
-
-        // Update documents list
-        setAnalyzedDocuments((prev) => [...prev, data.document]);
-        toast.success("Document uploaded successfully");
-      } catch (error) {
-        console.error("Upload error:", error);
-        toast.error(error.message || "Failed to upload document");
-      }
-    },
-    [selectedAnalyses]
-  );
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "application/pdf": [".pdf"],
-    },
-    maxSize: MAX_FILE_SIZE,
-    multiple: true,
-  });
 
   const handleDeleteClick = (doc) => {
     setDocumentToDelete(doc);
     setShowDeleteModal(true);
   };
 
-  const handleDeleteDocument = async (doc) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `http://localhost:8080/api/documents/${doc.id}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const updatedDocs = analyzedDocuments.filter((d) => d.id !== doc.id);
-        setAnalyzedDocuments(updatedDocs);
-      } else {
-        alert("Failed to delete document. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error deleting document:", error);
-      alert("An error occurred while deleting the document.");
-    }
+  const handleDeleteDocument = () => {
+    const updatedDocs = documents.filter(
+      (doc) => doc.id !== documentToDelete.id
+    );
+    setDocuments(updatedDocs);
+    localStorage.setItem("studentDocuments", JSON.stringify(updatedDocs));
+    setShowDeleteModal(false);
+    setDocumentToDelete(null);
   };
 
-  const handleDocumentClick = (document) => {
-    if (document.analyzed) {
-      navigate("/parsing-result", {
-        state: { parsingResult: document.results },
-      });
-    }
+  const getUpcomingDeadlines = () => {
+    const today = new Date();
+    return availableSubmissions
+      .filter((submission) => new Date(submission.deadline) > today)
+      .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
   };
 
-  const handleFullAnalysisChange = (checked) => {
-    setSelectedAnalyses((prev) => {
-      const newState = { ...prev };
-      // Set all analyses to the checked value
-      Object.keys(newState).forEach((key) => {
-        newState[key] = checked;
-      });
-      return newState;
-    });
-  };
+  const SubmissionModal = ({
+    isOpen,
+    onClose,
+    document,
+    availableSubmissions,
+    onSubmit,
+  }) => {
+    const [selectedSubmission, setSelectedSubmission] = useState("");
 
-  const handleIndividualAnalysisChange = (key) => {
-    setSelectedAnalyses((prev) => {
-      const newState = {
-        ...prev,
-        [key]: !prev[key],
-      };
+    if (!isOpen) return null;
 
-      // Check if all individual analyses are selected after the change
-      const allSelected = Object.entries(newState).every(
-        ([k, v]) => k === "FullAnalysis" || v === true
-      );
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
+          <h2 className="text-xl font-semibold mb-4">Submit Document</h2>
+          <p className="mb-4 text-gray-600">
+            Select a submission slot for "{document?.name}"
+          </p>
 
-      // Update FullAnalysis based on whether all other options are selected
-      newState.FullAnalysis = allSelected;
-      return newState;
-    });
-  };
+          <select
+            value={selectedSubmission}
+            onChange={(e) => setSelectedSubmission(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 mb-6"
+          >
+            <option value="" disabled hidden>
+              Select submission type
+            </option>
+            {availableSubmissions.map((submission) => (
+              <option
+                key={submission.id}
+                value={submission.id}
+                className="text-gray-900"
+              >
+                {submission.name} - Due:{" "}
+                {new Date(submission.deadline).toLocaleDateString()}
+              </option>
+            ))}
+          </select>
 
-  const handleAnalyzeClick = (document) => {
-    setSelectedDocument(document);
-    setShowAnalysisModal(true);
-  };
-
-  const startAnalysis = async (documentId) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("Authentication token not found");
-        return;
-      }
-
-      // Update document status to "Analyzing"
-      const updatedDocuments = analyzedDocuments.map((doc) =>
-        doc.id === documentId ? { ...doc, status: "Analyzing" } : doc
-      );
-      setAnalyzedDocuments(updatedDocuments);
-
-      // Send request to Spring backend with selected analyses
-      const response = await fetch(
-        `http://localhost:8080/api/documents/${documentId}/analyze`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ analyses: selectedAnalyses }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Analysis failed");
-      }
-
-      const data = await response.json();
-      console.log("Analysis response:", data);
-
-      // Update document status
-      const updatedDocs = analyzedDocuments.map((doc) =>
-        doc.id === documentId
-          ? { ...doc, status: "Analyzing", analyzed: false }
-          : doc
-      );
-      setAnalyzedDocuments(updatedDocs);
-      toast.success("Analysis started successfully");
-    } catch (error) {
-      console.error("Analysis error:", error);
-      toast.error(error.message || "Failed to start analysis");
-
-      // Update document status to failed
-      const updatedDocs = analyzedDocuments.map((doc) =>
-        doc.id === documentId
-          ? { ...doc, status: "Failed", analyzed: false }
-          : doc
-      );
-      setAnalyzedDocuments(updatedDocs);
-    }
-  };
-
-  const handleReanalyze = (doc) => {
-    setSelectedDocument(doc);
-    setSelectedAnalyses({
-      SrsValidation: true,
-      ReferencesValidation: true,
-      ContentAnalysis: true,
-      ImageAnalysis: true,
-      BusinessValueAnalysis: true,
-      DiagramConvention: true,
-      SpellCheck: true,
-      FullAnalysis: true,
-    });
-    setShowAnalysisModal(true);
-  };
-
-  const handleViewResults = (doc) => {
-    if (doc.results) {
-      navigate("/parsing-result", {
-        state: { parsingResult: doc.results },
-      });
-    } else {
-      alert("No results available for this document.");
-    }
+          <div className="flex justify-end space-x-4">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-300"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onSubmit(selectedSubmission)}
+              disabled={!selectedSubmission}
+              className="px-4 py-2 bg-[#ff6464] text-white rounded-md hover:bg-[#ff4444] transition-colors duration-300 disabled:hover:bg-[#ff6464] disabled:opacity-50"
+            >
+              Submit
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
-      <ToastContainer position="top-right" autoClose={5000} />
       <div className="max-w-6xl mx-auto mt-6">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-gray-800">
-            Document Dashboard
+            Student Dashboard
           </h1>
           <p className="text-gray-500">
-            {analyzedDocuments.length} documents total
+            {documents.length} documents submitted
           </p>
         </div>
 
-        <hr className="border-t border-gray-200 mb-8" />
-
-        {/* Dropzone */}
-        <div
-          {...getRootProps()}
-          className={`
-            w-1/2 mx-auto border-2 border-dashed rounded-lg p-16 mb-8 text-center cursor-pointer
-            transition-colors duration-300 ease-in-out
-            ${
-              isDragActive
-                ? "border-[#ff6464] bg-red-50"
-                : "border-gray-300 hover:border-[#ff6464] hover:bg-red-50"
-            }
-            ${isAnalyzing ? "pointer-events-none opacity-50" : ""}
-          `}
-        >
-          <input {...getInputProps()} />
-          <div className="mb-3">
-            <svg
-              className={`mx-auto h-12 w-12 ${
-                isDragActive ? "text-red-400" : "text-gray-400"
-              }`}
-              stroke="currentColor"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M3 12h18M12 3v18"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
+        <div className="grid grid-cols-3 gap-6 mb-8">
+          {/* Upload Card */}
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <h2 className="text-lg font-semibold mb-4">Upload Document</h2>
+            <UploadModal onUploadComplete={handleStudentUpload} />
           </div>
-          {isAnalyzing ? (
-            <div className="flex items-center justify-center space-x-3">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600" />
-              <p className="text-red-600">Analyzing documents...</p>
+
+          {/* Upcoming Deadlines Card */}
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <h2 className="text-lg font-semibold mb-4">Upcoming Deadlines</h2>
+            <div className="space-y-3">
+              {getUpcomingDeadlines().map((submission) => (
+                <div key={submission.id} className="border-b pb-2">
+                  <p className="font-medium text-gray-800">{submission.name}</p>
+                  <p className="text-sm text-gray-500">
+                    Due: {new Date(submission.deadline).toLocaleDateString()}
+                  </p>
+                </div>
+              ))}
             </div>
-          ) : isDragActive ? (
-            <>
-              <p className="text-red-500 mb-1">Drop PDF files here</p>
-              <p className="text-gray-400 text-sm">
-                PDF files only (max 100MB each)
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-gray-600 mb-1">
-                Drag & drop PDF files here, or click to select
-              </p>
-              <p className="text-gray-400 text-sm">
-                PDF files only (max 100MB each)
-              </p>
-            </>
-          )}
+          </div>
+
+          {/* Quick Stats Card */}
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <h2 className="text-lg font-semibold mb-4">Overview</h2>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-500">Uploaded Documents</p>
+                <p className="text-2xl font-semibold text-[#ff6464]">
+                  {documents.length}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Submitted Documents</p>
+                <p className="text-2xl font-semibold text-[#ff6464]">
+                  {documents.filter((doc) => doc.status === "Submitted").length}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Graded Documents</p>
+                <p className="text-2xl font-semibold text-[#ff6464]">
+                  {documents.filter((doc) => doc.grade !== null).length}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Document List */}
-        <div className="mb-10">
-          <div className="flex gap-4 mb-4">
-            <div className="relative">
-              <select className="flex items-center space-x-2 border rounded-md px-4 py-2 pr-8 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-[#ff6464] focus:border-transparent  cursor-pointer">
-                <option>All ({analyzedDocuments.length})</option>
-                <option>Analyzed</option>
-                <option>Pending</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"></div>
-            </div>
-          </div>
-
-          {/* Table Header */}
-          <div className="grid grid-cols-5 gap-4 px-4 py-2 bg-gray-50 text-sm font-medium text-gray-500">
+        {/* Documents Table */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="grid grid-cols-7 gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
             <div>DOCUMENT NAME</div>
-            <div>
-              UPLOAD DATE
-              <span className="text-[10px] ml-2 text-gray-400">
-                (MMM DD, YYYY)
-              </span>
-            </div>
+            <div>SUBMISSION TYPE</div>
+            <div>SUBMITTED DATE</div>
             <div>SIZE</div>
             <div>STATUS</div>
+            <div>GRADE</div>
+            <div>ACTIONS</div>
           </div>
 
-          {/* Table Content */}
-          {analyzedDocuments.length === 0 ? (
+          {documents.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No documents uploaded yet
+              No documents submitted yet
             </div>
           ) : (
-            analyzedDocuments.map((doc) => (
+            documents.map((doc) => (
               <div
                 key={doc.id}
-                className="grid grid-cols-5 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50"
-                onClick={() => handleDocumentClick(doc)}
+                className="grid grid-cols-7 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50"
               >
                 <div className="overflow-hidden">
                   <span className="truncate block" title={doc.name}>
                     {doc.name}
                   </span>
                 </div>
+                <div>{doc.submissionType || "Not submitted"}</div>
                 <div>{doc.date}</div>
                 <div>{doc.size}</div>
                 <div>
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        doc.analyzed
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {doc.status}
-                    </span>
-                    {doc.analysisProgress > 0 && doc.analysisProgress < 100 && (
-                      <div className="w-20 h-1 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 transition-all duration-300"
-                          style={{ width: `${doc.analysisProgress}%` }}
-                        />
-                      </div>
-                    )}
-                  </div>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      doc.status === "Graded"
+                        ? "bg-green-100 text-green-800"
+                        : doc.status === "Submitted"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {doc.status}
+                  </span>
                 </div>
-                <div className="flex items-center gap-16">
-                  {!doc.analyzed && (
+                <div>{doc.grade ? `${doc.grade}%` : "-"}</div>
+                <div className="flex items-center space-x-2">
+                  {!doc.submissionType && (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAnalyzeClick(doc);
-                      }}
-                      className="px-3 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300 ease-in-out"
+                      onClick={() => handleSubmitClick(doc)}
+                      className="px-3 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300"
                     >
-                      Analyze
+                      Submit
                     </button>
                   )}
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteClick(doc);
-                    }}
-                    className="text-gray-400 hover:text-red-500 transition-colors duration-300 ease-in-out"
+                    onClick={() => handleDeleteClick(doc)}
+                    className="text-gray-400 hover:text-red-500 transition-colors duration-300"
                   >
                     <svg
                       className="w-5 h-5"
@@ -489,83 +318,43 @@ function Dashboard() {
               </div>
             ))
           )}
-          <DeleteConfirmationModal
-            isOpen={showDeleteModal}
-            onClose={() => setShowDeleteModal(false)}
-            onConfirm={() => handleDeleteDocument(documentToDelete)}
-            documentName={documentToDelete?.name}
-          />
         </div>
 
-        {/* Analysis Modal */}
-        {showAnalysisModal && (
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg max-w-2xl w-full m-4">
-              <h2 className="text-xl font-semibold mb-4">
-                Select Analyses to Perform
-              </h2>
-
-              {/* Full Analysis Option */}
-              <div className="mb-4">
-                <label className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 bg-gray-50 hover:cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedAnalyses.FullAnalysis}
-                    onChange={(e) => handleFullAnalysisChange(e.target.checked)}
-                    className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
-                  />
-                  <span className="font-semibold">
-                    Full Analysis (All Options)
-                  </span>
-                </label>
-              </div>
-
-              {/* Individual Analysis Options */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                {Object.entries(selectedAnalyses).map(([key, value]) => {
-                  if (key === "FullAnalysis") return null; // Skip Full Analysis in the grid
-                  return (
-                    <label
-                      key={key}
-                      className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 hover:cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={value}
-                        onChange={() => handleIndividualAnalysisChange(key)}
-                        className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
-                      />
-                      <span>{key.replace(/([A-Z])/g, " $1").trim()}</span>
-                    </label>
-                  );
-                })}
-              </div>
-
+            <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
+              <h2 className="text-xl font-semibold mb-4">Confirm Deletion</h2>
+              <p className="mb-6 text-gray-600">
+                Are you sure you want to delete "{documentToDelete?.name}"? This
+                action cannot be undone.
+              </p>
               <div className="flex justify-end space-x-4">
                 <button
-                  onClick={() => setShowAnalysisModal(false)}
+                  onClick={() => setShowDeleteModal(false)}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => startAnalysis(selectedDocument.id)}
-                  disabled={
-                    !Object.values(selectedAnalyses).some((value) => value) ||
-                    isAnalyzing
-                  }
-                  className={`px-4 py-2 bg-[#ff6464] text-white rounded-md transition-colors duration-300 ease-in-out ${
-                    !Object.values(selectedAnalyses).some((value) => value) ||
-                    isAnalyzing
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-[#ff4444]"
-                  }`}
+                  onClick={handleDeleteDocument}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                 >
-                  {isAnalyzing ? "Analyzing..." : "Start Analysis"}
+                  Delete
                 </button>
               </div>
             </div>
           </div>
+        )}
+
+        {showSubmitModal && (
+          <SubmissionModal
+            isOpen={showSubmitModal}
+            onClose={() => setShowSubmitModal(false)}
+            document={selectedDocument}
+            availableSubmissions={availableSubmissions}
+            onSubmit={handleSubmitDocument}
+          />
         )}
       </div>
     </div>
