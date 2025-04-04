@@ -188,6 +188,3 @@ def process_class_diagram(image_folder, output_folder, model_path):
 
     return results
 
-# Example usage:
-# results = process_class_diagram("input_images_folder", "output_results_folder", "runs/detect/train/weights/best.pt")
-# print(results)
