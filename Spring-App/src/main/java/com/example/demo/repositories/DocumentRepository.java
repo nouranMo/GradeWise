@@ -10,4 +10,6 @@ public interface DocumentRepository extends MongoRepository<DocumentModel, Strin
     List<DocumentModel> findByUserIdAndAnalyzed(String userId, boolean analyzed);
 
     void deleteByUserId(String userId);
+
+    DocumentModel findByIdEquals(String id);
 }

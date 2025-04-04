@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "components/layout/Navbar/Navbar";
 import UploadModal from "components/UploadModal";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function Dashboard() {
   const [documents, setDocuments] = useState([]);
@@ -10,88 +12,273 @@ function Dashboard() {
   const [documentToDelete, setDocumentToDelete] = useState(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [availableSubmissions, setAvailableSubmissions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Fetch student documents and available submissions from backend
+    fetchStudentDocuments();
+    fetchAvailableSubmissions();
+  }, []);
+
+  const fetchStudentDocuments = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        return;
+      }
+
+      const response = await fetch(
+        "http://localhost:8080/api/student/documents",
+        {
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const documents = await response.json();
+        console.log("Fetched student documents:", documents);
+        setDocuments(documents);
+      } else {
+        console.error("Failed to fetch documents:", await response.text());
+        toast.error("Failed to fetch your documents");
+      }
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+      toast.error("Error connecting to server");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchAvailableSubmissions = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        return;
+      }
+
+      const response = await fetch(
+        "http://localhost:8080/api/submissions/available",
+        {
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const submissions = await response.json();
+        console.log("Fetched available submissions:", submissions);
+        setAvailableSubmissions(submissions);
+      } else {
+        console.error(
+          "Failed to fetch available submissions:",
+          await response.text()
+        );
+        // Use fallback data
+        setAvailableSubmissions([
+          {
+            id: "1",
+            name: "SRS Document - SWE301",
+            course: "SWE301",
+            deadline: "2024-02-01",
+            description: "Software Requirements Specification Document",
+          },
+          {
+            id: "2",
+            name: "SDD Document - SWE301",
+            course: "SWE301",
+            deadline: "2024-02-15",
+            description: "Software Design Document",
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error fetching available submissions:", error);
+      // Fallback to default submissions
+      setAvailableSubmissions([
+        {
+          id: "1",
+          name: "SRS Document - SWE301",
+          course: "SWE301",
+          deadline: "2024-02-01",
+          description: "Software Requirements Specification Document",
+        },
+      ]);
+    }
+  };
 
   const handleSubmitClick = (doc) => {
     setSelectedDocument(doc);
     setShowSubmitModal(true);
   };
 
-  const handleSubmitDocument = (submissionId) => {
-    const submission = availableSubmissions.find((s) => s.id === submissionId);
+  const handleSubmitDocument = async (submissionId) => {
+    try {
+      const submission = availableSubmissions.find(
+        (s) => s.id === submissionId
+      );
 
-    const updatedDocuments = documents.map((doc) => {
-      if (doc.id === selectedDocument.id) {
-        return {
-          ...doc,
-          status: "Submitted",
-          submissionType: submission.name,
-          submissionId: submission.id,
-          submissionDate: new Date().toISOString(),
-        };
+      if (!submission) {
+        toast.error("Selected submission slot not found");
+        return;
       }
-      return doc;
-    });
 
-    setDocuments(updatedDocuments);
-    localStorage.setItem("studentDocuments", JSON.stringify(updatedDocuments));
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Not authenticated");
+        return;
+      }
 
-    // Store submitted documents separately
-    const submittedDocs = JSON.parse(
-      localStorage.getItem("submittedDocuments") || "[]"
-    );
-    submittedDocs.push({
-      ...selectedDocument,
-      status: "Submitted",
-      submissionType: submission.name,
-      submissionId: submission.id,
-      submissionDate: new Date().toISOString(),
-    });
-    localStorage.setItem("submittedDocuments", JSON.stringify(submittedDocs));
+      // Create submission data
+      const submissionData = {
+        documentId: selectedDocument.id,
+        submissionSlotId: submissionId,
+        submissionType: submission.name,
+        course: submission.course,
+      };
 
-    setShowSubmitModal(false);
-    setSelectedDocument(null);
+      console.log(
+        "Submitting document:",
+        selectedDocument.id,
+        "to slot:",
+        submissionId
+      );
+
+      // Submit document to backend
+      const response = await fetch("http://localhost:8080/api/student/submit", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(submissionData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Submission failed");
+      }
+
+      const responseData = await response.json();
+      console.log("Submission response:", responseData);
+
+      // Refresh the documents list
+      await fetchStudentDocuments();
+
+      toast.success(`Document submitted to ${submission.name} successfully!`);
+      setShowSubmitModal(false);
+      setSelectedDocument(null);
+    } catch (error) {
+      console.error("Submission error:", error);
+      toast.error(error.message || "Failed to submit document");
+    }
   };
 
-  // Mock data for available submissions - this would come from API/backend
-  const availableSubmissions = [
-    {
-      id: "1",
-      name: "SRS Document - SWE301",
-      deadline: "2024-02-01",
-      description: "Software Requirements Specification Document",
-    },
-    {
-      id: "2",
-      name: "SDD Document - SWE301",
-      deadline: "2024-02-15",
-      description: "Software Design Document",
-    },
-  ];
+  const handleStudentUpload = async (uploadData) => {
+    try {
+      // Create FormData
+      const formData = new FormData();
+      formData.append("file", uploadData.file);
+      formData.append("name", uploadData.name);
 
-  const navigate = useNavigate();
+      // Get JWT token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Not authenticated");
+        return;
+      }
 
-  useEffect(() => {
-    const savedDocuments = localStorage.getItem("studentDocuments");
-    if (savedDocuments) {
-      setDocuments(JSON.parse(savedDocuments));
+      // Upload file to backend
+      const response = await fetch(
+        "http://localhost:8080/api/student/documents",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Upload failed");
+      }
+
+      const data = await response.json();
+      console.log("Upload response:", data);
+
+      // Refresh documents list
+      await fetchStudentDocuments();
+
+      toast.success("Document uploaded successfully!");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error(error.message || "Failed to upload document");
     }
-  }, []);
+  };
 
-  const handleStudentUpload = (uploadData) => {
-    const newDocument = {
-      id: Date.now(),
-      name: uploadData.name,
-      submissionType: null,
-      date: new Date().toLocaleDateString(),
-      size: formatFileSize(uploadData.size),
-      status: "Uploaded",
-      grade: null,
-      feedback: null,
-    };
+  const handleDeleteClick = (doc) => {
+    setDocumentToDelete(doc);
+    setShowDeleteModal(true);
+  };
 
-    const updatedDocuments = [newDocument, ...documents];
-    setDocuments(updatedDocuments);
-    localStorage.setItem("studentDocuments", JSON.stringify(updatedDocuments));
+  const handleDeleteDocument = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Not authenticated");
+        return;
+      }
+
+      const response = await fetch(
+        `http://localhost:8080/api/student/documents/${documentToDelete.id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Delete failed");
+      }
+
+      // Refresh documents list
+      await fetchStudentDocuments();
+
+      toast.success("Document deleted successfully");
+      setShowDeleteModal(false);
+      setDocumentToDelete(null);
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error(error.message || "Failed to delete document");
+    }
+  };
+
+  const getUpcomingDeadlines = () => {
+    const today = new Date();
+    return availableSubmissions
+      .filter((submission) => new Date(submission.deadline) > today)
+      .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
   };
 
   const formatFileSize = (bytes) => {
@@ -100,26 +287,52 @@ function Dashboard() {
     return MB.toFixed(2) + " MB";
   };
 
-  const handleDeleteClick = (doc) => {
-    setDocumentToDelete(doc);
-    setShowDeleteModal(true);
-  };
+  const handleViewReport = async (document) => {
+    try {
+      if (document.status !== "Graded") {
+        toast.info("This document has not been graded yet");
+        return;
+      }
 
-  const handleDeleteDocument = () => {
-    const updatedDocs = documents.filter(
-      (doc) => doc.id !== documentToDelete.id
-    );
-    setDocuments(updatedDocs);
-    localStorage.setItem("studentDocuments", JSON.stringify(updatedDocs));
-    setShowDeleteModal(false);
-    setDocumentToDelete(null);
-  };
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Not authenticated");
+        return;
+      }
 
-  const getUpcomingDeadlines = () => {
-    const today = new Date();
-    return availableSubmissions
-      .filter((submission) => new Date(submission.deadline) > today)
-      .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+      // Fetch document results from backend
+      const response = await fetch(
+        `http://localhost:8080/api/student/documents/${document.id}/results`,
+        {
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch document results");
+      }
+
+      const results = await response.json();
+
+      // Navigate to the results page with the document data
+      navigate("/parsing-result", {
+        state: {
+          parsingResult: {
+            ...results,
+            status: "success",
+            document_name: document.name,
+            document_type: "student_document",
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error viewing report:", error);
+      toast.error("Failed to load analysis results");
+    }
   };
 
   const SubmissionModal = ({
@@ -184,6 +397,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
+      <ToastContainer position="top-right" autoClose={5000} />
       <div className="max-w-6xl mx-auto mt-6">
         {/* Header */}
         <div className="mb-8">
@@ -264,10 +478,36 @@ function Dashboard() {
               <div
                 key={doc.id}
                 className="grid grid-cols-7 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-100 hover:cursor-pointer transition-colors duration-300"
+                onClick={
+                  doc.status === "Graded"
+                    ? () => handleViewReport(doc)
+                    : undefined
+                }
               >
                 <div className="overflow-hidden">
-                  <span className="truncate block" title={doc.name}>
+                  <span
+                    className={`truncate block ${
+                      doc.status === "Graded" ? "text-blue-600 font-medium" : ""
+                    }`}
+                    title={doc.name}
+                  >
                     {doc.name}
+                    {doc.status === "Graded" && (
+                      <span className="ml-2 text-green-600">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4 inline"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div>{doc.submissionType || "Not submitted"}</div>
@@ -288,16 +528,33 @@ function Dashboard() {
                 </div>
                 <div>{doc.grade ? `${doc.grade}%` : "-"}</div>
                 <div className="flex items-center space-x-2">
+                  {doc.status === "Graded" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewReport(doc);
+                      }}
+                      className="px-3 py-1 text-sm text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors duration-300"
+                    >
+                      View Report
+                    </button>
+                  )}
                   {!doc.submissionType && (
                     <button
-                      onClick={() => handleSubmitClick(doc)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSubmitClick(doc);
+                      }}
                       className="px-3 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300"
                     >
                       Submit
                     </button>
                   )}
                   <button
-                    onClick={() => handleDeleteClick(doc)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteClick(doc);
+                    }}
                     className="text-gray-400 hover:text-red-500 transition-colors duration-300"
                   >
                     <svg
