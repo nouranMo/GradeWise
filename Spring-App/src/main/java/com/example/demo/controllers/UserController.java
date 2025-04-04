@@ -21,7 +21,7 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/users")
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class UserController {
 

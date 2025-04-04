@@ -69,13 +69,25 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String token) {
         try {
+            if (token == null || token.isEmpty()) {
+                logger.warn("Token is null or empty");
+                return false;
+            }
+
+            // Check if token has the correct format (contains exactly 2 periods)
+            if (!token.contains(".") || token.split("\\.").length != 3) {
+                logger.warn("JWT strings must contain exactly 2 period characters. Found: {}",
+                        token.contains(".") ? token.split("\\.").length - 1 : 0);
+                return false;
+            }
+
             Jwts.parserBuilder()
                     .setSigningKey(getSigningKey())
                     .build()
                     .parseClaimsJws(token);
             return true;
         } catch (Exception e) {
-            System.out.println("Invalid JWT token: " + e.getMessage());
+            logger.error("Invalid JWT token: {}", e.getMessage());
             return false;
         }
     }

@@ -15,12 +15,14 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.annotation.PostConstruct;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -40,18 +42,35 @@ public class DocumentService {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private final String uploadDir = "uploads";
+    // Set an absolute file path for uploads
+    private final String uploadDir = System.getProperty("user.dir") + File.separator + "uploads";
     private final String pythonApiUrl = "http://localhost:5000/analyze_document";
+
+    @PostConstruct
+    public void init() {
+        try {
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+                System.out.println("Created upload directory: " + uploadPath.toAbsolutePath());
+            } else {
+                System.out.println("Upload directory already exists: " + uploadPath.toAbsolutePath());
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Could not create upload directory!", e);
+        }
+    }
 
     public DocumentModel saveDocument(String userId, MultipartFile file, Map<String, Boolean> selectedAnalyses)
             throws IOException {
         try {
             System.out.println("Saving document for user: " + userId);
 
-            // Create upload directory if it doesn't exist
+            // Ensure upload directory exists
             Path uploadPath = Paths.get(uploadDir);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
+                System.out.println("Created upload directory on demand: " + uploadPath.toAbsolutePath());
             }
 
             // Generate unique filename
@@ -205,17 +224,32 @@ public class DocumentService {
     }
 
     public DocumentModel getDocumentById(String documentId) {
+        if (documentId == null || documentId.isEmpty()) {
+            System.out.println("Invalid document ID: null or empty");
+            return null;
+        }
+
+        System.out.println("Looking for document with ID: " + documentId);
         try {
-            System.out.println("Looking for document with ID: " + documentId);
+            // Try to find by ID in database
             DocumentModel document = documentRepository.findById(documentId).orElse(null);
-            if (document == null) {
-                System.out.println("Document not found in database");
-            } else {
-                System.out.println("Found document: " + document.getName());
+
+            if (document != null) {
+                System.out.println("Found document in database: " + document.getName());
+                return document;
             }
-            return document;
+
+            // If not found by ID, try to find by ID field
+            document = documentRepository.findByIdEquals(documentId);
+            if (document != null) {
+                System.out.println("Found document by ID field: " + document.getName());
+                return document;
+            }
+
+            System.out.println("Document not found in database with ID: " + documentId);
+            return null;
         } catch (Exception e) {
-            System.out.println("Error finding document: " + e.getMessage());
+            System.out.println("Error retrieving document: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
@@ -241,5 +275,40 @@ public class DocumentService {
             document.setAnalysisProgress(progress);
             documentRepository.save(document);
         }
+    }
+
+    // Save document without analysis preferences (for student uploads)
+    public DocumentModel saveDocumentWithoutAnalysis(String userId, MultipartFile file, String documentName)
+            throws Exception {
+        // Ensure upload directory exists
+        Path uploadPath = Paths.get(uploadDir);
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+            System.out.println("Created upload directory on demand: " + uploadPath.toAbsolutePath());
+        }
+
+        // Generate unique ID
+        String documentId = UUID.randomUUID().toString();
+
+        // Save file to disk
+        String fileName = documentId + "_" + file.getOriginalFilename();
+        Path filePath = Paths.get(uploadDir, fileName);
+        file.transferTo(filePath.toFile());
+
+        // Create document model
+        DocumentModel document = new DocumentModel();
+        document.setId(documentId);
+        document.setUserId(userId);
+        document.setName(documentName);
+        document.setOriginalFilename(file.getOriginalFilename());
+        document.setFileSize(file.getSize());
+        document.setUploadDate(new Date());
+        document.setStatus("Uploaded");
+        document.setFilePath(filePath.toString());
+
+        // Save document to repository
+        documentRepository.save(document);
+
+        return document;
     }
 }

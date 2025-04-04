@@ -6,6 +6,8 @@ import UploadModal from "components/UploadModal";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+// API URL constant
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 // Modal for creating new submission slots
 const CreateSubmissionModal = ({ isOpen, onClose, onSubmit }) => {
@@ -266,27 +268,66 @@ function ProfessorDashboard() {
     PlagiarismCheck: false,
     FullAnalysis: false,
   });
+  const [analyzingSubmission, setAnalyzingSubmission] = useState(null);
 
   const navigate = useNavigate();
+
+  // Define fetchSubmissions function to reload submissions
+  const fetchSubmissions = useCallback(async () => {
+    try {
+      console.log("Fetching submissions...");
+      setSubmissions([]); // Clear existing submissions while loading
+      toast.info("Refreshing submissions...", { autoClose: 2000 });
+
+      // Fetch student submissions directly from API
+      const submissionsResponse = await fetch(`${API_URL}/api/submissions`);
+
+      if (submissionsResponse.ok) {
+        const submissionData = await submissionsResponse.json();
+        console.log("Fetched student submissions:", submissionData);
+
+        if (Array.isArray(submissionData) && submissionData.length > 0) {
+          setSubmissions(submissionData);
+          toast.success(`Found ${submissionData.length} submissions`, {
+            autoClose: 2000,
+          });
+        } else {
+          console.log("No submissions found or empty array returned");
+          toast.info("No submissions found", { autoClose: 2000 });
+          // Keep the submissions array empty
+        }
+      } else {
+        const errorText = await submissionsResponse.text();
+        console.error(
+          `Failed to fetch submissions: ${submissionsResponse.status} ${submissionsResponse.statusText}`,
+          errorText
+        );
+        toast.error(
+          `Error fetching submissions: ${submissionsResponse.status} ${submissionsResponse.statusText}`
+        );
+
+        // Try to get student submissions from localStorage as fallback
+        const studentSubmissions = JSON.parse(
+          localStorage.getItem("submittedDocuments") || "[]"
+        );
+
+        if (studentSubmissions.length > 0) {
+          console.log("Using fallback student submissions from localStorage");
+          setSubmissions(studentSubmissions);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching submissions:", error);
+      toast.error(`Failed to fetch submissions: ${error.message}`);
+    }
+  }, [API_URL]);
 
   useEffect(() => {
     // Fetch documents from the backend API
     const fetchDocuments = async () => {
       try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          console.error("No authentication token found");
-          return;
-        }
-
         // Fetch professor documents
-        const response = await fetch("http://localhost:8080/api/documents", {
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(`${API_URL}/api/documents`);
 
         if (response.ok) {
           const documents = await response.json();
@@ -296,21 +337,25 @@ function ProfessorDashboard() {
           console.error("Failed to fetch documents:", await response.text());
         }
 
-        // Get the documents from localStorage that were uploaded by students
-        const studentDocuments = JSON.parse(
-          localStorage.getItem("studentDocuments") || "[]"
-        );
+        // Fetch submission slots
+        const slotsResponse = await fetch(`${API_URL}/api/submissions/slots`);
 
-        const submittedDocuments = studentDocuments.filter(
-          (doc) => doc.status === "Submitted" || doc.status === "Graded"
-        );
-        setSubmissions(submittedDocuments);
+        if (slotsResponse.ok) {
+          const slots = await slotsResponse.json();
+          console.log("Fetched submission slots:", slots);
+          setSubmissionSlots(slots);
+        } else {
+          console.error(
+            "Failed to fetch submission slots:",
+            await slotsResponse.text()
+          );
 
-        // Get submission slots
-        const savedSlots = JSON.parse(
-          localStorage.getItem("submissionSlots") || "[]"
-        );
-        setSubmissionSlots(savedSlots);
+          // Get submission slots from localStorage as fallback
+          const savedSlots = JSON.parse(
+            localStorage.getItem("submissionSlots") || "[]"
+          );
+          setSubmissionSlots(savedSlots);
+        }
       } catch (error) {
         console.error("Error fetching documents:", error);
         toast.error("Failed to fetch documents");
@@ -318,7 +363,9 @@ function ProfessorDashboard() {
     };
 
     fetchDocuments();
-  }, []);
+    // Also fetch submissions when component loads
+    fetchSubmissions();
+  }, [fetchSubmissions]); // Add fetchSubmissions to dependencies
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return "0 MB";
@@ -333,19 +380,9 @@ function ProfessorDashboard() {
       formData.append("file", uploadData.file);
       formData.append("analyses", JSON.stringify(selectedAnalyses));
 
-      // Get JWT token
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("Not authenticated");
-        return;
-      }
-
-      // Upload file to backend
-      const response = await fetch("http://localhost:8080/api/documents", {
+      // Upload file to backend without auth token for now
+      const response = await fetch(`${API_URL}/api/documents`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
       });
 
@@ -371,45 +408,55 @@ function ProfessorDashboard() {
     }
   };
 
-  const handleCreateSubmissionSlot = (formData) => {
-    const newSlot = {
-      id: Date.now(),
-      ...formData,
-      status: "Open",
-      submissionsCount: 0,
-    };
+  const handleCreateSubmissionSlot = async (formData) => {
+    try {
+      // Create submission slot on the backend
+      const response = await fetch(`${API_URL}/api/submissions/slots`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-    const updatedSlots = [...submissionSlots, newSlot];
-    setSubmissionSlots(updatedSlots);
-    localStorage.setItem("submissionSlots", JSON.stringify(updatedSlots));
-    setShowCreateSubmissionModal(false);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create submission slot");
+      }
+
+      const newSlot = await response.json();
+      console.log("Created new submission slot:", newSlot);
+
+      // Update the local state with the new slot
+      setSubmissionSlots((prev) => [...prev, newSlot]);
+
+      toast.success(
+        `New submission slot "${formData.name}" created successfully`
+      );
+      setShowCreateSubmissionModal(false);
+    } catch (error) {
+      console.error("Error creating submission slot:", error);
+      toast.error(error.message || "Failed to create submission slot");
+    }
   };
 
   const handleAnalyzeSubmission = async (submission) => {
-    try {
-      // Here you would implement the analysis logic
-      // For now, we'll just simulate it
-      const updatedSubmissions = submissions.map((sub) => {
-        if (sub.id === submission.id) {
-          return {
-            ...sub,
-            status: "Graded",
-            grade: Math.floor(Math.random() * 30) + 70, // Random grade between 70-100
-            feedback: "Analysis completed successfully.",
-          };
-        }
-        return sub;
-      });
-
-      setSubmissions(updatedSubmissions);
-      localStorage.setItem(
-        "studentDocuments",
-        JSON.stringify(updatedSubmissions)
-      );
-    } catch (error) {
-      console.error("Analysis failed:", error);
-      alert("Failed to analyze submission. Please try again.");
-    }
+    // Set selected document for analysis
+    setSelectedDocument(submission);
+    // Reset analysis options when opening modal
+    setSelectedAnalyses({
+      SrsValidation: true,
+      ReferencesValidation: true,
+      ContentAnalysis: true,
+      ImageAnalysis: false,
+      BusinessValueAnalysis: false,
+      DiagramConvention: false,
+      SpellCheck: true,
+      PlagiarismCheck: false,
+      FullAnalysis: false,
+    });
+    // Show the analysis options modal
+    setShowAnalysisModal(true);
   };
 
   const handleDeleteClick = (item, type) => {
@@ -419,17 +466,14 @@ function ProfessorDashboard() {
   };
 
   const handleDelete = async () => {
-    if (deleteType === "professor_document") {
-      try {
-        const token = localStorage.getItem("token");
+    try {
+      if (deleteType === "professor_document") {
         const response = await fetch(
-          `http://localhost:8080/api/documents/${itemToDelete.id}`,
+          `${API_URL}/api/documents/${itemToDelete.id}`,
           {
             method: "DELETE",
-            credentials: "include",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
           }
         );
@@ -443,29 +487,55 @@ function ProfessorDashboard() {
         } else {
           toast.error("Failed to delete document");
         }
-      } catch (error) {
-        console.error("Error deleting document:", error);
-        toast.error("An error occurred while deleting the document");
+      } else if (deleteType === "submission") {
+        const response = await fetch(
+          `${API_URL}/api/submissions/${itemToDelete.id}`,
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.ok) {
+          const updatedSubmissions = submissions.filter(
+            (sub) => sub.id !== itemToDelete.id
+          );
+          setSubmissions(updatedSubmissions);
+          toast.success("Student submission deleted successfully");
+        } else {
+          toast.error("Failed to delete submission");
+        }
+      } else if (deleteType === "slot") {
+        const response = await fetch(
+          `${API_URL}/api/submissions/slots/${itemToDelete.id}`,
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.ok) {
+          const updatedSlots = submissionSlots.filter(
+            (slot) => slot.id !== itemToDelete.id
+          );
+          setSubmissionSlots(updatedSlots);
+          toast.success("Submission slot deleted successfully");
+        } else {
+          toast.error("Failed to delete submission slot");
+        }
       }
-    } else if (deleteType === "submission") {
-      const updatedSubmissions = submissions.filter(
-        (sub) => sub.id !== itemToDelete.id
-      );
-      setSubmissions(updatedSubmissions);
-      localStorage.setItem(
-        "studentDocuments",
-        JSON.stringify(updatedSubmissions)
-      );
-    } else if (deleteType === "slot") {
-      const updatedSlots = submissionSlots.filter(
-        (slot) => slot.id !== itemToDelete.id
-      );
-      setSubmissionSlots(updatedSlots);
-      localStorage.setItem("submissionSlots", JSON.stringify(updatedSlots));
+    } catch (error) {
+      console.error("Error during deletion:", error);
+      toast.error("An error occurred while deleting");
+    } finally {
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+      setDeleteType(null);
     }
-    setShowDeleteModal(false);
-    setItemToDelete(null);
-    setDeleteType(null);
   };
 
   const DeleteConfirmationModal = () => {
@@ -558,15 +628,33 @@ function ProfessorDashboard() {
     setIsAnalyzing(true);
     setShowAnalysisModal(false);
 
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("Authentication token not found");
-        return;
-      }
+    // Determine if we're analyzing a professor document or a student submission
+    const isSubmission =
+      !!selectedDocument.submissionSlotId || selectedDocument.submissionType;
+    const endpointUrl = isSubmission
+      ? `${API_URL}/api/submissions/${selectedDocument.id}/analyze`
+      : `${API_URL}/api/documents/${selectedDocument.id}/analyze`;
 
-      // Update document status to "Analyzing"
-      if (selectedDocument.type === "professor_document") {
+    console.log(
+      `Starting analysis for ${isSubmission ? "submission" : "document"}: ${
+        selectedDocument.id
+      }`
+    );
+    console.log("Selected analyses:", selectedAnalyses);
+
+    try {
+      // Update status to "Analyzing" in the UI
+      if (isSubmission) {
+        // Also set the analyzing submission ID for UI feedback
+        setAnalyzingSubmission(selectedDocument.id);
+
+        // Update submission status
+        const updatedSubmissions = submissions.map((sub) =>
+          sub.id === selectedDocument.id ? { ...sub, status: "Analyzing" } : sub
+        );
+        setSubmissions(updatedSubmissions);
+      } else {
+        // Update document status
         const updatedDocs = professorDocuments.map((doc) =>
           doc.id === selectedDocument.id ? { ...doc, status: "Analyzing" } : doc
         );
@@ -574,17 +662,13 @@ function ProfessorDashboard() {
       }
 
       // Send request to Spring backend with selected analyses
-      const response = await fetch(
-        `http://localhost:8080/api/documents/${selectedDocument.id}/analyze`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ analyses: selectedAnalyses }),
-        }
-      );
+      const response = await fetch(endpointUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ analyses: selectedAnalyses }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -594,65 +678,69 @@ function ProfessorDashboard() {
       // Wait for 5 seconds to allow the analysis to complete
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      // Fetch the updated document with analysis results
-      const documentResponse = await fetch(
-        `http://localhost:8080/api/documents/${selectedDocument.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      // Fetch the updated document or submission with analysis results
+      const resultResponse = await fetch(
+        isSubmission
+          ? `${API_URL}/api/submissions/${selectedDocument.id}`
+          : `${API_URL}/api/documents/${selectedDocument.id}`
       );
 
-      if (!documentResponse.ok) {
-        throw new Error("Failed to fetch document results");
+      if (!resultResponse.ok) {
+        throw new Error(
+          `Failed to fetch ${isSubmission ? "submission" : "document"} results`
+        );
       }
 
-      const updatedDocument = await documentResponse.json();
-      console.log("Updated document with results:", updatedDocument);
-      console.log("Updated document results:", updatedDocument.results);
+      const updatedItem = await resultResponse.json();
+      console.log(
+        `Updated ${isSubmission ? "submission" : "document"} with results:`,
+        updatedItem
+      );
+      console.log("Updated results:", updatedItem.results);
 
-      // Update document status to "Graded" on success
-      if (selectedDocument.type === "professor_document") {
-        const updatedDocs = professorDocuments.map((doc) => {
-          if (doc.id === selectedDocument.id) {
-            return {
-              ...doc,
-              status: "Graded",
-              analyzed: true,
-              results: updatedDocument.results,
-            };
-          }
-          return doc;
-        });
-        setProfessorDocuments(updatedDocs);
-      } else {
+      // Update document/submission status to "Graded" on success
+      if (isSubmission) {
         const updatedSubmissions = submissions.map((sub) => {
           if (sub.id === selectedDocument.id) {
             return {
               ...sub,
               status: "Graded",
               analyzed: true,
-              results: updatedDocument.results,
+              results: updatedItem.results,
             };
           }
           return sub;
         });
         setSubmissions(updatedSubmissions);
-        localStorage.setItem(
-          "studentDocuments",
-          JSON.stringify(updatedSubmissions)
-        );
+
+        // Also fetch all submissions to make sure our list is updated
+        fetchSubmissions();
+      } else {
+        const updatedDocs = professorDocuments.map((doc) => {
+          if (doc.id === selectedDocument.id) {
+            return {
+              ...doc,
+              status: "Graded",
+              analyzed: true,
+              results: updatedItem.results,
+            };
+          }
+          return doc;
+        });
+        setProfessorDocuments(updatedDocs);
       }
 
       // Navigate to results page with the complete data
       navigate("/parsing-result", {
         state: {
           parsingResult: {
-            ...updatedDocument.results,
+            ...updatedItem.results,
             status: "success",
-            document_name: selectedDocument.name,
-            document_type: "professor_document",
+            document_name:
+              selectedDocument.name || selectedDocument.documentName,
+            document_type: isSubmission
+              ? "student_submission"
+              : "professor_document",
           },
         },
       });
@@ -661,16 +749,11 @@ function ProfessorDashboard() {
       console.error("Analysis failed:", error);
       toast.error(error.message || "Failed to analyze document");
 
-      // Update document status to reflect failure
-      if (selectedDocument.type === "professor_document") {
-        const updatedDocs = professorDocuments.map((doc) => {
-          if (doc.id === selectedDocument.id) {
-            return { ...doc, status: "Analysis Failed" };
-          }
-          return doc;
-        });
-        setProfessorDocuments(updatedDocs);
-      } else {
+      // Update document/submission status to reflect failure
+      const isSubmission =
+        !!selectedDocument.submissionSlotId || selectedDocument.submissionType;
+
+      if (isSubmission) {
         const updatedSubmissions = submissions.map((sub) => {
           if (sub.id === selectedDocument.id) {
             return { ...sub, status: "Analysis Failed" };
@@ -678,127 +761,120 @@ function ProfessorDashboard() {
           return sub;
         });
         setSubmissions(updatedSubmissions);
-        localStorage.setItem(
-          "studentDocuments",
-          JSON.stringify(updatedSubmissions)
-        );
+      } else {
+        const updatedDocs = professorDocuments.map((doc) => {
+          if (doc.id === selectedDocument.id) {
+            return { ...doc, status: "Analysis Failed" };
+          }
+          return doc;
+        });
+        setProfessorDocuments(updatedDocs);
       }
     } finally {
       setIsAnalyzing(false);
+      setAnalyzingSubmission(null);
     }
   };
 
-  const handleViewReport = async (document) => {
-    console.log("handleViewReport called with document:", document);
-    console.log("Document ID:", document.id);
-    console.log("Document status:", document.status);
-    console.log("Document results:", document.results);
+  // Unified view report function for both professor documents and student submissions
+  const handleViewReport = (item) => {
+    console.log("Viewing report for item:", item);
 
-    try {
-      // If the document has "Completed" status but no results, add dummy results
-      if (document.status === "Completed" && !document.results) {
+    if (!item || !item.id) {
+      toast.error("Invalid item data");
+      return;
+    }
+
+    // Determine if this is a submission or a document
+    const isSubmission = !!item.submissionSlotId || !!item.documentId;
+    const endpoint = isSubmission
+      ? `${API_URL}/api/submissions/${item.id}`
+      : `${API_URL}/api/documents/${item.id}`;
+
+    console.log(
+      `Fetching ${
+        isSubmission ? "submission" : "document"
+      } data from: ${endpoint}`
+    );
+
+    // Fetch the item with the latest results
+    fetch(endpoint)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(
+            `Error fetching ${isSubmission ? "submission" : "document"}: ${
+              response.status
+            }`
+          );
+        }
+        return response.json();
+      })
+      .then((data) => {
         console.log(
-          "Document has Completed status but no results, adding dummy results"
+          `Fetched ${isSubmission ? "submission" : "document"} data:`,
+          data
         );
-        document.results = {
-          srs_validation: {
-            structure_validation: {
-              matching_sections: ["Introduction", "Requirements"],
-              missing_sections: [],
+
+        // For submissions, we might need to fetch the document
+        if (isSubmission && !data.results && data.documentId) {
+          // If submission has no results directly, try to fetch the document
+          return fetch(`${API_URL}/api/documents/${data.documentId}`)
+            .then((docResponse) => {
+              if (!docResponse.ok) {
+                throw new Error(
+                  `Error fetching document: ${docResponse.status}`
+                );
+              }
+              return docResponse.json();
+            })
+            .then((docData) => {
+              if (!docData.results) {
+                throw new Error("No analysis results found for this document");
+              }
+
+              // Navigate with document results
+              navigate("/parsing-result", {
+                state: {
+                  parsingResult: {
+                    ...docData.results,
+                    status: "success",
+                    document_name: data.documentName || docData.name,
+                    document_type: "student_submission",
+                    document_id: data.documentId,
+                  },
+                },
+              });
+            });
+        }
+
+        // If no results are available
+        if (!data.results) {
+          throw new Error(
+            `No analysis results found for this ${
+              isSubmission ? "submission" : "document"
+            }`
+          );
+        }
+
+        // Navigate with results
+        navigate("/parsing-result", {
+          state: {
+            parsingResult: {
+              ...data.results,
+              status: "success",
+              document_name: isSubmission ? data.documentName : data.name,
+              document_type: isSubmission
+                ? "student_submission"
+                : "professor_document",
+              document_id: isSubmission ? data.documentId : data.id,
             },
           },
-          status: "success",
-        };
-      }
-
-      // If we need to fetch fresh data for the document
-      if (document.id) {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          console.log("No authentication token found");
-          toast.error("Authentication token not found");
-          return;
-        }
-
-        console.log("Fetching document with ID:", document.id);
-        // Fetch the document to get the latest results
-        const response = await fetch(
-          `http://localhost:8080/api/documents/${document.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Failed to fetch document results:", errorText);
-          throw new Error("Failed to fetch document results");
-        }
-
-        const updatedDocument = await response.json();
-        console.log("Fetched updated document:", updatedDocument);
-        console.log("Updated document results:", updatedDocument.results);
-
-        // Check if the document has results
-        if (updatedDocument.results) {
-          const reportData = {
-            ...updatedDocument.results,
-            status: "success",
-            document_name: document.name || updatedDocument.name,
-            document_type: "professor_document",
-          };
-          console.log("Report data to navigate with:", reportData);
-
-          navigate("/parsing-result", {
-            state: { parsingResult: reportData },
-          });
-          return;
-        } else if (document.status === "Completed") {
-          // If the updated document doesn't have results but status is Completed,
-          // use the dummy results we added
-          const reportData = {
-            ...document.results,
-            status: "success",
-            document_name: document.name,
-            document_type: "professor_document",
-          };
-          console.log("Using dummy report data:", reportData);
-
-          navigate("/parsing-result", {
-            state: { parsingResult: reportData },
-          });
-          return;
-        } else {
-          console.log("Updated document has no results");
-        }
-      } else {
-        console.log("Document has no ID, skipping fetch");
-      }
-
-      // Fallback to using the document object directly if it has results
-      if (document.results) {
-        console.log("Using document results directly:", document.results);
-        const reportData = {
-          ...document.results,
-          status: "success",
-          document_name: document.name,
-          document_type: "professor_document",
-        };
-        console.log("Report data from direct document:", reportData);
-
-        navigate("/parsing-result", {
-          state: { parsingResult: reportData },
         });
-      } else {
-        console.log("No results found in document");
-        toast.error("No analysis results available for this document");
-      }
-    } catch (error) {
-      console.error("Error viewing report:", error);
-      toast.error("Failed to load analysis results");
-    }
+      })
+      .catch((error) => {
+        console.error("Error viewing report:", error);
+        toast.error(error.message || "Error viewing report");
+      });
   };
 
   // Add this new function to debug document status
@@ -837,9 +913,19 @@ function ProfessorDashboard() {
       navigate("/parsing-result", {
         state: { parsingResult: document.results },
       });
-    }
-    else {
+    } else {
       toast.error("No analysis results available");
+    }
+  };
+
+  const handleDeleteSubmission = (submissionId) => {
+    // Find the submission to delete
+    const submission = submissions.find((sub) => sub.id === submissionId);
+    if (submission) {
+      // Call the existing delete function with the correct parameters
+      handleDeleteClick(submission, "submission");
+    } else {
+      toast.error("Submission not found");
     }
   };
 
@@ -968,135 +1054,178 @@ function ProfessorDashboard() {
           {/* Student Submissions Table */}
           <div>
             <h2 className="text-xl font-semibold mb-4">Student Submissions</h2>
-            <div className="bg-white rounded-lg shadow mb-8">
-              <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-                <div>DOCUMENT NAME</div>
+            <div className="bg-white rounded-lg shadow mt-8">
+              <div className="flex justify-between items-center px-4 py-3 bg-gray-50">
+                <h2 className="text-lg font-semibold text-gray-700">
+                  Student Submissions
+                </h2>
+                <button
+                  onClick={fetchSubmissions}
+                  className="px-3 py-1 text-sm text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors duration-300 flex items-center"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 mr-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+              <div className="grid grid-cols-8 gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
                 <div>STUDENT</div>
+                <div>DOCUMENT</div>
                 <div>SUBMISSION TYPE</div>
-                <div>SUBMITTED</div>
-                <div>GRADE</div>
+                <div>COURSE</div>
+                <div>SUBMISSION DATE</div>
                 <div>STATUS</div>
+                <div>GRADE</div>
                 <div>ACTIONS</div>
               </div>
 
-              {filteredSubmissions.map((submission) => {
-                // Check if submission is viewable (has completed analysis)
-                const isViewable =
-                  submission.status === "Graded" ||
-                  submission.status === "Analyzed";
-
-                return (
+              {submissions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No student submissions yet
+                </div>
+              ) : (
+                submissions.map((submission) => (
                   <div
                     key={submission.id}
-                    onClick={() => {
-                      if (isViewable) {
-                        handleViewReport(submission);
-                      }
-                    }}
-                    className={`flex items-center px-6 py-3 border-b text-sm text-gray-600 relative ${
-                      isViewable
-                        ? "hover:bg-blue-50 cursor-pointer group transition-colors"
-                        : ""
-                    }`}
+                    className="grid grid-cols-8 gap-4 px-4 py-3 border-b text-sm text-gray-600"
                   >
-                    <div className="flex-1 grid grid-cols-5 gap-4">
-                      <div>{submission.studentName || "Student Name"}</div>
-                      <div
-                        className={`truncate ${
-                          isViewable ? "font-medium text-blue-600" : ""
-                        }`}
-                      >
-                        {submission.name}
-                        {isViewable && (
-                          <span className="ml-2 text-green-600">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4 inline"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </span>
-                        )}
-                      </div>
-                      <div>{submission.submissionType}</div>
-                      <div>{submission.date}</div>
-                      <div>{submission.grade || "-"}</div>
-                    </div>
-                    <div className="w-[120px]">
+                    <div>{submission.studentName || "Unknown"}</div>
+                    <div className="overflow-hidden">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          isViewable
-                            ? "bg-green-100 text-green-800"
-                            : submission.status === "Analyzing"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-yellow-100 text-yellow-800"
-
-                        }`}
+                        title={`Document ID: ${submission.documentId}`}
+                        className="truncate block"
                       >
-                        {submission.status}
+                        {submission.documentName}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        ID: {submission.documentId}
                       </span>
                     </div>
-
-                    <div
-                      className="w-[150px] flex items-center space-x-2"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {isViewable ? (
-                        <>
-                          <button
-                            onClick={() => handleViewReport(submission)}
-                            className="px-4 py-1 text-sm text-white bg-green-600 rounded-md hover:bg-green-700"
-                          >
-                            View Report
-                          </button>
-                          <button
-                            onClick={() => handleAnalyzeClick(submission)}
-                            className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
-                          >
-                            Re-analyze
-                          </button>
-                        </>
+                    <div>{submission.submissionType}</div>
+                    <div>{submission.course}</div>
+                    <div>
+                      {submission.submissionDate
+                        ? new Date(
+                            submission.submissionDate
+                          ).toLocaleDateString()
+                        : "-"}
+                    </div>
+                    <div className="col-span-1 flex items-center">
+                      {submission.status === "Submitted" ? (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          Submitted
+                        </span>
+                      ) : submission.status === "Analyzing" ? (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                          <span className="flex items-center">
+                            <svg
+                              className="animate-spin -ml-1 mr-2 h-3 w-3 text-yellow-800"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Analyzing
+                          </span>
+                        </span>
+                      ) : submission.status === "Failed" ? (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                          Failed
+                        </span>
+                      ) : submission.status === "Analyzed" ||
+                        submission.status === "Graded" ? (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                          Analyzed
+                        </span>
                       ) : (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                          {submission.status}
+                        </span>
+                      )}
+                    </div>
+                    <div>{submission.grade ? `${submission.grade}%` : "-"}</div>
+                    <div className="flex items-center space-x-2">
+                      {submission.status === "Submitted" && (
                         <button
-                          onClick={() => handleAnalyzeClick(submission)}
-                          className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
-
+                          onClick={() => handleAnalyzeSubmission(submission)}
+                          className="px-3 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300"
+                          disabled={analyzingSubmission === submission.id}
                         >
-                          Analyze
+                          {analyzingSubmission === submission.id ? (
+                            <span className="flex items-center">
+                              <svg
+                                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                ></circle>
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                              </svg>
+                              Analyzing...
+                            </span>
+                          ) : (
+                            "Analyze"
+                          )}
                         </button>
                       )}
-                      <button
-                        onClick={() =>
-                          handleDeleteClick(submission, "submission")
-                        }
-                        className="text-gray-400 hover:text-red-500"
 
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                      {(submission.status === "Analyzed" ||
+                        submission.status === "Graded") && (
+                        <button
+                          onClick={() => handleViewReport(submission)}
+                          className="px-3 py-1 text-sm text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors duration-300"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
+                          View Report
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleDeleteSubmission(submission.id)}
+                        className="px-3 py-1 text-sm text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors duration-300"
+                      >
+                        Delete
                       </button>
                     </div>
                   </div>
-                );
-              })}
-
+                ))
+              )}
             </div>
           </div>
 
@@ -1208,7 +1337,6 @@ function ProfessorDashboard() {
                         <button
                           onClick={() => handleAnalyzeClick(doc)}
                           className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
-
                         >
                           Analyze
                         </button>
@@ -1218,7 +1346,6 @@ function ProfessorDashboard() {
                           handleDeleteClick(doc, "professor_document")
                         }
                         className="text-gray-400 hover:text-red-500"
-
                       >
                         <svg
                           className="w-5 h-5"
@@ -1238,7 +1365,6 @@ function ProfessorDashboard() {
                   </div>
                 );
               })}
-
             </div>
           </div>
         </div>
@@ -1257,7 +1383,11 @@ function ProfessorDashboard() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg max-w-2xl w-full m-4">
               <h2 className="text-xl font-semibold mb-4">
-                Select Analyses to Perform
+                {selectedDocument && selectedDocument.submissionSlotId
+                  ? `Analyze Student Submission: ${
+                      selectedDocument.documentName || selectedDocument.name
+                    }`
+                  : "Select Analyses to Perform"}
               </h2>
 
               {/* Full Analysis Option */}
