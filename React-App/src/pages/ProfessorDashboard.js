@@ -248,6 +248,19 @@ function ProfessorDashboard() {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [deleteType, setDeleteType] = useState(null); // 'submission' or 'slot'
   const [professorDocuments, setProfessorDocuments] = useState([]);
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedAnalyses, setSelectedAnalyses] = useState({
+    SrsValidation: false,
+    ReferencesValidation: false,
+    ContentAnalysis: false,
+    ImageAnalysis: false,
+    BusinessValueAnalysis: false,
+    DiagramConvention: false,
+    SpellCheck: false,
+    FullAnalysis: false,
+  });
 
   const navigate = useNavigate();
 
@@ -256,7 +269,11 @@ function ProfessorDashboard() {
     const studentDocuments = JSON.parse(
       localStorage.getItem("studentDocuments") || "[]"
     );
-    setSubmissions(studentDocuments);
+
+    const submittedDocuments = studentDocuments.filter(
+      (doc) => doc.status === "Submitted" || doc.status === "Graded"
+    );
+    setSubmissions(submittedDocuments);
 
     // Get submission slots
     const savedSlots = JSON.parse(
@@ -278,6 +295,7 @@ function ProfessorDashboard() {
       date: new Date().toLocaleDateString(),
       status: "Uploaded",
       type: "professor_document",
+      file: uploadData.file,
     };
 
     const updatedDocs = [...professorDocuments, newDocument];
@@ -408,6 +426,140 @@ function ProfessorDashboard() {
         </div>
       </div>
     );
+  };
+
+  const handleFullAnalysisChange = (checked) => {
+    setSelectedAnalyses((prev) => {
+      const newState = { ...prev };
+      Object.keys(newState).forEach((key) => {
+        newState[key] = checked;
+      });
+      return newState;
+    });
+  };
+
+  const handleIndividualAnalysisChange = (key) => {
+    setSelectedAnalyses((prev) => {
+      const newState = {
+        ...prev,
+        [key]: !prev[key],
+      };
+      const allSelected = Object.entries(newState).every(
+        ([k, v]) => k === "FullAnalysis" || v === true
+      );
+      newState.FullAnalysis = allSelected;
+      return newState;
+    });
+  };
+
+  const handleAnalyzeClick = (document) => {
+    setSelectedDocument(document);
+    // Reset analysis options when opening modal
+    setSelectedAnalyses({
+      SrsValidation: false,
+      ReferencesValidation: false,
+      ContentAnalysis: false,
+      ImageAnalysis: false,
+      BusinessValueAnalysis: false,
+      DiagramConvention: false,
+      SpellCheck: false,
+      FullAnalysis: false,
+    });
+    setShowAnalysisModal(true);
+  };
+
+  const startAnalysis = async () => {
+    if (!selectedDocument) return;
+
+    setIsAnalyzing(true);
+    setShowAnalysisModal(false);
+
+    try {
+      // Create FormData and append document
+      const formData = new FormData();
+      formData.append("pdfFile", selectedDocument.file);
+      formData.append("analyses", JSON.stringify(selectedAnalyses));
+
+      // Send request to backend
+      const response = await fetch("http://localhost:5000/analyze_document", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.status === "success") {
+        if (selectedDocument.type === "professor_document") {
+          const updatedDocs = professorDocuments.map((doc) => {
+            if (doc.id === selectedDocument.id) {
+              return {
+                ...doc,
+                status: "Graded",
+                analyzed: true,
+                results: result,
+              };
+            }
+            return doc;
+          });
+          setProfessorDocuments(updatedDocs);
+          localStorage.setItem(
+            "professorDocuments",
+            JSON.stringify(updatedDocs)
+          );
+        } else {
+          const updatedSubmissions = submissions.map((sub) => {
+            if (sub.id === selectedDocument.id) {
+              return {
+                ...sub,
+                status: "Graded",
+                analyzed: true,
+                results: result,
+              };
+            }
+            return sub;
+          });
+          setSubmissions(updatedSubmissions);
+          localStorage.setItem(
+            "studentDocuments",
+            JSON.stringify(updatedSubmissions)
+          );
+        }
+
+        // Navigate to results page
+        navigate("/parsing-result", {
+          state: { parsingResult: result },
+        });
+      }
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      alert("Failed to analyze document. Please try again.");
+
+      // Update document status to reflect failure
+      if (selectedDocument.type === "professor_document") {
+        const updatedDocs = professorDocuments.map((doc) => {
+          if (doc.id === selectedDocument.id) {
+            return { ...doc, status: "Analysis Failed" };
+          }
+          return doc;
+        });
+        setProfessorDocuments(updatedDocs);
+        localStorage.setItem("professorDocuments", JSON.stringify(updatedDocs));
+      } else {
+        const updatedSubmissions = submissions.map((sub) => {
+          if (sub.id === selectedDocument.id) {
+            return { ...sub, status: "Analysis Failed" };
+          }
+          return sub;
+        });
+        setSubmissions(updatedSubmissions);
+        localStorage.setItem(
+          "studentDocuments",
+          JSON.stringify(updatedSubmissions)
+        );
+      }
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const filteredSubmissions = submissions.filter((submission) => {
@@ -552,75 +704,65 @@ function ProfessorDashboard() {
           <div>
             <h2 className="text-xl font-semibold mb-4">Student Submissions</h2>
             <div className="bg-white rounded-lg shadow mb-8">
-              <div className="grid grid-cols-7 gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-                <div>STUDENT</div>
-                <div>DOCUMENT</div>
-                <div>SUBMISSION TYPE</div>
-                <div>SUBMITTED</div>
-                <div>STATUS</div>
-                <div>GRADE</div>
-                <div>ACTIONS</div>
+              <div className="flex items-center px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+                <div className="flex-1 grid grid-cols-5 gap-4">
+                  <div>STUDENT</div>
+                  <div>DOCUMENT</div>
+                  <div>SUBMISSION TYPE</div>
+                  <div>SUBMITTED</div>
+                  <div>GRADE</div>
+                </div>
+                <div className="w-[120px]">STATUS</div>
+                <div className="w-[150px]">ACTIONS</div>
               </div>
 
-              {filteredSubmissions.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No student submissions found
-                </div>
-              ) : (
-                filteredSubmissions.map((submission) => (
-                  <div
-                    key={submission.id}
-                    className="grid grid-cols-7 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50"
-                  >
+              {filteredSubmissions.map((submission) => (
+                <div
+                  key={submission.id}
+                  className="flex items-center px-6 py-3 border-b text-sm text-gray-600"
+                >
+                  <div className="flex-1 grid grid-cols-5 gap-4">
                     <div>{submission.studentName || "Student Name"}</div>
                     <div className="truncate">{submission.name}</div>
                     <div>{submission.submissionType}</div>
                     <div>{submission.date}</div>
-                    <div>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          submission.status === "Graded"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {submission.status}
-                      </span>
-                    </div>
-                    <div>{submission.grade ? `${submission.grade}%` : "-"}</div>
-                    <div className="flex items-center justify-between">
-                      {submission.status !== "Graded" && (
-                        <button
-                          onClick={() => handleAnalyzeSubmission(submission)}
-                          className="px-3 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
-                        >
-                          Analyze
-                        </button>
-                      )}
-                      <button
-                        onClick={() =>
-                          handleDeleteClick(submission, "submission")
-                        }
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    </div>
+                    <div>{submission.grade || "-"}</div>
                   </div>
-                ))
-              )}
+                  <div className="w-[120px]">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      {submission.status}
+                    </span>
+                  </div>
+                  <div className="w-[150px] flex items-center space-x-2">
+                    <button
+                      onClick={() => handleAnalyzeClick(submission)}
+                      className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
+                    >
+                      Analyze
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleDeleteClick(submission, "submission")
+                      }
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -628,57 +770,61 @@ function ProfessorDashboard() {
           <div>
             <h2 className="text-xl font-semibold mb-4">Uploaded Documents</h2>
             <div className="bg-white rounded-lg shadow mb-8">
-              <div className="grid grid-cols-5 gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-                <div>DOCUMENT NAME</div>
-                <div>UPLOADED DATE</div>
-                <div>SIZE</div>
-                <div>STATUS</div>
-                <div>ACTIONS</div>
+              <div className="flex items-center px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+                <div className="flex-1 grid grid-cols-3 gap-4">
+                  <div>DOCUMENT NAME</div>
+                  <div>UPLOADED DATE</div>
+                  <div>SIZE</div>
+                </div>
+                <div className="w-[120px]">STATUS</div>
+                <div className="w-[150px]">ACTIONS</div>
               </div>
 
-              {professorDocuments.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No documents uploaded
-                </div>
-              ) : (
-                professorDocuments.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="grid grid-cols-5 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50"
-                  >
+              {professorDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center px-6 py-3 border-b text-sm text-gray-600"
+                >
+                  <div className="flex-1 grid grid-cols-3 gap-4">
                     <div className="truncate">{doc.name}</div>
                     <div>{doc.date}</div>
                     <div>{doc.size}</div>
-                    <div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {doc.status}
-                      </span>
-                    </div>
-                    <div>
-                      <button
-                        onClick={() =>
-                          handleDeleteClick(doc, "professor_document")
-                        }
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
-                    </div>
                   </div>
-                ))
-              )}
+                  <div className="w-[120px]">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {doc.status}
+                    </span>
+                  </div>
+                  <div className="w-[150px] flex items-center space-x-2">
+                    <button
+                      onClick={() => handleAnalyzeClick(doc)}
+                      className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
+                    >
+                      Analyze
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleDeleteClick(doc, "professor_document")
+                      }
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -691,6 +837,77 @@ function ProfessorDashboard() {
         />
 
         <DeleteConfirmationModal />
+
+        {/* Analysis Modal */}
+        {showAnalysisModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg max-w-2xl w-full m-4">
+              <h2 className="text-xl font-semibold mb-4">
+                Select Analyses to Perform
+              </h2>
+
+              {/* Full Analysis Option */}
+              <div className="mb-4">
+                <label className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 bg-gray-50 hover:cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedAnalyses.FullAnalysis}
+                    onChange={(e) => handleFullAnalysisChange(e.target.checked)}
+                    className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
+                  />
+                  <span className="font-semibold">
+                    Full Analysis (All Options)
+                  </span>
+                </label>
+              </div>
+
+              {/* Individual Analysis Options */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {Object.entries(selectedAnalyses).map(([key, value]) => {
+                  if (key === "FullAnalysis") return null;
+                  return (
+                    <label
+                      key={key}
+                      className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 hover:cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={value}
+                        onChange={() => handleIndividualAnalysisChange(key)}
+                        className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
+                      />
+                      <span>{key.replace(/([A-Z])/g, " $1").trim()}</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setShowAnalysisModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={startAnalysis}
+                  disabled={
+                    !Object.values(selectedAnalyses).some((value) => value) ||
+                    isAnalyzing
+                  }
+                  className={`px-4 py-2 bg-[#ff6464] text-white rounded-md transition-colors duration-300 ease-in-out ${
+                    !Object.values(selectedAnalyses).some((value) => value) ||
+                    isAnalyzing
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-[#ff4444]"
+                  }`}
+                >
+                  {isAnalyzing ? "Analyzing..." : "Start Analysis"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
