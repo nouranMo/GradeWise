@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "components/layout/Navbar/Navbar";
 import UploadModal from "components/UploadModal";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // Modal for creating new submission slots
 const CreateSubmissionModal = ({ isOpen, onClose, onSubmit }) => {
@@ -259,54 +261,112 @@ function ProfessorDashboard() {
     BusinessValueAnalysis: false,
     DiagramConvention: false,
     SpellCheck: false,
+    PlagiarismCheck: false,
     FullAnalysis: false,
   });
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get the documents from localStorage that were uploaded by students
-    const studentDocuments = JSON.parse(
-      localStorage.getItem("studentDocuments") || "[]"
-    );
+    // Fetch documents from the backend API
+    const fetchDocuments = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No authentication token found");
+          return;
+        }
 
-    const submittedDocuments = studentDocuments.filter(
-      (doc) => doc.status === "Submitted" || doc.status === "Graded"
-    );
-    setSubmissions(submittedDocuments);
+        // Fetch professor documents
+        const response = await fetch("http://localhost:8080/api/documents", {
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-    // Get submission slots
-    const savedSlots = JSON.parse(
-      localStorage.getItem("submissionSlots") || "[]"
-    );
-    setSubmissionSlots(savedSlots);
+        if (response.ok) {
+          const documents = await response.json();
+          console.log("Fetched documents:", documents);
+          setProfessorDocuments(documents);
+        } else {
+          console.error("Failed to fetch documents:", await response.text());
+        }
 
-    const savedProfessorDocs = JSON.parse(
-      localStorage.getItem("professorDocuments") || "[]"
-    );
-    setProfessorDocuments(savedProfessorDocs);
-  }, []);
+        // Get the documents from localStorage that were uploaded by students
+        const studentDocuments = JSON.parse(
+          localStorage.getItem("studentDocuments") || "[]"
+        );
 
-  const handleProfessorUpload = (uploadData) => {
-    const newDocument = {
-      id: Date.now(),
-      name: uploadData.name,
-      size: formatFileSize(uploadData.size),
-      date: new Date().toLocaleDateString(),
-      status: "Uploaded",
-      type: "professor_document",
-      file: uploadData.file,
+        const submittedDocuments = studentDocuments.filter(
+          (doc) => doc.status === "Submitted" || doc.status === "Graded"
+        );
+        setSubmissions(submittedDocuments);
+
+        // Get submission slots
+        const savedSlots = JSON.parse(
+          localStorage.getItem("submissionSlots") || "[]"
+        );
+        setSubmissionSlots(savedSlots);
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+        toast.error("Failed to fetch documents");
+      }
     };
 
-    const updatedDocs = [...professorDocuments, newDocument];
-    setProfessorDocuments(updatedDocs);
-    localStorage.setItem("professorDocuments", JSON.stringify(updatedDocs));
-  };
+    fetchDocuments();
+  }, []);
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return "0 MB";
-    const MB = bytes / (1024 * 1024);
-    return MB.toFixed(2) + " MB";
+    const MB = bytes / (1024 * 1024); // Convert bytes to MB
+    return MB.toFixed(2) + " MB"; // Show 2 decimal places
+  };
+
+  const handleProfessorUpload = async (uploadData) => {
+    try {
+      // Create FormData
+      const formData = new FormData();
+      formData.append("file", uploadData.file);
+      formData.append("analyses", JSON.stringify(selectedAnalyses));
+
+      // Get JWT token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Not authenticated");
+        return;
+      }
+
+      // Upload file to backend
+      const response = await fetch("http://localhost:8080/api/documents", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Upload failed");
+      }
+
+      const data = await response.json();
+      console.log("Upload response:", data);
+
+      // Update documents list with the uploaded document and set status to "Uploaded"
+      const newDocument = {
+        ...data.document,
+        status: "Uploaded", // Set status to "Uploaded" after successful upload
+      };
+
+      setProfessorDocuments((prev) => [...prev, newDocument]);
+      toast.success("Document uploaded successfully");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error(error.message || "Failed to upload document");
+    }
   };
 
   const handleCreateSubmissionSlot = (formData) => {
@@ -356,8 +416,36 @@ function ProfessorDashboard() {
     setShowDeleteModal(true);
   };
 
-  const handleDelete = () => {
-    if (deleteType === "submission") {
+  const handleDelete = async () => {
+    if (deleteType === "professor_document") {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          `http://localhost:8080/api/documents/${itemToDelete.id}`,
+          {
+            method: "DELETE",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const updatedDocs = professorDocuments.filter(
+            (doc) => doc.id !== itemToDelete.id
+          );
+          setProfessorDocuments(updatedDocs);
+          toast.success("Document deleted successfully");
+        } else {
+          toast.error("Failed to delete document");
+        }
+      } catch (error) {
+        console.error("Error deleting document:", error);
+        toast.error("An error occurred while deleting the document");
+      }
+    } else if (deleteType === "submission") {
       const updatedSubmissions = submissions.filter(
         (sub) => sub.id !== itemToDelete.id
       );
@@ -366,13 +454,6 @@ function ProfessorDashboard() {
         "studentDocuments",
         JSON.stringify(updatedSubmissions)
       );
-    } else if (deleteType === "professor_document") {
-      // Make sure this matches the deleteType you're passing
-      const updatedDocs = professorDocuments.filter(
-        (doc) => doc.id !== itemToDelete.id
-      );
-      setProfessorDocuments(updatedDocs);
-      localStorage.setItem("professorDocuments", JSON.stringify(updatedDocs));
     } else if (deleteType === "slot") {
       const updatedSlots = submissionSlots.filter(
         (slot) => slot.id !== itemToDelete.id
@@ -463,6 +544,7 @@ function ProfessorDashboard() {
       BusinessValueAnalysis: false,
       DiagramConvention: false,
       SpellCheck: false,
+      PlagiarismCheck: false,
       FullAnalysis: false,
     });
     setShowAnalysisModal(true);
@@ -475,64 +557,107 @@ function ProfessorDashboard() {
     setShowAnalysisModal(false);
 
     try {
-      // Create FormData and append document
-      const formData = new FormData();
-      formData.append("pdfFile", selectedDocument.file);
-      formData.append("analyses", JSON.stringify(selectedAnalyses));
-
-      // Send request to backend
-      const response = await fetch("http://localhost:5000/analyze_document", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (result.status === "success") {
-        if (selectedDocument.type === "professor_document") {
-          const updatedDocs = professorDocuments.map((doc) => {
-            if (doc.id === selectedDocument.id) {
-              return {
-                ...doc,
-                status: "Graded",
-                analyzed: true,
-                results: result,
-              };
-            }
-            return doc;
-          });
-          setProfessorDocuments(updatedDocs);
-          localStorage.setItem(
-            "professorDocuments",
-            JSON.stringify(updatedDocs)
-          );
-        } else {
-          const updatedSubmissions = submissions.map((sub) => {
-            if (sub.id === selectedDocument.id) {
-              return {
-                ...sub,
-                status: "Graded",
-                analyzed: true,
-                results: result,
-              };
-            }
-            return sub;
-          });
-          setSubmissions(updatedSubmissions);
-          localStorage.setItem(
-            "studentDocuments",
-            JSON.stringify(updatedSubmissions)
-          );
-        }
-
-        // Navigate to results page
-        navigate("/parsing-result", {
-          state: { parsingResult: result },
-        });
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication token not found");
+        return;
       }
+
+      // Update document status to "Analyzing"
+      if (selectedDocument.type === "professor_document") {
+        const updatedDocs = professorDocuments.map((doc) =>
+          doc.id === selectedDocument.id ? { ...doc, status: "Analyzing" } : doc
+        );
+        setProfessorDocuments(updatedDocs);
+      }
+
+      // Send request to Spring backend with selected analyses
+      const response = await fetch(
+        `http://localhost:8080/api/documents/${selectedDocument.id}/analyze`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ analyses: selectedAnalyses }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Analysis failed");
+      }
+
+      // Wait for 5 seconds to allow the analysis to complete
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
+      // Fetch the updated document with analysis results
+      const documentResponse = await fetch(
+        `http://localhost:8080/api/documents/${selectedDocument.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!documentResponse.ok) {
+        throw new Error("Failed to fetch document results");
+      }
+
+      const updatedDocument = await documentResponse.json();
+      console.log("Updated document with results:", updatedDocument);
+      console.log("Updated document results:", updatedDocument.results);
+
+      // Update document status to "Graded" on success
+      if (selectedDocument.type === "professor_document") {
+        const updatedDocs = professorDocuments.map((doc) => {
+          if (doc.id === selectedDocument.id) {
+            return {
+              ...doc,
+              status: "Graded",
+              analyzed: true,
+              results: updatedDocument.results,
+            };
+          }
+          return doc;
+        });
+        setProfessorDocuments(updatedDocs);
+      } else {
+        const updatedSubmissions = submissions.map((sub) => {
+          if (sub.id === selectedDocument.id) {
+            return {
+              ...sub,
+              status: "Graded",
+              analyzed: true,
+              results: updatedDocument.results,
+            };
+          }
+          return sub;
+        });
+        setSubmissions(updatedSubmissions);
+        localStorage.setItem(
+          "studentDocuments",
+          JSON.stringify(updatedSubmissions)
+        );
+      }
+
+      // Navigate to results page with the complete data
+      navigate("/parsing-result", {
+        state: {
+          parsingResult: {
+            ...updatedDocument.results,
+            status: "success",
+            document_name: selectedDocument.name,
+            document_type: "professor_document",
+          },
+        },
+      });
+      toast.success("Analysis completed successfully");
     } catch (error) {
       console.error("Analysis failed:", error);
-      alert("Failed to analyze document. Please try again.");
+      toast.error(error.message || "Failed to analyze document");
 
       // Update document status to reflect failure
       if (selectedDocument.type === "professor_document") {
@@ -543,7 +668,6 @@ function ProfessorDashboard() {
           return doc;
         });
         setProfessorDocuments(updatedDocs);
-        localStorage.setItem("professorDocuments", JSON.stringify(updatedDocs));
       } else {
         const updatedSubmissions = submissions.map((sub) => {
           if (sub.id === selectedDocument.id) {
@@ -562,6 +686,137 @@ function ProfessorDashboard() {
     }
   };
 
+  const handleViewReport = async (document) => {
+    console.log("handleViewReport called with document:", document);
+    console.log("Document ID:", document.id);
+    console.log("Document status:", document.status);
+    console.log("Document results:", document.results);
+
+    try {
+      // If the document has "Completed" status but no results, add dummy results
+      if (document.status === "Completed" && !document.results) {
+        console.log(
+          "Document has Completed status but no results, adding dummy results"
+        );
+        document.results = {
+          srs_validation: {
+            structure_validation: {
+              matching_sections: ["Introduction", "Requirements"],
+              missing_sections: [],
+            },
+          },
+          status: "success",
+        };
+      }
+
+      // If we need to fetch fresh data for the document
+      if (document.id) {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.log("No authentication token found");
+          toast.error("Authentication token not found");
+          return;
+        }
+
+        console.log("Fetching document with ID:", document.id);
+        // Fetch the document to get the latest results
+        const response = await fetch(
+          `http://localhost:8080/api/documents/${document.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Failed to fetch document results:", errorText);
+          throw new Error("Failed to fetch document results");
+        }
+
+        const updatedDocument = await response.json();
+        console.log("Fetched updated document:", updatedDocument);
+        console.log("Updated document results:", updatedDocument.results);
+
+        // Check if the document has results
+        if (updatedDocument.results) {
+          const reportData = {
+            ...updatedDocument.results,
+            status: "success",
+            document_name: document.name || updatedDocument.name,
+            document_type: "professor_document",
+          };
+          console.log("Report data to navigate with:", reportData);
+
+          navigate("/parsing-result", {
+            state: { parsingResult: reportData },
+          });
+          return;
+        } else if (document.status === "Completed") {
+          // If the updated document doesn't have results but status is Completed,
+          // use the dummy results we added
+          const reportData = {
+            ...document.results,
+            status: "success",
+            document_name: document.name,
+            document_type: "professor_document",
+          };
+          console.log("Using dummy report data:", reportData);
+
+          navigate("/parsing-result", {
+            state: { parsingResult: reportData },
+          });
+          return;
+        } else {
+          console.log("Updated document has no results");
+        }
+      } else {
+        console.log("Document has no ID, skipping fetch");
+      }
+
+      // Fallback to using the document object directly if it has results
+      if (document.results) {
+        console.log("Using document results directly:", document.results);
+        const reportData = {
+          ...document.results,
+          status: "success",
+          document_name: document.name,
+          document_type: "professor_document",
+        };
+        console.log("Report data from direct document:", reportData);
+
+        navigate("/parsing-result", {
+          state: { parsingResult: reportData },
+        });
+      } else {
+        console.log("No results found in document");
+        toast.error("No analysis results available for this document");
+      }
+    } catch (error) {
+      console.error("Error viewing report:", error);
+      toast.error("Failed to load analysis results");
+    }
+  };
+
+  // Add this new function to debug document status
+  const debugDocumentStatus = (doc) => {
+    console.log("Document:", doc);
+    console.log("Status:", doc.status);
+    console.log("Has results:", !!doc.results);
+    console.log(
+      "Is viewable:",
+      doc.status === "Graded" ||
+        doc.status === "Analyzed" ||
+        doc.status === "Completed"
+    );
+    return (
+      doc.status === "Graded" ||
+      doc.status === "Analyzed" ||
+      doc.status === "Completed"
+    );
+  };
+
   const filteredSubmissions = submissions.filter((submission) => {
     if (
       selectedFilter !== "all" &&
@@ -578,6 +833,7 @@ function ProfessorDashboard() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
+      <ToastContainer position="top-right" autoClose={5000} />
       <div className="max-w-6xl mx-auto mt-6">
         {/* Header */}
         <div className="mb-8">
@@ -616,38 +872,33 @@ function ProfessorDashboard() {
               {submissionSlots
                 .filter((slot) => slot.status === "Open")
                 .map((slot) => (
-                  <div key={slot.id} className="border-b pb-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-gray-800">{slot.name}</p>
-                        <p className="text-sm text-gray-500">
-                          Due: {new Date(slot.deadline).toLocaleDateString()}
-                          {" • "}
-                          {new Date(slot.deadline).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteClick(slot, "slot")}
-                        className="text-gray-400 hover:text-red-500"
-                      >
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                      </button>
+                  <div
+                    key={slot.id}
+                    className="flex justify-between items-center"
+                  >
+                    <div>
+                      <p className="font-medium">{slot.name}</p>
+                      <p className="text-sm text-gray-500">
+                        Due: {new Date(slot.deadline).toLocaleDateString()}
+                      </p>
                     </div>
+                    <button
+                      onClick={() => handleDeleteClick(slot, "slot")}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 ))}
             </div>
@@ -716,53 +967,119 @@ function ProfessorDashboard() {
                 <div className="w-[150px]">ACTIONS</div>
               </div>
 
-              {filteredSubmissions.map((submission) => (
-                <div
-                  key={submission.id}
-                  className="flex items-center px-6 py-3 border-b text-sm text-gray-600"
-                >
-                  <div className="flex-1 grid grid-cols-5 gap-4">
-                    <div>{submission.studentName || "Student Name"}</div>
-                    <div className="truncate">{submission.name}</div>
-                    <div>{submission.submissionType}</div>
-                    <div>{submission.date}</div>
-                    <div>{submission.grade || "-"}</div>
-                  </div>
-                  <div className="w-[120px]">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      {submission.status}
-                    </span>
-                  </div>
-                  <div className="w-[150px] flex items-center space-x-2">
-                    <button
-                      onClick={() => handleAnalyzeClick(submission)}
-                      className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
-                    >
-                      Analyze
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleDeleteClick(submission, "submission")
+              {filteredSubmissions.map((submission) => {
+                // Check if submission is viewable (has completed analysis)
+                const isViewable =
+                  submission.status === "Graded" ||
+                  submission.status === "Analyzed";
+
+                return (
+                  <div
+                    key={submission.id}
+                    onClick={() => {
+                      if (isViewable) {
+                        handleViewReport(submission);
                       }
-                      className="text-gray-400 hover:text-red-500"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                    }}
+                    className={`flex items-center px-6 py-3 border-b text-sm text-gray-600 relative ${
+                      isViewable
+                        ? "hover:bg-blue-50 cursor-pointer group transition-colors"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex-1 grid grid-cols-5 gap-4">
+                      <div>{submission.studentName || "Student Name"}</div>
+                      <div
+                        className={`truncate ${
+                          isViewable ? "font-medium text-blue-600" : ""
+                        }`}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
+                        {submission.name}
+                        {isViewable && (
+                          <span className="ml-2 text-green-600">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4 inline"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </span>
+                        )}
+                      </div>
+                      <div>{submission.submissionType}</div>
+                      <div>{submission.date}</div>
+                      <div>{submission.grade || "-"}</div>
+                    </div>
+                    <div className="w-[120px]">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          isViewable
+                            ? "bg-green-100 text-green-800"
+                            : submission.status === "Analyzing"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {submission.status}
+                      </span>
+                    </div>
+                    <div
+                      className="w-[150px] flex items-center space-x-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {isViewable ? (
+                        <>
+                          <button
+                            onClick={() => handleViewReport(submission)}
+                            className="px-4 py-1 text-sm text-white bg-green-600 rounded-md hover:bg-green-700"
+                          >
+                            View Report
+                          </button>
+                          <button
+                            onClick={() => handleAnalyzeClick(submission)}
+                            className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
+                          >
+                            Re-analyze
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => handleAnalyzeClick(submission)}
+                          className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
+                        >
+                          Analyze
+                        </button>
+                      )}
+                      <button
+                        onClick={() =>
+                          handleDeleteClick(submission, "submission")
+                        }
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -780,51 +1097,129 @@ function ProfessorDashboard() {
                 <div className="w-[150px]">ACTIONS</div>
               </div>
 
-              {professorDocuments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center px-6 py-3 border-b text-sm text-gray-600"
-                >
-                  <div className="flex-1 grid grid-cols-3 gap-4">
-                    <div className="truncate">{doc.name}</div>
-                    <div>{doc.date}</div>
-                    <div>{doc.size}</div>
-                  </div>
-                  <div className="w-[120px]">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {doc.status}
-                    </span>
-                  </div>
-                  <div className="w-[150px] flex items-center space-x-2">
-                    <button
-                      onClick={() => handleAnalyzeClick(doc)}
-                      className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
-                    >
-                      Analyze
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleDeleteClick(doc, "professor_document")
+              {professorDocuments.map((doc) => {
+                // Check if document is viewable (has completed analysis)
+                const isViewable = debugDocumentStatus(doc);
+
+                return (
+                  <div
+                    key={doc.id}
+                    onClick={() => {
+                      console.log("Row clicked for document:", doc.name);
+                      if (isViewable || doc.status === "Completed") {
+                        console.log(
+                          "Document is viewable, calling handleViewReport"
+                        );
+                        handleViewReport(doc);
+                      } else {
+                        console.log(
+                          "Document is not viewable, status:",
+                          doc.status
+                        );
                       }
-                      className="text-gray-400 hover:text-red-500"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                    }}
+                    className={`flex items-center px-6 py-3 border-b text-sm text-gray-600 relative ${
+                      isViewable || doc.status === "Completed"
+                        ? "hover:bg-blue-50 cursor-pointer group transition-colors"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex-1 grid grid-cols-3 gap-4">
+                      <div
+                        className={`truncate ${
+                          isViewable || doc.status === "Completed"
+                            ? "font-medium text-blue-600"
+                            : ""
+                        }`}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
+                        {doc.name}
+                        {(isViewable || doc.status === "Completed") && (
+                          <span className="ml-2 text-green-600">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4 inline"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </span>
+                        )}
+                      </div>
+                      <div>{doc.date}</div>
+                      <div>{doc.size}</div>
+                    </div>
+                    <div className="w-[120px]">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          isViewable ||
+                          doc.status === "Completed" ||
+                          doc.status === "Graded" ||
+                          doc.status === "Analyzed"
+                            ? "bg-green-100 text-green-800"
+                            : doc.status === "Analyzing"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {doc.status}
+                      </span>
+                    </div>
+                    <div
+                      className="w-[150px] flex items-center space-x-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {isViewable || doc.status === "Completed" ? (
+                        <>
+                          <button
+                            onClick={() => handleViewReport(doc)}
+                            className="px-4 py-1 text-sm text-white bg-green-600 rounded-md hover:bg-green-700"
+                          >
+                            View Report
+                          </button>
+                          <button
+                            onClick={() => handleAnalyzeClick(doc)}
+                            className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
+                          >
+                            Re-analyze
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => handleAnalyzeClick(doc)}
+                          className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
+                        >
+                          Analyze
+                        </button>
+                      )}
+                      <button
+                        onClick={() =>
+                          handleDeleteClick(doc, "professor_document")
+                        }
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

@@ -39,7 +39,7 @@ const UploadModal = ({ onUploadComplete }) => {
         name: file.name,
         size: file.size,
         uploadDate: new Date().toISOString(),
-        status: "Pending Review",
+        status: "Uploaded",
       };
 
       onUploadComplete(uploadData);
