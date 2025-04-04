@@ -1,0 +1,266 @@
+{
+    "diagram_type": "sequence",
+    "components": [
+        {
+            "id": 1,
+            "type": "activtion_bar",
+            "coords": [
+                351,
+                252,
+                378,
+                349
+            ]
+        },
+        {
+            "id": 2,
+            "type": "activtion_bar",
+            "coords": [
+                507,
+                302,
+                532,
+                587
+            ]
+        },
+        {
+            "id": 3,
+            "type": "messages",
+            "coords": [
+                530,
+                539,
+                666,
+                578
+            ]
+        },
+        {
+            "id": 4,
+            "type": "messages",
+            "coords": [
+                377,
+                306,
+                508,
+                339
+            ]
+        },
+        {
+            "id": 5,
+            "type": "messages",
+            "coords": [
+                66,
+                150,
+                199,
+                178
+            ]
+        },
+        {
+            "id": 6,
+            "type": "messages",
+            "coords": [
+                224,
+                248,
+                354,
+                277
+            ]
+        },
+        {
+            "id": 7,
+            "type": "activtion_bar",
+            "coords": [
+                197,
+                141,
+                226,
+                415
+            ]
+        },
+        {
+            "id": 8,
+            "type": "lifeline",
+            "coords": [
+                627,
+                30,
+                723,
+                87
+            ]
+        },
+        {
+            "id": 9,
+            "type": "sequence_actor",
+            "coords": [
+                21,
+                0,
+                116,
+                109
+            ]
+        },
+        {
+            "id": 10,
+            "type": "lifeline",
+            "coords": [
+                317,
+                31,
+                413,
+                88
+            ]
+        },
+        {
+            "id": 11,
+            "type": "messages",
+            "coords": [
+                70,
+                770,
+                549,
+                809
+            ]
+        },
+        {
+            "id": 12,
+            "type": "lifeline",
+            "coords": [
+                473,
+                28,
+                569,
+                85
+            ]
+        },
+        {
+            "id": 13,
+            "type": "lifeline",
+            "coords": [
+                160,
+                35,
+                260,
+                95
+            ]
+        },
+        {
+            "id": 14,
+            "type": "activtion_bar",
+            "coords": [
+                661,
+                533,
+                687,
+                819
+            ]
+        },
+        {
+            "id": 15,
+            "type": "messages",
+            "coords": [
+                67,
+                603,
+                561,
+                639
+            ]
+        },
+        {
+            "id": 16,
+            "type": "messages",
+            "coords": [
+                527,
+                449,
+                679,
+                507
+            ]
+        },
+        {
+            "id": 17,
+            "type": "messages",
+            "coords": [
+                66,
+                508,
+                419,
+                538
+            ]
+        },
+        {
+            "id": 18,
+            "type": "messages",
+            "coords": [
+                68,
+                430,
+                435,
+                458
+            ]
+        },
+        {
+            "id": 19,
+            "type": "messages",
+            "coords": [
+                68,
+                207,
+                197,
+                233
+            ]
+        },
+        {
+            "id": 20,
+            "type": "messages",
+            "coords": [
+                67,
+                603,
+                422,
+                636
+            ]
+        },
+        {
+            "id": 21,
+            "type": "lifeline",
+            "coords": [
+                23,
+                90,
+                113,
+                118
+            ]
+        },
+        {
+            "id": 22,
+            "type": "messages",
+            "coords": [
+                69,
+                431,
+                537,
+                462
+            ]
+        },
+        {
+            "id": 23,
+            "type": "messages",
+            "coords": [
+                65,
+                206,
+                199,
+                251
+            ]
+        },
+        {
+            "id": 24,
+            "type": "messages",
+            "coords": [
+                65,
+                309,
+                353,
+                341
+            ]
+        },
+        {
+            "id": 25,
+            "type": "messages",
+            "coords": [
+                86,
+                505,
+                510,
+                537
+            ]
+        },
+        {
+            "id": 26,
+            "type": "messages",
+            "coords": [
+                528,
+                341,
+                848,
+                407
+            ]
+        }
+    ],
+    "relationships": []
+}

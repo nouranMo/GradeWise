@@ -1,4 +1,3 @@
-# sequence_processor.py
 import os
 import cv2
 import json
@@ -22,6 +21,19 @@ def process_sequence_diagram(image_folder, output_folder, model_path):
         "object_destruction",
         "fragment"
     ]
+
+    # Assign unique colors to each label
+    label_colors = {
+        "lifeline": (255, 0, 0),  # Blue
+        "sequence_actor": (0, 255, 0),  # Green
+        "messages": (0, 0, 255),  # Red
+        "activtion_bar": (255, 165, 0),  # Orange
+        "return_message": (128, 0, 128),  # Purple
+        "self_message": (255, 192, 203),  # Pink
+        "object_creation": (0, 255, 255),  # Cyan
+        "object_destruction": (255, 255, 0),  # Yellow
+        "fragment": (139, 69, 19)  # Brown
+    }
 
     # Get image files
     image_files = [f for f in os.listdir(image_folder) if f.endswith((".png", ".jpg", ".jpeg"))]
@@ -54,15 +66,26 @@ def process_sequence_diagram(image_folder, output_folder, model_path):
                     }
                     components.append(comp)
 
-                    # Visualize
-                    cv2.rectangle(image_display, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+                    # Get label color (default to white if label is unknown)
+                    color = label_colors.get(label, (255, 255, 255))
+
+                    # Draw bounding box
+                    cv2.rectangle(image_display, (x_min, y_min), (x_max, y_max), color, 2)
+
+                    # Draw text background for better readability
+                    text = f"{label} (ID: {comp['id']})"
+                    text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
+                    text_x, text_y = x_min, y_min - 10
+                    cv2.rectangle(image_display, (text_x, text_y - 5), (text_x + text_size[0], text_y + text_size[1] + 5), color, -1)
+
+                    # Put label text on the image
                     cv2.putText(
                         image_display,
-                        f"{label} (ID: {comp['id']})",
-                        (x_min, y_min - 10),
+                        text,
+                        (text_x, text_y + text_size[1] - 5),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.5,
-                        (0, 255, 0),
+                        (255, 255, 255),  # White text for contrast
                         2
                     )
 

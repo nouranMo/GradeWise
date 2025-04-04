@@ -187,4 +187,3 @@ def process_class_diagram(image_folder, output_folder, model_path):
         results[image_name] = json_path
 
     return results
-
