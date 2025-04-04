@@ -455,6 +455,28 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
                     'message': str(e)
                 }
 
+        if analyses.get('DiagramConvention'):
+            print("\nSTARTING DIAGRAM CONVENTION VALIDATION")
+            print("-"*30)
+            try:
+                logger.debug("Running YOLO script for diagram validation")
+                # Get the absolute path to the script
+                script_path = os.path.join(YOLO_PATH, "script.py")
+                print(f"Running YOLO script at: {script_path}")
+                
+                # Run the YOLO script as a subprocess
+                subprocess.run(["python", script_path], check=True)
+                response['image_validation'] = {"status": "success", "message": "YOLO script executed"}
+                print("Diagram convention validation completed")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"YOLO script execution failed: {str(e)}")
+                response['image_validation'] = {"status": "error", "message": "YOLO script execution failed"}
+                print(f"Error in diagram convention validation: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error in diagram convention validation: {str(e)}")
+                response['image_validation'] = {"status": "error", "message": str(e)}
+                print(f"Error in diagram convention validation: {str(e)}")
+
         print("\nAnalysis completed successfully")
         print("Final response:", json.dumps(response, indent=2))
         return response
