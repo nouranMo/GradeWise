@@ -57,6 +57,14 @@ spec = importlib.util.spec_from_file_location("script", script_path)
 script = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(script)
 
+diagram_convention_path = os.path.join(YOLO_PATH, "DiagramConvention.py")
+spec = importlib.util.spec_from_file_location("DiagramConvention", diagram_convention_path)
+diagram_convention = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(diagram_convention)
+
+# Now you can use process_diagrams from diagram_convention
+process_diagrams = diagram_convention.process_diagrams
+
 # Now you can use process_image from script
 process_image = script.process_image
 
@@ -455,31 +463,79 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
                     'message': str(e)
                 }
 
-        if analyses.get('DiagramConvention'):
-            print("\nSTARTING DIAGRAM CONVENTION VALIDATION")
-            print("-"*30)
-            try:
-                logger.debug("Running YOLO script for diagram validation")
-                # Get the absolute path to the script
-                script_path = os.path.join(YOLO_PATH, "script.py")
-                print(f"Running YOLO script at: {script_path}")
+        # if analyses.get('DiagramConvention'):
+        #     print("\nSTARTING DIAGRAM CONVENTION VALIDATION")
+        #     print("-"*30)
+        #     try:
+        #         logger.debug("Running YOLO script for diagram validation")
+        #         # Get the absolute path to the script
+        #         script_path = os.path.join(YOLO_PATH, "script.py")
+        #         print(f"Running YOLO script at: {script_path}")
                 
-                # Run the YOLO script as a subprocess
-                subprocess.run(["python", script_path], check=True)
-                response['image_validation'] = {"status": "success", "message": "YOLO script executed"}
-                print("Diagram convention validation completed")
-            except subprocess.CalledProcessError as e:
-                logger.error(f"YOLO script execution failed: {str(e)}")
-                response['image_validation'] = {"status": "error", "message": "YOLO script execution failed"}
-                print(f"Error in diagram convention validation: {str(e)}")
-            except Exception as e:
-                logger.error(f"Error in diagram convention validation: {str(e)}")
-                response['image_validation'] = {"status": "error", "message": str(e)}
-                print(f"Error in diagram convention validation: {str(e)}")
+        #         # Run the YOLO script as a subprocess
+        #         subprocess.run(["python", script_path], check=True)
+        #         response['image_validation'] = {"status": "success", "message": "YOLO script executed"}
+        #         print("Diagram convention validation completed")
+        #     except subprocess.CalledProcessError as e:
+        #         logger.error(f"YOLO script execution failed: {str(e)}")
+        #         response['image_validation'] = {"status": "error", "message": "YOLO script execution failed"}
+        #         print(f"Error in diagram convention validation: {str(e)}")
+        #     except Exception as e:
+        #         logger.error(f"Error in diagram convention validation: {str(e)}")
+        #         response['image_validation'] = {"status": "error", "message": str(e)}
+        #         print(f"Error in diagram convention validation: {str(e)}")
 
-        print("\nAnalysis completed successfully")
-        print("Final response:", json.dumps(response, indent=2))
+        # print("\nAnalysis completed successfully")
+        # print("Final response:", json.dumps(response, indent=2))
+        # return response
+        if analyses.get('DiagramConvention'):
+            try:
+                upload_folder = app.config['UPLOAD_FOLDER']
+                sequence_folder = os.path.join(PROJECT_ROOT, "sequence_diagrams")  # Outside uploads
+                os.makedirs(upload_folder, exist_ok=True)
+                os.makedirs(sequence_folder, exist_ok=True)
+                
+                # Extract diagrams from PDF
+                diagram_scopes = text_processor.extract_diagrams_from_pdf(file_path)
+                if diagram_scopes:
+                    use_case_folder = os.path.join(upload_folder, "System Functions")
+                    class_folder = os.path.join(upload_folder, "Preliminary Object-Oriented Domain Analysis")
+                    os.makedirs(use_case_folder, exist_ok=True)
+                    os.makedirs(class_folder, exist_ok=True)
+                    
+                    for diagram_name, diagram_data in diagram_scopes.items():
+                        if "use case" in diagram_name.lower():
+                            diagram_path = os.path.join(use_case_folder, f"{diagram_name}.png")
+                        elif "sequence" in diagram_name.lower():
+                            diagram_path = os.path.join(sequence_folder, f"{diagram_name}.png")
+                        else:  # Default to class diagram
+                            diagram_path = os.path.join(class_folder, f"{diagram_name}.png")
+                        with open(diagram_path, 'wb') as f:
+                            f.write(diagram_data.get('image', b''))
+                
+                # Process all diagrams
+                diagram_results = process_diagrams(
+                    upload_base=upload_folder,
+                    sequence_base=sequence_folder,
+                    output_base="output_results",
+                    model_path=os.path.join(YOLO_PATH, "runs/detect/train/weights/best.pt")
+                )
+                response['diagram_convention'] = diagram_results
+                
+            except Exception as e:
+                response['diagram_convention'] = {
+                    "status": "error",
+                    "message": f"Error processing diagrams: {str(e)}"
+                }
+
         return response
+
+    except Exception as e:
+        return {
+            'status': 'error',
+            'message': str(e)
+        }
+
 
     except Exception as e:
         print("\nERROR IN ANALYZE_DOCUMENT:")

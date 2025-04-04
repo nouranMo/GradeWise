@@ -1,0 +1,146 @@
+{
+    "diagram_type": "sequence",
+    "components": [
+        {
+            "id": 1,
+            "type": "fragment",
+            "coords": [
+                5,
+                166,
+                402,
+                291
+            ]
+        },
+        {
+            "id": 2,
+            "type": "lifeline",
+            "coords": [
+                148,
+                43,
+                228,
+                85
+            ]
+        },
+        {
+            "id": 3,
+            "type": "messages",
+            "coords": [
+                193,
+                120,
+                352,
+                141
+            ]
+        },
+        {
+            "id": 4,
+            "type": "lifeline",
+            "coords": [
+                24,
+                43,
+                87,
+                84
+            ]
+        },
+        {
+            "id": 5,
+            "type": "messages",
+            "coords": [
+                57,
+                93,
+                183,
+                115
+            ]
+        },
+        {
+            "id": 6,
+            "type": "lifeline",
+            "coords": [
+                310,
+                43,
+                399,
+                85
+            ]
+        },
+        {
+            "id": 7,
+            "type": "lifeline",
+            "coords": [
+                25,
+                297,
+                86,
+                337
+            ]
+        },
+        {
+            "id": 8,
+            "type": "fragment",
+            "coords": [
+                9,
+                168,
+                422,
+                257
+            ]
+        },
+        {
+            "id": 9,
+            "type": "lifeline",
+            "coords": [
+                149,
+                297,
+                228,
+                336
+            ]
+        },
+        {
+            "id": 10,
+            "type": "messages",
+            "coords": [
+                196,
+                148,
+                362,
+                171
+            ]
+        },
+        {
+            "id": 11,
+            "type": "return_message",
+            "coords": [
+                57,
+                202,
+                195,
+                221
+            ]
+        },
+        {
+            "id": 12,
+            "type": "return_message",
+            "coords": [
+                57,
+                202,
+                283,
+                220
+            ]
+        },
+        {
+            "id": 13,
+            "type": "messages",
+            "coords": [
+                58,
+                265,
+                194,
+                287
+            ]
+        },
+        {
+            "id": 14,
+            "type": "activtion_bar",
+            "coords": [
+                181,
+                103,
+                195,
+                171
+            ]
+        }
+    ],
+    "relationships": []
+}

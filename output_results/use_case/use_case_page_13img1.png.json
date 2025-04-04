@@ -1,0 +1,265 @@
+{
+    "diagram_type": "use_case",
+    "components": [
+        {
+            "id": 1,
+            "type": "use_case_oval",
+            "coords": [
+                170,
+                728,
+                324,
+                790
+            ]
+        },
+        {
+            "id": 2,
+            "type": "use_case_oval",
+            "coords": [
+                160,
+                134,
+                318,
+                197
+            ]
+        },
+        {
+            "id": 3,
+            "type": "use_case_oval",
+            "coords": [
+                370,
+                708,
+                526,
+                769
+            ]
+        },
+        {
+            "id": 4,
+            "type": "use_case_oval",
+            "coords": [
+                360,
+                326,
+                514,
+                390
+            ]
+        },
+        {
+            "id": 5,
+            "type": "use_case_oval",
+            "coords": [
+                350,
+                67,
+                507,
+                130
+            ]
+        },
+        {
+            "id": 6,
+            "type": "use_case_oval",
+            "coords": [
+                370,
+                637,
+                525,
+                699
+            ]
+        },
+        {
+            "id": 7,
+            "type": "use_case_oval",
+            "coords": [
+                350,
+                217,
+                503,
+                282
+            ]
+        },
+        {
+            "id": 8,
+            "type": "use_case_oval",
+            "coords": [
+                160,
+                438,
+                318,
+                498
+            ]
+        },
+        {
+            "id": 9,
+            "type": "use_case_oval",
+            "coords": [
+                359,
+                467,
+                515,
+                531
+            ]
+        },
+        {
+            "id": 10,
+            "type": "use_case_oval",
+            "coords": [
+                160,
+                578,
+                318,
+                640
+            ]
+        },
+        {
+            "id": 11,
+            "type": "use_case_oval",
+            "coords": [
+                160,
+                277,
+                317,
+                340
+            ]
+        },
+        {
+            "id": 12,
+            "type": "use_case_oval",
+            "coords": [
+                160,
+                67,
+                318,
+                130
+            ]
+        },
+        {
+            "id": 13,
+            "type": "use_case_oval",
+            "coords": [
+                350,
+                0,
+                507,
+                60
+            ]
+        },
+        {
+            "id": 14,
+            "type": "use_case_actor",
+            "coords": [
+                637,
+                612,
+                695,
+                706
+            ]
+        },
+        {
+            "id": 15,
+            "type": "use_case_oval",
+            "coords": [
+                370,
+                567,
+                528,
+                630
+            ]
+        },
+        {
+            "id": 16,
+            "type": "use_case_oval",
+            "coords": [
+                158,
+                0,
+                318,
+                60
+            ]
+        },
+        {
+            "id": 17,
+            "type": "use_case_oval",
+            "coords": [
+                350,
+                145,
+                506,
+                207
+            ]
+        },
+        {
+            "id": 18,
+            "type": "use_case_oval",
+            "coords": [
+                360,
+                398,
+                515,
+                459
+            ]
+        },
+        {
+            "id": 19,
+            "type": "use_case_actor",
+            "coords": [
+                630,
+                382,
+                680,
+                478
+            ]
+        },
+        {
+            "id": 20,
+            "type": "use_case_oval",
+            "coords": [
+                160,
+                208,
+                317,
+                269
+            ]
+        },
+        {
+            "id": 21,
+            "type": "use_case_oval",
+            "coords": [
+                161,
+                358,
+                317,
+                421
+            ]
+        },
+        {
+            "id": 22,
+            "type": "use_case_oval",
+            "coords": [
+                161,
+                508,
+                318,
+                569
+            ]
+        },
+        {
+            "id": 23,
+            "type": "use_case_oval",
+            "coords": [
+                162,
+                657,
+                319,
+                719
+            ]
+        },
+        {
+            "id": 24,
+            "type": "use_case_actor",
+            "coords": [
+                0,
+                302,
+                61,
+                397
+            ]
+        },
+        {
+            "id": 25,
+            "type": "use_case_actor",
+            "coords": [
+                628,
+                90,
+                683,
+                190
+            ]
+        },
+        {
+            "id": 26,
+            "type": "use_case_oval",
+            "coords": [
+                370,
+                779,
+                524,
+                840
+            ]
+        }
+    ]
+}
