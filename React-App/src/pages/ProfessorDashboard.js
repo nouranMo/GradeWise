@@ -704,65 +704,77 @@ function ProfessorDashboard() {
           <div>
             <h2 className="text-xl font-semibold mb-4">Student Submissions</h2>
             <div className="bg-white rounded-lg shadow mb-8">
-              <div className="flex items-center px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-                <div className="flex-1 grid grid-cols-5 gap-4">
-                  <div>STUDENT</div>
-                  <div>DOCUMENT</div>
-                  <div>SUBMISSION TYPE</div>
-                  <div>SUBMITTED</div>
-                  <div>GRADE</div>
-                </div>
-                <div className="w-[120px]">STATUS</div>
-                <div className="w-[150px]">ACTIONS</div>
+              <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+                <div>DOCUMENT NAME</div>
+                <div>STUDENT</div>
+                <div>SUBMISSION TYPE</div>
+                <div>SUBMITTED</div>
+                <div>GRADE</div>
+                <div>STATUS</div>
+                <div>ACTIONS</div>
               </div>
 
-              {filteredSubmissions.map((submission) => (
-                <div
-                  key={submission.id}
-                  className="flex items-center px-6 py-3 border-b text-sm text-gray-600"
-                >
-                  <div className="flex-1 grid grid-cols-5 gap-4">
-                    <div>{submission.studentName || "Student Name"}</div>
+              {filteredSubmissions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No student submissions found
+                </div>
+              ) : (
+                filteredSubmissions.map((submission) => (
+                  <div
+                    key={submission.id}
+                    className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 border-b text-sm text-gray-600"
+                  >
                     <div className="truncate">{submission.name}</div>
+                    <div>{submission.studentName || "Student Name"}</div>
                     <div>{submission.submissionType}</div>
                     <div>{submission.date}</div>
                     <div>{submission.grade || "-"}</div>
-                  </div>
-                  <div className="w-[120px]">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      {submission.status}
-                    </span>
-                  </div>
-                  <div className="w-[150px] flex items-center space-x-2">
-                    <button
-                      onClick={() => handleAnalyzeClick(submission)}
-                      className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
-                    >
-                      Analyze
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleDeleteClick(submission, "submission")
-                      }
-                      className="text-gray-400 hover:text-red-500"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                    <div>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          submission.status === "Submitted"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : submission.status === "Graded"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
+                        {submission.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {submission.status !== "Graded" && (
+                        <button
+                          onClick={() => handleAnalyzeClick(submission)}
+                          className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300"
+                        >
+                          Analyze
+                        </button>
+                      )}
+                      <button
+                        onClick={() =>
+                          handleDeleteClick(submission, "submission")
+                        }
+                        className="text-gray-400 hover:text-red-500 transition-colors duration-300"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -770,61 +782,73 @@ function ProfessorDashboard() {
           <div>
             <h2 className="text-xl font-semibold mb-4">Uploaded Documents</h2>
             <div className="bg-white rounded-lg shadow mb-8">
-              <div className="flex items-center px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-                <div className="flex-1 grid grid-cols-3 gap-4">
-                  <div>DOCUMENT NAME</div>
-                  <div>UPLOADED DATE</div>
-                  <div>SIZE</div>
-                </div>
-                <div className="w-[120px]">STATUS</div>
-                <div className="w-[150px]">ACTIONS</div>
+              <div className="grid grid-cols-[1.5fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+                <div>DOCUMENT NAME</div>
+                <div>UPLOADED DATE</div>
+                <div>SIZE</div>
+                <div>STATUS</div>
+                <div>ACTIONS</div>
               </div>
 
-              {professorDocuments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center px-6 py-3 border-b text-sm text-gray-600"
-                >
-                  <div className="flex-1 grid grid-cols-3 gap-4">
+              {professorDocuments.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No documents uploaded
+                </div>
+              ) : (
+                professorDocuments.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="grid grid-cols-[1.5fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 border-b text-sm text-gray-600"
+                  >
                     <div className="truncate">{doc.name}</div>
                     <div>{doc.date}</div>
                     <div>{doc.size}</div>
-                  </div>
-                  <div className="w-[120px]">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {doc.status}
-                    </span>
-                  </div>
-                  <div className="w-[150px] flex items-center space-x-2">
-                    <button
-                      onClick={() => handleAnalyzeClick(doc)}
-                      className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
-                    >
-                      Analyze
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleDeleteClick(doc, "professor_document")
-                      }
-                      className="text-gray-400 hover:text-red-500"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                    <div>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          doc.status === "Analysis Failed"
+                            ? "bg-red-100 text-red-800"
+                            : doc.status === "Uploaded"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
+                        {doc.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {doc.status !== "Graded" && (
+                        <button
+                          onClick={() => handleAnalyzeClick(doc)}
+                          className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300"
+                        >
+                          Analyze
+                        </button>
+                      )}
+                      <button
+                        onClick={() =>
+                          handleDeleteClick(doc, "professor_document")
+                        }
+                        className="text-gray-400 hover:text-red-500 transition-colors duration-300"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
