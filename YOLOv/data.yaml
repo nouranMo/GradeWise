@@ -1,5 +1,25 @@
-train: C:/Users/a/Documents/YOLOv8/dataset/train # Path to training images
-val: C:/Users/a/Documents/YOLOv8/dataset/val     # Path to validation images
+train: C:\Users\a\Documents\GitHub\GradeWise\YOLOv\dataset\train  # Path to training images
+val: C:\Users\a\Documents\GitHub\GradeWise\YOLOv\dataset\val      # Path to validation images
 
-nc: 3  # Number of classes
-names: ['use case diagram', 'use_case_actor', 'use_case_oval']
+nc: 17  # Updated number of classes
+
+names: 
+  [
+    'use_case_actor', 
+    'use_case_oval', 
+    'system_boundry',
+    'class_box', 
+    'class_name', 
+    'attributes', 
+    'methods', 
+    'multiplicity',
+    'lifeline', 
+    'sequence_actor', 
+    'messages', 
+    'activtion_bar', 
+    'return_message', 
+    'self_message', 
+    'object_creation', 
+    'object_destruction', 
+    'fragment'
+  ]

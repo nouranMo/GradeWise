@@ -1,3 +1,17 @@
-use case diagram
 use_case_actor
 use_case_oval
+system_boundry
+class_box
+class_name
+attributes
+methods
+multiplicity
+lifeline
+sequence_actor
+messages
+activtion_bar
+return_message
+self_message
+object_creation
+object_destruction
+fragment

@@ -6,7 +6,7 @@ import json
 from ultralytics import YOLO
 
 # Define paths
-YOLO_MODEL_PATH = "runs/detect/train5/weights/best.pt"  
+YOLO_MODEL_PATH = "runs/detect/train/weights/best.pt"  
 IMAGE_FOLDER = "uploads/System Function"  # Change this to the folder where images are stored
 OUTPUT_FOLDER = "output_results"
 
