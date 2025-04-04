@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "components/layout/Navbar/Navbar";
 import UploadModal from "components/UploadModal";
+
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
 
 // Modal for creating new submission slots
 const CreateSubmissionModal = ({ isOpen, onClose, onSubmit }) => {
@@ -830,10 +832,22 @@ function ProfessorDashboard() {
     return true;
   });
 
+  const handleRowClick = (document) => {
+    if (document.status === "Graded" && document.results) {
+      navigate("/parsing-result", {
+        state: { parsingResult: document.results },
+      });
+    }
+    else {
+      toast.error("No analysis results available");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
       <ToastContainer position="top-right" autoClose={5000} />
+
       <div className="max-w-6xl mx-auto mt-6">
         {/* Header */}
         <div className="mb-8">
@@ -955,16 +969,14 @@ function ProfessorDashboard() {
           <div>
             <h2 className="text-xl font-semibold mb-4">Student Submissions</h2>
             <div className="bg-white rounded-lg shadow mb-8">
-              <div className="flex items-center px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-                <div className="flex-1 grid grid-cols-5 gap-4">
-                  <div>STUDENT</div>
-                  <div>DOCUMENT</div>
-                  <div>SUBMISSION TYPE</div>
-                  <div>SUBMITTED</div>
-                  <div>GRADE</div>
-                </div>
-                <div className="w-[120px]">STATUS</div>
-                <div className="w-[150px]">ACTIONS</div>
+              <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+                <div>DOCUMENT NAME</div>
+                <div>STUDENT</div>
+                <div>SUBMISSION TYPE</div>
+                <div>SUBMITTED</div>
+                <div>GRADE</div>
+                <div>STATUS</div>
+                <div>ACTIONS</div>
               </div>
 
               {filteredSubmissions.map((submission) => {
@@ -1024,11 +1036,13 @@ function ProfessorDashboard() {
                             : submission.status === "Analyzing"
                             ? "bg-blue-100 text-blue-800"
                             : "bg-yellow-100 text-yellow-800"
+
                         }`}
                       >
                         {submission.status}
                       </span>
                     </div>
+
                     <div
                       className="w-[150px] flex items-center space-x-2"
                       onClick={(e) => e.stopPropagation()}
@@ -1052,6 +1066,7 @@ function ProfessorDashboard() {
                         <button
                           onClick={() => handleAnalyzeClick(submission)}
                           className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
+
                         >
                           Analyze
                         </button>
@@ -1061,6 +1076,7 @@ function ProfessorDashboard() {
                           handleDeleteClick(submission, "submission")
                         }
                         className="text-gray-400 hover:text-red-500"
+
                       >
                         <svg
                           className="w-5 h-5"
@@ -1080,6 +1096,7 @@ function ProfessorDashboard() {
                   </div>
                 );
               })}
+
             </div>
           </div>
 
@@ -1087,14 +1104,12 @@ function ProfessorDashboard() {
           <div>
             <h2 className="text-xl font-semibold mb-4">Uploaded Documents</h2>
             <div className="bg-white rounded-lg shadow mb-8">
-              <div className="flex items-center px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-                <div className="flex-1 grid grid-cols-3 gap-4">
-                  <div>DOCUMENT NAME</div>
-                  <div>UPLOADED DATE</div>
-                  <div>SIZE</div>
-                </div>
-                <div className="w-[120px]">STATUS</div>
-                <div className="w-[150px]">ACTIONS</div>
+              <div className="grid grid-cols-[1.5fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+                <div>DOCUMENT NAME</div>
+                <div>UPLOADED DATE</div>
+                <div>SIZE</div>
+                <div>STATUS</div>
+                <div>ACTIONS</div>
               </div>
 
               {professorDocuments.map((doc) => {
@@ -1169,6 +1184,7 @@ function ProfessorDashboard() {
                         {doc.status}
                       </span>
                     </div>
+
                     <div
                       className="w-[150px] flex items-center space-x-2"
                       onClick={(e) => e.stopPropagation()}
@@ -1192,6 +1208,7 @@ function ProfessorDashboard() {
                         <button
                           onClick={() => handleAnalyzeClick(doc)}
                           className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
+
                         >
                           Analyze
                         </button>
@@ -1201,6 +1218,7 @@ function ProfessorDashboard() {
                           handleDeleteClick(doc, "professor_document")
                         }
                         className="text-gray-400 hover:text-red-500"
+
                       >
                         <svg
                           className="w-5 h-5"
@@ -1220,6 +1238,7 @@ function ProfessorDashboard() {
                   </div>
                 );
               })}
+
             </div>
           </div>
         </div>
