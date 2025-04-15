@@ -10,7 +10,7 @@
                 324,
                 790
             ],
-            "text": "rmulate a maintenancd\nheckiat"
+            "text": "\u2018ormulate a maintenance\nchecklist 7"
         },
         {
             "id": 2,
@@ -21,7 +21,7 @@
                 318,
                 197
             ],
-            "text": "\u2014\u2014)"
+            "text": "Scan the car components"
         },
         {
             "id": 3,
@@ -32,7 +32,7 @@
                 526,
                 769
             ],
-            "text": "jews what is scanned bp\nthe car owners"
+            "text": "iews what Is scanned by\nthe car owners"
         },
         {
             "id": 4,
@@ -43,7 +43,7 @@
                 514,
                 390
             ],
-            "text": "/Addredivdelete car model\ninthe ays"
+            "text": "Addedit/delete car made\nin the system"
         },
         {
             "id": 5,
@@ -65,7 +65,7 @@
                 525,
                 699
             ],
-            "text": "\u2018View historical repons af\nuser's car issues"
+            "text": "View historical reports of\nuser's car issues"
         },
         {
             "id": 7,
@@ -76,7 +76,7 @@
                 503,
                 282
             ],
-            "text": "\u201cGenerate repons for car\nissues"
+            "text": "Generate reports for car\nIssues"
         },
         {
             "id": 8,
@@ -98,7 +98,7 @@
                 515,
                 531
             ],
-            "text": "\u2018View history of the\n\u2018ear owners\u2019 reports and\ntele-assistance"
+            "text": "View history of the\ncar owners' reports and\ntele-assistance"
         },
         {
             "id": 10,
@@ -120,7 +120,7 @@
                 317,
                 340
             ],
-            "text": "\u2018View instructions averiaid"
+            "text": "View instructions overlald"
         },
         {
             "id": 12,
@@ -142,7 +142,7 @@
                 507,
                 60
             ],
-            "text": "fetect and Recognize cat\n\u2018eamponents"
+            "text": "etect and Recognize car\ncomponents"
         },
         {
             "id": 14,
@@ -185,7 +185,7 @@
                 318,
                 60
             ],
-            "text": "Add/Edit car's speos"
+            "text": "Add/Edit car's specs"
         },
         {
             "id": 18,
@@ -196,7 +196,7 @@
                 506,
                 207
             ],
-            "text": "\u2018Overlay the procedure\ninstructions"
+            "text": "Overlay the procedure\ninstructions"
         },
         {
             "id": 19,
@@ -207,7 +207,7 @@
                 515,
                 459
             ],
-            "text": "\u2018addfedtidelete procedure"
+            "text": "add/edit/delete procedure"
         },
         {
             "id": 20,
@@ -240,7 +240,7 @@
                 317,
                 421
             ],
-            "text": "Receive warnings 1oP\nincorrect application of\ninstructions"
+            "text": "Receive warnings for\nincorrect application of\ninstructions"
         },
         {
             "id": 23,
@@ -251,7 +251,7 @@
                 318,
                 569
             ],
-            "text": "few historical reports fo?\ncar issues"
+            "text": "lev historical reports for\ncar issues"
         },
         {
             "id": 24,
@@ -262,7 +262,7 @@
                 319,
                 719
             ],
-            "text": "few nearby maintenanos\nenters"
+            "text": "lew nearby maintenance\ncenters"
         },
         {
             "id": 25,
@@ -295,7 +295,119 @@
                 524,
                 840
             ],
-            "text": "\u2018Annotate on the user's\nsoreen for sneistance"
+            "text": "Annotate on the user\u2019s\nscreen for assistance"
+        }
+    ],
+    "relationships": [
+        {
+            "from": 25,
+            "to": 12,
+            "line": "normal"
+        },
+        {
+            "from": 7,
+            "to": 26,
+            "line": "normal"
+        },
+        {
+            "from": 25,
+            "to": 23,
+            "line": "normal"
+        },
+        {
+            "from": 25,
+            "to": 1,
+            "line": "normal"
+        },
+        {
+            "from": 27,
+            "to": 14,
+            "line": "normal"
+        },
+        {
+            "from": 25,
+            "to": 10,
+            "line": "normal"
+        },
+        {
+            "from": 25,
+            "to": 21,
+            "line": "normal"
+        },
+        {
+            "from": 25,
+            "to": 17,
+            "line": "normal"
+        },
+        {
+            "from": 13,
+            "to": 26,
+            "line": "normal"
+        },
+        {
+            "from": 25,
+            "to": 2,
+            "line": "normal"
+        },
+        {
+            "from": 25,
+            "to": 22,
+            "line": "normal"
+        },
+        {
+            "from": 9,
+            "to": 20,
+            "line": "normal"
+        },
+        {
+            "from": 25,
+            "to": 8,
+            "line": "normal"
+        },
+        {
+            "from": 3,
+            "to": 14,
+            "line": "normal"
+        },
+        {
+            "from": 25,
+            "to": 11,
+            "line": "normal"
+        },
+        {
+            "from": 4,
+            "to": 20,
+            "line": "normal"
+        },
+        {
+            "from": 19,
+            "to": 20,
+            "line": "normal"
+        },
+        {
+            "from": 18,
+            "to": 26,
+            "line": "normal"
+        },
+        {
+            "from": 5,
+            "to": 26,
+            "line": "normal"
+        },
+        {
+            "from": 15,
+            "to": 14,
+            "line": "normal"
+        },
+        {
+            "from": 6,
+            "to": 14,
+            "line": "normal"
+        },
+        {
+            "from": 8,
+            "to": 23,
+            "line": "normal"
         }
     ]
 }
