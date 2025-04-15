@@ -653,10 +653,16 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
                 # Validate diagram conventions using Gemini
                 validation_results = validate_diagram(output_base="output_results")
                 
-                response['diagram_convention'] = {
-                    "processing_results": diagram_results,
-                    "validation_results": validation_results
-                }
+                logger.debug("Diagram Convention Results: %s", {
+                'processing_results': diagram_results,
+                'validation_results': validation_results
+              })
+
+            # Include only validation_results in response
+                response['diagram_convention']= validation_results
+
+                print("\nDiagram Convention Data in analyze_document:")
+                print(json.dumps(validation_results, indent=2))
             except Exception as e:
                 response['diagram_convention'] = {
                     "status": "error",
@@ -856,13 +862,13 @@ def analyze_document_route():
             print("FULL RESPONSE (for reference)")
             print("="*50)
             print(json.dumps(results, indent=2))
-
-            return jsonify(results)
-            # Debug: Print the complete response
             print("\nComplete response being sent:")
             print(json.dumps(results, indent=2))
-            
             return jsonify(results)
+            # Debug: Print the complete response
+            
+            
+            
         finally:
             # Clean up the temporary file
             try:

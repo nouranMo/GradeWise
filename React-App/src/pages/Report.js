@@ -35,7 +35,8 @@ function Report() {
     let warnings = 0;
 
     if (results) {
-      Object.entries(results).forEach(([_, result]) => {
+      Object.entries(results).forEach(([key, result]) => {
+        console.log(`Checking status for key ${key}:`, result?.status);
         if (result?.status === "success") passed++;
         else if (result?.status === "error" || result?.status === "fail")
           failed++;
@@ -43,6 +44,7 @@ function Report() {
       });
     }
 
+    console.log("Analysis Counts - Passed:", passed, "Failed:", failed, "Warnings:", warnings);
     return { passed, failed, warnings };
   };
 
@@ -96,6 +98,7 @@ function Report() {
       }
     };
 
+    console.log(`Rendering CollapsibleSection for ${id} - Status:`, status);
     return (
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-4">
         <button
@@ -130,21 +133,68 @@ function Report() {
             />
           </svg>
         </button>
-        {expandedSections[id] && <div className="px-6 py-4">{children}</div>}
+        {expandedSections[id] && (
+          <div className="px-6 py-4">
+            {console.log(`Rendering children for ${id} section`)}
+            {children}
+          </div>
+        )}
       </div>
     );
   };
 
   // Helper function to render analysis card
   const AnalysisCard = ({ title, data, type }) => {
+
     const renderContent = () => {
       if (!data) {
+       
         return <p className="text-gray-500">No data available</p>;
       }
 
       switch (type) {
         case "list":
+          console.log("Handling list type in AnalysisCard");
+
+          // Handle diagram_convention validation results
+          if (data.validation_results) {
+            if (Object.keys(data.validation_results).length === 0) {
+              return <p className="text-gray-500">No validation results found</p>;
+            }
+            return (
+              <div>
+                {Object.entries(data.validation_results).map(([diagramKey, validationText], index) => (
+                  <div key={index} className="mb-4">
+                    <h4 className="font-medium mb-2">
+                      Diagram: {diagramKey.replace(/_/g, " ")}
+                    </h4>
+                    <pre
+                      className={`whitespace-pre-wrap text-sm p-3 rounded ${
+                        validationText.includes("Errors Found")
+                          ? "bg-red-100 text-red-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {validationText || "No validation text provided"}
+                    </pre>
+                  </div>
+                ))}
+                {data.issues && data.issues.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-medium mb-2 text-red-600">Issues:</h4>
+                    <ul className="list-disc list-inside text-red-600">
+                      {data.issues.map((issue, idx) => (
+                        <li key={idx}>{issue}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           if (data.reformatted_references) {
+            console.log("Handling reformatted_references:", data.reformatted_references);
             return (
               <ul className="list-disc list-inside">
                 {data.reformatted_references.map((ref, index) => (
@@ -169,6 +219,7 @@ function Report() {
           }
 
           if (data.structure_validation) {
+            console.log("Handling structure_validation:", data.structure_validation);
             return (
               <div>
                 <div className="mb-4">
@@ -199,10 +250,13 @@ function Report() {
             );
           }
 
+          console.log("Reason: No matching list data (validation_results, reformatted_references, or structure_validation) found");
           return <p className="text-gray-500">No list data available</p>;
 
         case "matrix":
+          console.log("Handling matrix type in AnalysisCard");
           if (!data.similarity_matrix || !data.scope_sources) {
+            console.log("Reason: Missing similarity_matrix or scope_sources in data");
             return <p className="text-gray-500">No matrix data available</p>;
           }
           return (
@@ -243,8 +297,11 @@ function Report() {
               </table>
             </div>
           );
+
         case "text":
+          console.log("Handling text type in AnalysisCard");
           if (data["Business Value Evaluation"]) {
+            console.log("Rendering Business Value Evaluation");
             return (
               <div className="space-y-6">
                 <div className="text-gray-700 space-y-4">
@@ -252,13 +309,11 @@ function Report() {
                     .split("\n")
                     .filter((line) => line.trim())
                     .map((paragraph, index) => {
-                      // Remove all asterisks and clean up the text
                       const cleanText = paragraph
                         .replace(/\* \*/g, "")
                         .replace(/\*/g, "")
                         .trim();
 
-                      // Check if this is a heading/category line
                       if (cleanText.includes("Overall Business Value Rating")) {
                         return (
                           <div
@@ -282,7 +337,6 @@ function Report() {
                         );
                       }
 
-                      // Handle main categories (Uniqueness, Market Usefulness, etc.)
                       const match = cleanText.match(
                         /^(Uniqueness|Market Usefulness|Feasibility|Profitability):(.*)/
                       );
@@ -304,7 +358,6 @@ function Report() {
                         );
                       }
 
-                      // Return regular paragraphs
                       return (
                         <p
                           key={index}
@@ -318,6 +371,7 @@ function Report() {
               </div>
             );
           }
+          console.log("Falling back to default text rendering");
           return (
             <div className="overflow-x-auto">
               <pre className="whitespace-pre-wrap text-sm">
@@ -327,6 +381,7 @@ function Report() {
           );
 
         default:
+          console.log("Falling back to default rendering in AnalysisCard");
           return (
             <div className="overflow-x-auto">
               <pre className="whitespace-pre-wrap text-sm">
@@ -339,7 +394,6 @@ function Report() {
 
     return (
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        {/* Only show title if it's not a Business Value Analysis text type */}
         {!(type === "text" && data["Business Value Evaluation"]) && (
           <h3 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
             {title}
@@ -393,23 +447,16 @@ function Report() {
           message: "Failed to generate recommendations",
         });
       }
-    }, 300); // 300ms debounce delay
+    }, 300);
 
     if (parsingResult) {
       debouncedGenerateRecommendations(parsingResult);
     }
 
-    // Cleanup function to cancel debounce on unmount
     return () => {
       debouncedGenerateRecommendations.cancel();
     };
   }, [parsingResult]);
-
-  useEffect(() => {
-    console.log("Location State:", location.state);
-    console.log("Document Info:", documentInfo);
-    console.log("Parsing Result:", parsingResult);
-  }, [location.state, documentInfo, parsingResult]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -554,14 +601,19 @@ function Report() {
             </CollapsibleSection>
           )}
 
-          {parsingResult?.image_validation && (
-            <CollapsibleSection
-              id="diagram"
-              title="Diagram Convention"
-              status={parsingResult.image_validation.status}
-            >
-              <AnalysisCard data={parsingResult.image_validation} type="list" />
-            </CollapsibleSection>
+          {parsingResult?.diagram_convention ? (
+            <>
+              {console.log("Diagram Convention Data Before Rendering:", parsingResult.diagram_convention)}
+              <CollapsibleSection
+                id="diagram"
+                title="Diagram Convention"
+                status={parsingResult.diagram_convention.status}
+              >
+                <AnalysisCard data={parsingResult.diagram_convention} type="list" />
+              </CollapsibleSection>
+            </>
+          ) : (
+            console.log("Reason: diagram_convention section not rendered - parsingResult.diagram_convention is undefined or falsy")
           )}
         </div>
 

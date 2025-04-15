@@ -1,16 +1,12 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
-
 import { useLocation, useNavigate } from "react-router-dom";
 
 // Helper function to determine if a section is a figure
 function isFigureSection(sectionName) {
   if (!sectionName) return false;
 
-  // Convert section name to lowercase for case-insensitive matching
   const lowerName = sectionName.toLowerCase();
-
-  // Check for common figure section patterns
   const figureDiagrams = [
     "System Overview",
     "System Context",
@@ -24,7 +20,6 @@ function isFigureSection(sectionName) {
     "Component Diagram",
   ];
 
-  // Check against known diagram types (case insensitive)
   for (const diagram of figureDiagrams) {
     if (lowerName.includes(diagram.toLowerCase())) {
       console.log(`Found diagram match: ${sectionName} matches ${diagram}`);
@@ -32,10 +27,8 @@ function isFigureSection(sectionName) {
     }
   }
 
-  // Original "Figure:" prefix check
   if (sectionName.startsWith("Figure:")) return true;
 
-  // Additional common diagram patterns
   if (
     lowerName.includes("diagram") ||
     lowerName.includes("chart") ||
@@ -46,20 +39,14 @@ function isFigureSection(sectionName) {
     return true;
   }
 
-  // No match found
   return false;
 }
 
 // Helper function to clean up section names
 function getCleanSectionName(sectionName) {
   if (!sectionName) return "";
-
-  // Remove "Figure:" prefix if present
   let cleanName = sectionName.replace(/^Figure:\s*/, "");
-
-  // Remove section numbering
   cleanName = cleanName.replace(/^\d+(\.\d+)*\s+/, "");
-
   return cleanName;
 }
 
@@ -68,21 +55,46 @@ function ParsingResult() {
   const navigate = useNavigate();
   const { parsingResult } = location.state || {};
 
+  // Debug logs for component mount and initial data
+  React.useEffect(() => {
+    console.log("=== ParsingResult Component Mounted ===");
+    console.log("Location Object:", location);
+    console.log("Location State:", location.state);
+    console.log("Parsing Result:", parsingResult);
+    if (parsingResult) {
+      console.log("Keys in Parsing Result:", Object.keys(parsingResult));
+    } else {
+      console.log("Reason: parsingResult is undefined or null");
+    }
+  }, [location, location.state, parsingResult]);
+
   // Debug log for references validation
   React.useEffect(() => {
     if (parsingResult?.references_validation) {
       console.log(
-        "References validation data:",
+        "References Validation Data:",
         parsingResult.references_validation
       );
+    } else {
+      console.log("No references_validation data found in parsingResult");
+    }
+  }, [parsingResult]);
+
+  // Debug log for diagram convention
+  React.useEffect(() => {
+    if (parsingResult?.diagram_convention) {
+      console.log(
+        "Diagram Convention Data in ParsingResultPage:",
+        parsingResult.diagram_convention
+      );
+    } else {
+      console.log("No diagram_convention data found in parsingResult");
     }
   }, [parsingResult]);
 
   // Determine which dashboard to go back to
   const handleBackClick = () => {
-    // Use document_type to determine which dashboard to go back to
     const documentType = parsingResult?.document_type || "";
-
     if (
       documentType.toLowerCase().includes("professor") ||
       documentType.toLowerCase() === "professor_document"
@@ -96,6 +108,7 @@ function ParsingResult() {
   };
 
   if (!parsingResult || parsingResult.status === "error") {
+    console.log("Rendering error state due to missing or invalid parsingResult");
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
         <h2 className="text-2xl font-bold text-red-600 mb-4">
@@ -126,6 +139,10 @@ function ParsingResult() {
         </div>
 
         {/* SRS Structure Validation */}
+        {console.log(
+          "Checking SRS Validation Section - Present:",
+          !!parsingResult?.srs_validation
+        )}
         {parsingResult.srs_validation && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
@@ -151,7 +168,6 @@ function ParsingResult() {
                 />
               </div>
 
-              {/* Missing Sections */}
               {parsingResult.srs_validation.structure_validation
                 .missing_sections.length > 0 && (
                 <div className="mt-4">
@@ -174,13 +190,16 @@ function ParsingResult() {
         )}
 
         {/* References Analysis */}
+        {console.log(
+          "Checking References Validation Section - Present:",
+          !!parsingResult?.references_validation
+        )}
         {parsingResult.references_validation && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
               References Analysis
             </h2>
 
-            {/* Debug information - remove in production */}
             {process.env.NODE_ENV !== "production" && (
               <div className="p-2 bg-yellow-50 border border-yellow-200 rounded mb-4 text-xs">
                 <p>Available data:</p>
@@ -190,7 +209,6 @@ function ParsingResult() {
               </div>
             )}
 
-            {/* Statistics - Only show if available */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <StatCard
                 title="Total References"
@@ -265,9 +283,7 @@ function ParsingResult() {
               />
             </div>
 
-            {/* References List */}
             <div className="space-y-4">
-              {/* Enhanced format */}
               {parsingResult.references_validation.reference_details &&
               Array.isArray(
                 parsingResult.references_validation.reference_details
@@ -287,7 +303,6 @@ function ParsingResult() {
                   )
                 )
               ) : parsingResult.references_validation.reformatted_references ? (
-                // Legacy format - direct array of references
                 Array.isArray(
                   parsingResult.references_validation.reformatted_references
                 ) ? (
@@ -301,7 +316,6 @@ function ParsingResult() {
                     )
                   )
                 ) : (
-                  // Handle case where reformatted_references is not an array but a direct property
                   <div className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                     <h4 className="text-lg font-medium mb-2">References</h4>
                     <pre className="text-gray-600 whitespace-pre-wrap text-sm">
@@ -316,7 +330,6 @@ function ParsingResult() {
                 )
               ) : parsingResult.references_validation.reference_validation
                   ?.errors ? (
-                // Legacy format - errors in validation
                 <div>
                   <p className="text-red-600 font-medium">Validation Errors:</p>
                   <ul className="list-disc list-inside">
@@ -372,6 +385,10 @@ function ParsingResult() {
         )}
 
         {/* Content Analysis */}
+        {console.log(
+          "Checking Content Analysis Section - Present:",
+          !!parsingResult?.content_analysis
+        )}
         {parsingResult.content_analysis && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
@@ -390,8 +407,6 @@ function ParsingResult() {
               </svg>
               Content Analysis
             </h2>
-
-            {/* Similarity Matrix */}
 
             {parsingResult.content_analysis.similarity_matrix &&
               parsingResult.content_analysis.scope_sources && (
@@ -419,52 +434,41 @@ function ParsingResult() {
                     )}
                   </h3>
 
-                  {/* Key Anomalies Section */}
                   <div className="bg-white p-4 rounded-lg shadow-inner mb-6">
                     <h4 className="font-medium text-lg mb-3 text-gray-700">
                       Key Insights
                     </h4>
-
                     {(() => {
-                      // Extract key insights from similarity matrix
                       const matrix =
                         parsingResult.content_analysis.similarity_matrix;
                       const sections =
                         parsingResult.content_analysis.scope_sources;
 
-                      // Skip if no data
                       if (!matrix || !sections || matrix.length === 0) {
                         return <p>No similarity data available</p>;
                       }
 
-                      // Find most dissimilar and most similar pairs (excluding self-comparisons)
                       let mostDissimilar = { i: 0, j: 1, value: 1 };
                       let mostSimilar = { i: 0, j: 1, value: 0 };
                       let diagramSimilarities = [];
-
-                      // Find diagram-to-section relationships
                       let diagramRelationships = [];
 
                       for (let i = 0; i < matrix.length; i++) {
                         for (let j = 0; j < matrix[i].length; j++) {
-                          // Skip self-comparisons
                           if (i === j) continue;
 
                           const similarity = matrix[i][j];
                           const isRow1Diagram = isFigureSection(sections[i]);
                           const isRow2Diagram = isFigureSection(sections[j]);
 
-                          // Track most dissimilar pair
                           if (similarity < mostDissimilar.value) {
                             mostDissimilar = { i, j, value: similarity };
                           }
 
-                          // Track most similar pair
                           if (similarity > mostSimilar.value) {
                             mostSimilar = { i, j, value: similarity };
                           }
 
-                          // Track diagram similarities
                           if (isRow1Diagram && isRow2Diagram) {
                             diagramSimilarities.push({
                               diagram1: sections[i],
@@ -473,12 +477,7 @@ function ParsingResult() {
                             });
                           }
 
-                          // Track diagram to section relationships
-                          if (
-                            isRow1Diagram &&
-                            !isRow2Diagram &&
-                            similarity > 0.5
-                          ) {
+                          if (isRow1Diagram && !isRow2Diagram && similarity > 0.5) {
                             diagramRelationships.push({
                               diagram: sections[i],
                               section: sections[j],
@@ -498,14 +497,12 @@ function ParsingResult() {
                         }
                       }
 
-                      // Sort by similarity (highest first)
                       diagramRelationships.sort(
                         (a, b) => b.similarity - a.similarity
                       );
 
                       return (
                         <div className="space-y-4">
-                          {/* Most different sections */}
                           <div className="p-4 bg-red-50 rounded-lg border border-red-100">
                             <h5 className="font-medium text-red-800 mb-1">
                               Most Different Sections
@@ -530,7 +527,6 @@ function ParsingResult() {
                             </p>
                           </div>
 
-                          {/* Most similar sections */}
                           <div className="p-4 bg-green-50 rounded-lg border border-green-100">
                             <h5 className="font-medium text-green-800 mb-1">
                               Most Similar Sections
@@ -551,7 +547,6 @@ function ParsingResult() {
                             </p>
                           </div>
 
-                          {/* Diagram relationships */}
                           {diagramRelationships.length > 0 && (
                             <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
                               <h5 className="font-medium text-blue-800 mb-1">
@@ -586,7 +581,6 @@ function ParsingResult() {
                             </div>
                           )}
 
-                          {/* Analysis tip */}
                           <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
                             <h5 className="font-medium text-purple-800 mb-1">
                               Analysis Tip
@@ -684,20 +678,17 @@ function ParsingResult() {
                                     const getColor = (intensity) => {
                                       if (i === j) return "bg-gray-100";
                                       if (isImageRow && isImageCol) {
-                                        // Figure to Figure comparison
-                                        const hue = 260; // Purple hue for figure-to-figure
+                                        const hue = 260;
                                         const saturation = 90;
                                         const lightness = 100 - intensity;
                                         return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
                                       } else if (isImageRow || isImageCol) {
-                                        // Figure to Section comparison
-                                        const hue = 200; // Blue hue for figure to section
+                                        const hue = 200;
                                         const saturation = 90;
                                         const lightness = 100 - intensity;
                                         return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
                                       } else {
-                                        // Section to Section comparison (original)
-                                        const hue = 200; // Blue hue
+                                        const hue = 200;
                                         const saturation = 90;
                                         const lightness = 100 - intensity;
                                         return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
@@ -764,7 +755,6 @@ function ParsingResult() {
                 </div>
               )}
 
-            {/* Section Contents */}
             {parsingResult.content_analysis.sections && (
               <div className="mt-8">
                 <h3 className="text-xl font-semibold mb-4 text-gray-700 flex items-center">
@@ -786,7 +776,6 @@ function ParsingResult() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {parsingResult.content_analysis.sections.map(
                     (section, index) => {
-                      // Split section into title and content
                       const [title, ...contentParts] = section.split("\n");
                       const content = contentParts.join("\n");
 
@@ -803,7 +792,6 @@ function ParsingResult() {
                           <div className="p-4">
                             <div className="prose prose-sm max-h-60 overflow-y-auto">
                               {(() => {
-                                // Handle different content types
                                 if (typeof content === "string") {
                                   return content.split("\n").map(
                                     (paragraph, i) =>
@@ -817,14 +805,12 @@ function ParsingResult() {
                                       )
                                   );
                                 } else if (typeof content === "object") {
-                                  // If content is an object, stringify it
                                   return (
                                     <p className="text-gray-600">
                                       {JSON.stringify(content, null, 2)}
                                     </p>
                                   );
                                 } else {
-                                  // Fallback for other types
                                   return (
                                     <p className="text-gray-600">
                                       {String(content)}
@@ -845,6 +831,10 @@ function ParsingResult() {
         )}
 
         {/* Image Analysis */}
+        {console.log(
+          "Checking Image Analysis Section - Present:",
+          !!parsingResult?.image_analysis
+        )}
         {parsingResult.image_analysis && (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
@@ -867,7 +857,14 @@ function ParsingResult() {
           </div>
         )}
 
-        {/* Spelling and Grammar Section - Updated for quick check */}
+        {/* Spelling and Grammar Section */}
+        {console.log(
+          "Checking Spelling and Grammar Section - Present:",
+          !!(
+            parsingResult.content_analysis?.spelling_grammar?.length > 0 ||
+            parsingResult.spelling_check
+          )
+        )}
         {(parsingResult.content_analysis?.spelling_grammar?.length > 0 ||
           parsingResult.spelling_check) && (
           <div className="bg-white rounded-lg shadow-lg p-6">
@@ -888,7 +885,6 @@ function ParsingResult() {
               Spelling and Grammar Analysis
             </h3>
 
-            {/* Quick spell check results */}
             {parsingResult.spelling_check && (
               <div className="mb-6">
                 <div className="bg-blue-50 p-4 rounded-lg mb-4">
@@ -940,13 +936,12 @@ function ParsingResult() {
               </div>
             )}
 
-            {/* Section-specific spelling results */}
             {parsingResult.content_analysis?.spelling_grammar?.length > 0 && (
               <div>
                 <h4 className="font-medium mb-3 text-gray-700">
                   Section-Specific Spelling Analysis
                 </h4>
-                {parsingResult.content_analysis.spelling_grammar.map(
+                {parsingResult.content_analysis倠.spelling_grammar.map(
                   (result, index) => (
                     <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg">
                       <h4 className="font-medium mb-2">
@@ -993,6 +988,10 @@ function ParsingResult() {
         )}
 
         {/* Business Value Analysis */}
+        {console.log(
+          "Checking Business Value Analysis Section - Present:",
+          !!parsingResult?.business_value_analysis
+        )}
         {parsingResult?.business_value_analysis && (
           <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
             <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">
@@ -1024,6 +1023,96 @@ function ParsingResult() {
             </div>
           </div>
         )}
+
+        {/* Diagram Convention Analysis */}
+        {console.log(
+          "Checking Diagram Convention Section - Present:",
+          !!parsingResult?.diagram_convention
+        )}
+        {parsingResult?.diagram_convention && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+              <svg
+                className="w-6 h-6 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+              Diagram Convention Analysis
+            </h2>
+            <div className="space-y-4">
+              
+
+              {console.log(
+                "Diagram Convention - Validation Results Present:",
+                !!parsingResult.diagram_convention.validation_results
+              )}
+              {parsingResult.diagram_convention.validation_results ? (
+                Object.keys(parsingResult.diagram_convention.validation_results)
+                  .length > 0 ? (
+                  Object.entries(
+                    parsingResult.diagram_convention.validation_results
+                  ).map(([diagramKey, validationText], index) => {
+                    console.log(
+                      `Rendering Diagram: ${diagramKey}`,
+                      validationText
+                    );
+                    return (
+                      <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                        <h3 className="font-medium mb-2">
+                          Diagram: {diagramKey.replace(/_/g, " ")}
+                        </h3>
+                        <pre
+                          className={`whitespace-pre-wrap text-sm p-3 rounded ${
+                            validationText.includes("Errors Found")
+                              ? "bg-red-100 text-red-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {validationText || "No validation text provided"}
+                        </pre>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-gray-600">No validation results found.</p>
+                )
+              ) : (
+                <p className="text-gray-600">
+                  No diagram convention data available.
+                </p>
+              )}
+
+              {console.log(
+                "Diagram Convention - Issues Present:",
+                !!(
+                  parsingResult.diagram_convention.issues &&
+                  parsingResult.diagram_convention.issues.length > 0
+                )
+              )}
+              {parsingResult.diagram_convention.issues &&
+                parsingResult.diagram_convention.issues.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="font-medium text-red-600 mb-2">Issues:</h3>
+                    <ul className="list-disc list-inside text-red-600">
+                      {parsingResult.diagram_convention.issues.map(
+                        (issue, idx) => (
+                          <li key={idx}>{issue}</li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1045,10 +1134,7 @@ function StatCard({ title, value, color }) {
 }
 
 function ReferenceCard({ reference, index }) {
-  // Check if reference is an object or a string
   const isObject = typeof reference === "object" && reference !== null;
-
-  // If it's an object, extract the properties
   const formatCheck = isObject
     ? reference.format_check || { valid: false, errors: [] }
     : { valid: false, errors: [] };
@@ -1062,7 +1148,6 @@ function ReferenceCard({ reference, index }) {
     ? reference.reformatted || reference.original || JSON.stringify(reference)
     : reference;
 
-  // State for showing/hiding citations
   const [showCitations, setShowCitations] = React.useState(false);
 
   const handleVerificationClick = () => {
@@ -1095,9 +1180,7 @@ function ReferenceCard({ reference, index }) {
           <Badge
             text={verification.verified ? "Verified Online" : "Unverified"}
             color={verification.verified ? "green" : "yellow"}
-            onClick={
-              verification.verified ? handleVerificationClick : undefined
-            }
+            onClick={verification.verified ? handleVerificationClick : undefined}
             className={
               verification.verified ? "cursor-pointer hover:opacity-80" : ""
             }
@@ -1128,7 +1211,6 @@ function ReferenceCard({ reference, index }) {
           </div>
         )}
 
-        {/* Format Issues */}
         {!formatCheck.valid &&
           formatCheck.errors &&
           formatCheck.errors.length > 0 && (
@@ -1142,7 +1224,6 @@ function ReferenceCard({ reference, index }) {
             </div>
           )}
 
-        {/* Verification Details */}
         {verification.verified && (
           <div className="text-sm">
             <p className="font-medium text-green-600">Verification:</p>
@@ -1157,7 +1238,6 @@ function ReferenceCard({ reference, index }) {
           </div>
         )}
 
-        {/* Citations in Document */}
         {citations.is_cited &&
           citations.contexts &&
           citations.contexts.length > 0 && (
@@ -1204,7 +1284,6 @@ function ReferenceCard({ reference, index }) {
 }
 
 function EnhancedReferenceCard({ reference, validationDetails }) {
-  // Ensure reference is an object
   const ref =
     typeof reference === "object" && reference !== null ? reference : {};
   const refNumber = ref.reference_number || "?";
@@ -1213,7 +1292,6 @@ function EnhancedReferenceCard({ reference, validationDetails }) {
   const citationCount = ref.citations_in_document?.length || 0;
   const isVerified = ref.online_verification?.verified || false;
 
-  // State for showing/hiding citations
   const [showCitations, setShowCitations] = React.useState(false);
 
   const handleVerificationClick = () => {
@@ -1260,7 +1338,6 @@ function EnhancedReferenceCard({ reference, validationDetails }) {
           </p>
         </div>
 
-        {/* Format Issues */}
         {validationDetails &&
           !isValid &&
           validationDetails.issues &&
@@ -1276,7 +1353,6 @@ function EnhancedReferenceCard({ reference, validationDetails }) {
             </div>
           )}
 
-        {/* Online Verification */}
         {isVerified && (
           <div className="text-sm">
             <p className="font-medium text-green-600">Verified Online:</p>
@@ -1298,7 +1374,6 @@ function EnhancedReferenceCard({ reference, validationDetails }) {
           </div>
         )}
 
-        {/* Citations in Document */}
         {isCited && (
           <div className="text-sm">
             <div className="flex items-center justify-between">

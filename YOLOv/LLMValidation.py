@@ -51,7 +51,7 @@ def generate_use_case_prompt(uml_json):
 def generate_class_prompt(uml_json):
     num_classes = sum(1 for obj in uml_json.get("objects", []) if obj["type"] == "class_box")
     num_relationships = len(uml_json.get("relationships", []))
-    
+
     prompt = f"""
     You are an expert in UML Class Diagrams. Validate the following JSON structure against standard UML conventions.
 
@@ -81,7 +81,7 @@ def generate_class_prompt(uml_json):
 def generate_sequence_prompt(uml_json):
     num_lifelines = sum(1 for obj in uml_json.get("objects", []) if obj["type"] == "lifeline")
     num_messages = len(uml_json.get("relationships", []))
-    
+
     prompt = f"""
     You are an expert in UML Sequence Diagrams. Validate the following JSON structure against standard UML conventions.
 
@@ -119,7 +119,7 @@ def validate_uml(json_data, diagram_type):
         prompt = generate_sequence_prompt(json_data)
     else:
         raise ValueError(f"Unsupported diagram type: {diagram_type}")
-    
+
     response = model.generate_content(prompt)
     return response.text
 
@@ -158,8 +158,9 @@ def validate_diagrams(output_base="output_results"):
             try:
                 json_data = load_json(json_path)
                 validation_result = validate_uml(json_data, diagram_type)
-                # Use the JSON filename (without extension) as the key
-                json_key = f"{diagram_type}_{json_file.replace('.json', '')}"
+                # Sanitize the JSON filename by replacing dots with underscores
+                sanitized_file_name = json_file.replace('.json', '').replace('.', '_')
+                json_key = f"{diagram_type}_{sanitized_file_name}"
                 validation_results["validation_results"][json_key] = validation_result
             except Exception as e:
                 validation_results["issues"].append(f"Error validating {json_path}: {str(e)}")

@@ -6,7 +6,7 @@ from classDiagramScript import process_class_diagram
 from seqDiagramScript import process_sequence_diagram
 
 def process_diagrams(upload_base="uploads", sequence_base="sequence_diagrams", 
-                    output_base="output_results", model_path="runs/detect/train/weights/best.pt"):
+                    output_base="output_resultss", model_path="runs/detect/train/weights/best.pt"):
     """Process use case, class, and sequence diagrams."""
     sequence_folder = sequence_base  
     class_folder = os.path.join(upload_base, "Preliminary Object-Oriented Domain Analysis")
@@ -27,7 +27,12 @@ def process_diagrams(upload_base="uploads", sequence_base="sequence_diagrams",
         if "error" in use_case_results:
             results["issues"].append(use_case_results["error"])
         else:
-            results["use_case_diagrams"] = use_case_results
+            # Sanitize keys by replacing dots with underscores
+            sanitized_use_case_results = {}
+            for key, value in use_case_results.items():
+                sanitized_key = key.replace('.', '_')
+                sanitized_use_case_results[sanitized_key] = value
+            results["use_case_diagrams"] = sanitized_use_case_results
     
     # Process class diagrams
     if os.path.exists(class_folder):
@@ -36,7 +41,12 @@ def process_diagrams(upload_base="uploads", sequence_base="sequence_diagrams",
         if "error" in class_results:
             results["issues"].append(class_results["error"])
         else:
-            results["class_diagrams"] = class_results
+            # Sanitize keys by replacing dots with underscores
+            sanitized_class_results = {}
+            for key, value in class_results.items():
+                sanitized_key = key.replace('.', '_')
+                sanitized_class_results[sanitized_key] = value
+            results["class_diagrams"] = sanitized_class_results
     
     # Process sequence diagrams
     if os.path.exists(sequence_folder):
@@ -45,7 +55,12 @@ def process_diagrams(upload_base="uploads", sequence_base="sequence_diagrams",
         if "error" in sequence_results:
             results["issues"].append(sequence_results["error"])
         else:
-            results["sequence_diagrams"] = sequence_results
+            # Sanitize keys by replacing dots with underscores
+            sanitized_sequence_results = {}
+            for key, value in sequence_results.items():
+                sanitized_key = key.replace('.', '_')
+                sanitized_sequence_results[sanitized_key] = value
+            results["sequence_diagrams"] = sanitized_sequence_results
     
     if not any([results["use_case_diagrams"], results["class_diagrams"], results["sequence_diagrams"]]):
         if results["issues"]:
@@ -53,6 +68,5 @@ def process_diagrams(upload_base="uploads", sequence_base="sequence_diagrams",
         else:
             results["status"] = "no_diagrams_found"
             results["message"] = "No diagram folders found"
-    
     
     return results
