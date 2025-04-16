@@ -458,7 +458,7 @@ function Dashboard() {
         </div>
 
         {/* Documents Table */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-lg shadow mb-10">
           <div className="grid grid-cols-7 gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
             <div>DOCUMENT NAME</div>
             <div>SUBMISSION TYPE</div>

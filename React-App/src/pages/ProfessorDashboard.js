@@ -246,7 +246,7 @@ function ProfessorDashboard() {
   const [submissions, setSubmissions] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedCourse, setSelectedCourse] = useState("all");
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showDocTypeModal, setShowDocTypeModal] = useState(false);
   const [showCreateSubmissionModal, setShowCreateSubmissionModal] =
     useState(false);
   const [submissionSlots, setSubmissionSlots] = useState([]);
@@ -255,6 +255,7 @@ function ProfessorDashboard() {
   const [deleteType, setDeleteType] = useState(null); // 'submission' or 'slot'
   const [professorDocuments, setProfessorDocuments] = useState([]);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [documentType, setDocumentType] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedAnalyses, setSelectedAnalyses] = useState({
@@ -441,8 +442,9 @@ function ProfessorDashboard() {
   };
 
   const handleAnalyzeSubmission = async (submission) => {
-    // Set selected document for analysis
     setSelectedDocument(submission);
+    setShowDocTypeModal(true);
+
     // Reset analysis options when opening modal
     setSelectedAnalyses({
       SrsValidation: true,
@@ -456,6 +458,41 @@ function ProfessorDashboard() {
       FullAnalysis: false,
     });
     // Show the analysis options modal
+    setShowAnalysisModal(true);
+  };
+
+  const handleDocTypeSelection = (type) => {
+    setDocumentType(type);
+    setShowDocTypeModal(false);
+
+    // Set appropriate default analyses based on document type
+    if (type === "SRS") {
+      setSelectedAnalyses({
+        SrsValidation: false,
+        ReferencesValidation: false,
+        ContentAnalysis: false,
+        ImageAnalysis: false,
+        BusinessValueAnalysis: false,
+        DiagramConvention: false,
+        SpellCheck: false,
+        PlagiarismCheck: false,
+        FullAnalysis: false,
+      });
+    } else {
+      // SDD
+      setSelectedAnalyses({
+        ArchitectureValidation: false,
+        DesignPatterns: false,
+        ComponentAnalysis: false,
+        DiagramConvention: false,
+        InterfaceAnalysis: false,
+        SecurityAnalysis: false,
+        SpellCheck: false,
+        PlagiarismCheck: false,
+        FullAnalysis: false,
+      });
+    }
+
     setShowAnalysisModal(true);
   };
 
@@ -607,19 +644,7 @@ function ProfessorDashboard() {
 
   const handleAnalyzeClick = (document) => {
     setSelectedDocument(document);
-    // Reset analysis options when opening modal
-    setSelectedAnalyses({
-      SrsValidation: false,
-      ReferencesValidation: false,
-      ContentAnalysis: false,
-      ImageAnalysis: false,
-      BusinessValueAnalysis: false,
-      DiagramConvention: false,
-      SpellCheck: false,
-      PlagiarismCheck: false,
-      FullAnalysis: false,
-    });
-    setShowAnalysisModal(true);
+    setShowDocTypeModal(true);
   };
 
   const startAnalysis = async () => {
@@ -1378,16 +1403,49 @@ function ProfessorDashboard() {
 
         <DeleteConfirmationModal />
 
+        {/* Document Type Selection Modal */}
+        {showDocTypeModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
+              <h2 className="text-xl font-semibold mb-4">
+                Select Document Type
+              </h2>
+              <div className="space-y-4">
+                <button
+                  onClick={() => handleDocTypeSelection("SRS")}
+                  className="w-full p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Software Requirements Specification (SRS)
+                </button>
+                <button
+                  onClick={() => handleDocTypeSelection("SDD")}
+                  className="w-full p-4 text-left border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Software Design Document (SDD)
+                </button>
+              </div>
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={() => setShowDocTypeModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Analysis Modal */}
         {showAnalysisModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg max-w-2xl w-full m-4">
               <h2 className="text-xl font-semibold mb-4">
                 {selectedDocument && selectedDocument.submissionSlotId
-                  ? `Analyze Student Submission: ${
+                  ? `Analyze ${documentType} Document: ${
                       selectedDocument.documentName || selectedDocument.name
                     }`
-                  : "Select Analyses to Perform"}
+                  : `Select ${documentType} Analyses to Perform`}
               </h2>
 
               {/* Full Analysis Option */}
@@ -1428,7 +1486,10 @@ function ProfessorDashboard() {
 
               <div className="flex justify-end space-x-4">
                 <button
-                  onClick={() => setShowAnalysisModal(false)}
+                  onClick={() => {
+                    setShowAnalysisModal(false);
+                    setDocumentType(null);
+                  }}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
                 >
                   Cancel
