@@ -252,7 +252,14 @@ public class SubmissionController {
             analyses.put("ReferencesValidation", true);
             analyses.put("ContentAnalysis", true);
             analyses.put("SpellCheck", true);
-
+            // Extract documentType from request body
+            String documentType = requestBody != null ? (String) requestBody.get("documentType") : null;
+            if (documentType == null || (!documentType.equals("SRS") && !documentType.equals("SDD"))) {
+                logger.warn("Invalid or missing documentType: {}", documentType);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Invalid or missing documentType: must be SRS or SDD"));
+            }
+            logger.info("Document type: {}", documentType);
             // If analyses were specified in the request, use those instead
             if (requestBody != null && requestBody.containsKey("analyses")) {
                 Object analysesObj = requestBody.get("analyses");
@@ -284,12 +291,13 @@ public class SubmissionController {
 
             // Start analysis in background
             try {
-                documentService.startAnalysis(documentId, analyses);
+                documentService.startAnalysis(documentId, analyses,documentType);
                 logger.info("Analysis started for document: {}", documentId);
 
                 // Directly call the analyzeSubmission method with the submission ID and
                 // analyses
-                SubmissionModel analyzedSubmission = submissionService.analyzeSubmission(submissionId, analyses);
+                SubmissionModel analyzedSubmission = submissionService.analyzeSubmission(submissionId, analyses,
+                        documentType);
 
                 logger.info("Analysis started for submission: {}", submissionId);
                 return ResponseEntity.ok(Map.of(

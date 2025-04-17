@@ -380,7 +380,8 @@ function ProfessorDashboard() {
       const formData = new FormData();
       formData.append("file", uploadData.file);
       formData.append("analyses", JSON.stringify(selectedAnalyses));
-
+      formData.append("documentType",documentType||"SRS")
+      console.log("Uploading document with type:", documentType);
       // Upload file to backend without auth token for now
       const response = await fetch(`${API_URL}/api/documents`, {
         method: "POST",
@@ -462,6 +463,7 @@ function ProfessorDashboard() {
   };
 
   const handleDocTypeSelection = (type) => {
+    console.log("Selected document type:", type)
     setDocumentType(type);
     setShowDocTypeModal(false);
 
@@ -478,10 +480,10 @@ function ProfessorDashboard() {
         PlagiarismCheck: false,
         FullAnalysis: false,
       });
-    } else {
+    } else if(type ==="SDD"){
       // SDD
       setSelectedAnalyses({
-        ArchitectureValidation: false,
+        SDDValidation: false,
         DesignPatterns: false,
         ComponentAnalysis: false,
         DiagramConvention: false,
@@ -692,7 +694,7 @@ function ProfessorDashboard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ analyses: selectedAnalyses }),
+        body: JSON.stringify({ analyses: selectedAnalyses,documentType: documentType, }),
       });
 
       if (!response.ok) {
@@ -905,6 +907,7 @@ function ProfessorDashboard() {
   // Add this new function to debug document status
   const debugDocumentStatus = (doc) => {
     console.log("Document:", doc);
+    console.log("Selected document type:", documentType)
     console.log("Status:", doc.status);
     console.log("Has results:", !!doc.results);
     console.log(

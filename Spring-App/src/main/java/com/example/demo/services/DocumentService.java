@@ -61,11 +61,13 @@ public class DocumentService {
         }
     }
 
-    public DocumentModel saveDocument(String userId, MultipartFile file, Map<String, Boolean> selectedAnalyses)
+    public DocumentModel saveDocument(String userId, MultipartFile file, Map<String, Boolean> selectedAnalyses,String documentType)
             throws IOException {
         try {
             System.out.println("Saving document for user: " + userId);
-
+            if (documentType == null || (!documentType.equals("SRS") && !documentType.equals("SDD"))) {
+                throw new IllegalArgumentException("Invalid documentType: must be SRS or SDD");
+            }
             // Ensure upload directory exists
             Path uploadPath = Paths.get(uploadDir);
             if (!Files.exists(uploadPath)) {
@@ -99,7 +101,7 @@ public class DocumentService {
             System.out.println("Starting analysis for document: " + savedDocument.getId());
             new Thread(() -> {
                 try {
-                    startAnalysis(savedDocument.getId(), selectedAnalyses);
+                    startAnalysis(savedDocument.getId(), selectedAnalyses,documentType);
                 } catch (Exception e) {
                     System.err.println("Error in analysis thread: " + e.getMessage());
                     e.printStackTrace();
@@ -114,7 +116,7 @@ public class DocumentService {
         }
     }
 
-    public void startAnalysis(String documentId, Map<String, Boolean> selectedAnalyses) {
+    public void startAnalysis(String documentId, Map<String, Boolean> selectedAnalyses,String documentType) {
         try {
             DocumentModel document = getDocumentById(documentId);
             if (document == null) {
@@ -160,7 +162,7 @@ public class DocumentService {
             }
             body.add("pdfFile", new FileSystemResource(file));
             body.add("analyses", objectMapper.writeValueAsString(selectedAnalyses));
-
+            body.add("documentType", documentType);
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
             logger.info("Sending request to Python API: {}", pythonApiUrl);

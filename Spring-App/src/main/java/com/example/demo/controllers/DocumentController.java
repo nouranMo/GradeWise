@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import org.springframework.web.bind.annotation.RequestMethod;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -38,12 +37,14 @@ public class DocumentController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadDocument(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("analyses") String analysesJson) {
+            @RequestParam("analyses") String analysesJson,
+            @RequestParam("documentType") String documentType) {
         try {
             System.out.println("Received file upload request");
             System.out.println("File name: " + file.getOriginalFilename());
             System.out.println("File size: " + file.getSize());
             System.out.println("Analyses: " + analysesJson);
+            System.err.println("Document Type:"+documentType);
 
             // Get current user
             String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -55,7 +56,7 @@ public class DocumentController {
                     });
 
             // Save document
-            DocumentModel document = documentService.saveDocument(currentUserEmail, file, selectedAnalyses);
+            DocumentModel document = documentService.saveDocument(currentUserEmail, file, selectedAnalyses,documentType);
             System.out.println("Document saved with ID: " + document.getId());
 
             // Return response with document
@@ -150,9 +151,10 @@ public class DocumentController {
             @SuppressWarnings("unchecked")
             Map<String, Boolean> selectedAnalyses = (Map<String, Boolean>) requestBody.get("analyses");
             System.out.println("Selected analyses: " + selectedAnalyses);
-
+            String documentType = (String) requestBody.get("documentType");
+            logger.info("Document type: {}", documentType);
             // Start analysis with selected analyses
-            documentService.startAnalysis(documentId, selectedAnalyses);
+            documentService.startAnalysis(documentId, selectedAnalyses,documentType);
             return ResponseEntity.ok(Map.of("message", "Analysis started successfully"));
         } catch (Exception e) {
             System.out.println("Error analyzing document: " + e.getMessage());

@@ -171,7 +171,7 @@ public class SubmissionService {
     }
 
     // Analyze a submission
-    public SubmissionModel analyzeSubmission(String submissionId, Map<String, Boolean> analysisOptions)
+    public SubmissionModel analyzeSubmission(String submissionId, Map<String, Boolean> analysisOptions, String documentType)
             throws Exception {
         logger.info("Starting analysis for submission ID: {} with options: {}", submissionId, analysisOptions);
 
@@ -239,11 +239,11 @@ public class SubmissionService {
                     analyses.put("SrsValidation", true);
                 }
 
-                logger.info("Starting document analysis with analyses: {}", analyses);
+                logger.info("Starting document analysis with analyses: {}", analyses,documentType);
 
                 // Analyze the document
                 try {
-                    documentService.startAnalysis(document.getId(), analyses);
+                    documentService.startAnalysis(document.getId(), analyses,documentType);
                     logger.info("Analysis started successfully for document: {}", document.getId());
                 } catch (Exception e) {
                     logger.error("Error starting analysis: {}", e.getMessage(), e);
