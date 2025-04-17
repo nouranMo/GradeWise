@@ -166,6 +166,14 @@ function ParsingResult() {
                   }
                   color="red"
                 />
+                <StatCard
+                  title="Order Issues"
+                  value={
+                    parsingResult.srs_validation.structure_validation
+                      .misplaced_sections.length
+                  }
+                  color="red"
+                />
               </div>
 
               {parsingResult.srs_validation.structure_validation
@@ -179,6 +187,99 @@ function ParsingResult() {
                       (section, index) => (
                         <li key={index} className="text-gray-700">
                           {section}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+              {parsingResult.srs_validation.structure_validation
+                .misplaced_sections.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-red-600">
+                    Order Issues:
+                  </h3>
+                  <ul className="list-disc list-inside">
+                    {parsingResult.srs_validation.structure_validation.misplaced_sections.map(
+                      (issue, index) => (
+                        <li key={index} className="text-gray-700">
+                          {issue}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* SDD Structure Validation */}
+        {console.log(
+          "Checking SDD Validation Section - Present:",
+          !!parsingResult?.sdd_validation
+        )}
+        {parsingResult.sdd_validation && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              SDD Structure Analysis
+            </h2>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <StatCard
+                  title="Matching Sections"
+                  value={
+                    parsingResult.sdd_validation.structure_validation
+                      .matching_sections.length
+                  }
+                  color="green"
+                />
+                <StatCard
+                  title="Missing Sections"
+                  value={
+                    parsingResult.sdd_validation.structure_validation
+                      .missing_sections.length
+                  }
+                  color="red"
+                />
+                <StatCard
+                  title="Order Issues"
+                  value={
+                    parsingResult.sdd_validation.structure_validation
+                      .misplaced_sections.length
+                  }
+                  color="red"
+                />
+              </div>
+
+              {parsingResult.sdd_validation.structure_validation
+                .missing_sections.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-red-600">
+                    Missing Sections:
+                  </h3>
+                  <ul className="list-disc list-inside">
+                    {parsingResult.sdd_validation.structure_validation.missing_sections.map(
+                      (section, index) => (
+                        <li key={index} className="text-gray-700">
+                          {section}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+              {parsingResult.sdd_validation.structure_validation
+                .misplaced_sections.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-red-600">
+                    Order Issues:
+                  </h3>
+                  <ul className="list-disc list-inside">
+                    {parsingResult.sdd_validation.structure_validation.misplaced_sections.map(
+                      (issue, index) => (
+                        <li key={index} className="text-gray-700">
+                          {issue}
                         </li>
                       )
                     )}

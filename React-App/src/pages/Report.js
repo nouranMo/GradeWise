@@ -118,9 +118,8 @@ function Report() {
             )}
           </div>
           <svg
-            className={`w-5 h-5 transform transition-transform ${
-              expandedSections[id] ? "rotate-180" : ""
-            }`}
+            className={`w-5 h-5 transform transition-transform ${expandedSections[id] ? "rotate-180" : ""
+              }`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -148,7 +147,7 @@ function Report() {
 
     const renderContent = () => {
       if (!data) {
-       
+
         return <p className="text-gray-500">No data available</p>;
       }
 
@@ -169,11 +168,10 @@ function Report() {
                       Diagram: {diagramKey.replace(/_/g, " ")}
                     </h4>
                     <pre
-                      className={`whitespace-pre-wrap text-sm p-3 rounded ${
-                        validationText.includes("Errors Found")
+                      className={`whitespace-pre-wrap text-sm p-3 rounded ${validationText.includes("Errors Found")
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-800"
-                      }`}
+                        }`}
                     >
                       {validationText || "No validation text provided"}
                     </pre>
@@ -234,7 +232,7 @@ function Report() {
                     )}
                   </ul>
                 </div>
-                <div>
+                <div className="mb-4">
                   <h4 className="font-medium mb-2">Missing Sections:</h4>
                   <ul className="list-disc list-inside">
                     {data.structure_validation.missing_sections.map(
@@ -246,6 +244,22 @@ function Report() {
                     )}
                   </ul>
                 </div>
+                {data.structure_validation.misplaced_sections.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2 text-red-600">
+                      Order Issues:
+                    </h4>
+                    <ul className="list-disc list-inside">
+                      {data.structure_validation.misplaced_sections.map(
+                        (issue, index) => (
+                          <li key={index} className="text-red-600">
+                            {issue}
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
               </div>
             );
           }
@@ -399,13 +413,12 @@ function Report() {
             {title}
             {data?.status && (
               <span
-                className={`ml-2 px-2 py-1 text-xs rounded ${
-                  data.status === "success" || data.status === "pass"
+                className={`ml-2 px-2 py-1 text-xs rounded ${data.status === "success" || data.status === "pass"
                     ? "bg-green-100 text-green-800"
                     : data.status === "fail" || data.status === "error"
-                    ? "bg-red-100 text-red-800"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}
+                      ? "bg-red-100 text-red-800"
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}
               >
                 {data.status}
               </span>
@@ -498,9 +511,8 @@ function Report() {
                 }
                 return (
                   <button
-                    className={`px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300 ease-in-out ${
-                      loading ? "opacity-50" : ""
-                    }`}
+                    className={`px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300 ease-in-out ${loading ? "opacity-50" : ""
+                      }`}
                     disabled={loading}
                   >
                     {loading ? "Generating PDF..." : "Download Report"}
@@ -546,6 +558,19 @@ function Report() {
             >
               <AnalysisCard
                 data={{ ...parsingResult.srs_validation }}
+                type="list"
+              />
+            </CollapsibleSection>
+          )}
+
+          {parsingResult?.sdd_validation && (
+            <CollapsibleSection
+              id="sdd"
+              title="SDD Structure Analysis"
+              status="success"
+            >
+              <AnalysisCard
+                data={{ ...parsingResult.sdd_validation }}
                 type="list"
               />
             </CollapsibleSection>

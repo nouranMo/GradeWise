@@ -1,6 +1,6 @@
 from config import create_app, Config
 from text_processing import TextProcessor
-from srs_validator import SRSValidator
+from srs_validator import DocumentValidator
 from similarity_analyzer import SimilarityAnalyzer
 from business_value_evaluator import BusinessValueEvaluator
 from flask import request, jsonify, session, Flask, send_file
@@ -225,20 +225,28 @@ def check_session():
             'message': str(e)
         }), 400
 
-def analyze_document(file_path: str, analyses: Dict) -> Dict:
+def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
     """Analyze a single document."""
     print("\n" + "="*50)
     print("ANALYZE DOCUMENT FUNCTION")
     print("="*50)
     print(f"File path: {file_path}")
     print(f"Selected analyses: {json.dumps(analyses, indent=2)}")
+    print(f"Document type: {document_type}")
     
     try:
+        if document_type not in ["SRS", "SDD"]:
+            print(f"Invalid document type: {document_type}")
+            return {
+                'status': 'error',
+                'message': 'Invalid document type: must be SRS or SDD'
+            }
+        
         response = {'status': 'success'}
 
         # Extract text if needed for any analysis
         pdf_text = None
-        if any([analyses.get('SrsValidation'), 
+        if any([analyses.get('SrsValidation') or analyses.get('SDDValidation'), 
                 analyses.get('ContentAnalysis'),
                 analyses.get('BusinessValueAnalysis'),
                 analyses.get('SpellCheck'),
@@ -336,20 +344,23 @@ def analyze_document(file_path: str, analyses: Dict) -> Dict:
                     'message': f'Error during reference validation: {str(e)}'
                 }
 
-        if analyses.get('SrsValidation'):
-            print("\nSTARTING SRS VALIDATION")
+        if analyses.get('SrsValidation') or analyses.get('SDDValidation'):
+            print(f"\nSTARTING {document_type} VALIDATION")
             print("-"*30)
             try:
-                parsed_srs = SRSValidator.parse_srs(pdf_text)
-                validation_results = SRSValidator.validate_srs_structure(parsed_srs)
-                response['srs_validation'] = {
+                parsed_sections = DocumentValidator.parse_document(pdf_text, document_type)
+                validation_results = DocumentValidator.validate_structure(parsed_sections, document_type)
+                key = 'srs_validation' if document_type == "SRS" else 'sdd_validation'
+                response[key] = {
                     'structure_validation': validation_results,
-                    'parsed_sections': parsed_srs
+                    'parsed_sections': parsed_sections,
+                    'document_type': document_type
                 }
-                print("SRS validation completed")
+                print(f"{document_type} validation completed")
             except Exception as e:
-                print(f"Error in SRS validation: {str(e)}")
-                response['srs_validation'] = {
+                print(f"Error in {document_type} validation: {str(e)}")
+                key = 'srs_validation' if document_type == "SRS" else 'sdd_validation'
+                response[key] = {
                     'status': 'error',
                     'message': str(e)
                 }
@@ -798,6 +809,12 @@ def analyze_document_route():
         except json.JSONDecodeError as e:
             print(f"Error parsing analyses JSON: {e}")
             return jsonify({'error': 'Invalid analyses format'}), 400
+        
+        document_type = request.form.get('documentType')
+        print(f"Received documentType: {document_type}")
+        if not document_type or document_type not in ["SRS", "SDD"]:
+            print(f"Invalid or missing documentType: {document_type}")
+            return jsonify({'error': 'Invalid or missing documentType: must be SRS or SDD'}), 400
 
         # Save the file temporarily
         filename = secure_filename(pdf_file.filename)
@@ -815,14 +832,25 @@ def analyze_document_route():
         try:
             # Start analysis
             print("\nStarting analysis...")
-            results = analyze_document(save_path, analyses)
+            results = analyze_document(save_path, analyses,document_type)
             print("\nAnalysis completed successfully")
             print(f"Final response: {json.dumps(results, indent=2)}")
             print("\n" + "="*50)
             print("SUMMARY OF ANALYSIS RESULTS")
             print("="*50)
             print(f"Overall Status: {results.get('status', 'unknown')}")
+            print(f"Document Type: {document_type}")
 
+
+            if 'srs_validation' in results or 'sdd_validation' in results:
+                key = 'srs_validation' if document_type == "SRS" else 'sdd_validation'
+                print(f"\n{document_type} Validation:")
+                print("-" * 30)
+                validation = results.get(key, {})
+                print(f"Matching sections: {validation.get('structure_validation', {}).get('matching_sections', [])}")
+                print(f"Missing sections: {validation.get('structure_validation', {}).get('missing_sections', [])}")
+
+                
             if 'diagram_convention' in results:
                 print("\nDiagram Convention Analysis:")
                 print("-" * 30)
