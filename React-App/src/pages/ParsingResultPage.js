@@ -175,41 +175,51 @@ function ParsingResult() {
                   color="red"
                 />
               </div>
+              {(parsingResult.srs_validation.structure_validation.missing_sections.length > 0 ||
+                parsingResult.srs_validation.structure_validation.missing_subsections?.length > 0) && (
+                  <div className="mt-4">
+                    <h3 className="font-semibold text-red-600">Missing Sections:</h3>
+                    <ul className="list-disc list-inside">
+                      {parsingResult.srs_validation.structure_validation.missing_sections.map(
+                        (section, index) => (
+                          <li key={`section-${index}`} className="text-gray-700">
+                            Section: {section}
+                          </li>
+                        )
+                      )}
+                      {parsingResult.srs_validation.structure_validation.missing_subsections?.map(
+                        (subsection, index) => (
+                          <li key={`subsection-${index}`} className="text-gray-700">
+                            Subsection: {subsection}
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
+              {(parsingResult.srs_validation.structure_validation.misplaced_sections.length > 0 ||
+                parsingResult.srs_validation.structure_validation.misplaced_subsections?.length > 0) && (
+                  <div className="mt-4">
+                    <h3 className="font-semibold text-red-600">Order Issues:</h3>
+                    <ul className="list-disc list-inside">
+                      {parsingResult.srs_validation.structure_validation.misplaced_sections.map(
+                        (issue, index) => (
+                          <li key={`misplaced-section-${index}`} className="text-gray-700">
+                            Section: {issue}
+                          </li>
+                        )
+                      )}
+                      {parsingResult.srs_validation.structure_validation.misplaced_subsections?.map(
+                        (issue, index) => (
+                          <li key={`misplaced-subsection-${index}`} className="text-gray-700">
+                            Subsection: {issue}
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
 
-              {parsingResult.srs_validation.structure_validation
-                .missing_sections.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="font-semibold text-red-600">
-                    Missing Sections:
-                  </h3>
-                  <ul className="list-disc list-inside">
-                    {parsingResult.srs_validation.structure_validation.missing_sections.map(
-                      (section, index) => (
-                        <li key={index} className="text-gray-700">
-                          {section}
-                        </li>
-                      )
-                    )}
-                  </ul>
-                </div>
-              )}
-              {parsingResult.srs_validation.structure_validation
-                .misplaced_sections.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="font-semibold text-red-600">
-                    Order Issues:
-                  </h3>
-                  <ul className="list-disc list-inside">
-                    {parsingResult.srs_validation.structure_validation.misplaced_sections.map(
-                      (issue, index) => (
-                        <li key={index} className="text-gray-700">
-                          {issue}
-                        </li>
-                      )
-                    )}
-                  </ul>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -252,40 +262,50 @@ function ParsingResult() {
                 />
               </div>
 
-              {parsingResult.sdd_validation.structure_validation
-                .missing_sections.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="font-semibold text-red-600">
-                    Missing Sections:
-                  </h3>
-                  <ul className="list-disc list-inside">
-                    {parsingResult.sdd_validation.structure_validation.missing_sections.map(
-                      (section, index) => (
-                        <li key={index} className="text-gray-700">
-                          {section}
-                        </li>
-                      )
-                    )}
-                  </ul>
-                </div>
-              )}
-              {parsingResult.sdd_validation.structure_validation
-                .misplaced_sections.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="font-semibold text-red-600">
-                    Order Issues:
-                  </h3>
-                  <ul className="list-disc list-inside">
-                    {parsingResult.sdd_validation.structure_validation.misplaced_sections.map(
-                      (issue, index) => (
-                        <li key={index} className="text-gray-700">
-                          {issue}
-                        </li>
-                      )
-                    )}
-                  </ul>
-                </div>
-              )}
+              {(parsingResult.sdd_validation.structure_validation.missing_sections.length > 0 ||
+                parsingResult.sdd_validation.structure_validation.missing_subsections?.length > 0) && (
+                  <div className="mt-4">
+                    <h3 className="font-semibold text-red-600">Missing Sections:</h3>
+                    <ul className="list-disc list-inside">
+                      {parsingResult.sdd_validation.structure_validation.missing_sections.map(
+                        (section, index) => (
+                          <li key={`section-${index}`} className="text-gray-700">
+                            Section: {section}
+                          </li>
+                        )
+                      )}
+                      {parsingResult.sdd_validation.structure_validation.missing_subsections?.map(
+                        (subsection, index) => (
+                          <li key={`subsection-${index}`} className="text-gray-700">
+                            Subsection: {subsection}
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
+              {(parsingResult.sdd_validation.structure_validation.misplaced_sections.length > 0 ||
+                parsingResult.sdd_validation.structure_validation.misplaced_subsections?.length > 0) && (
+                  <div className="mt-4">
+                    <h3 className="font-semibold text-red-600">Order Issues:</h3>
+                    <ul className="list-disc list-inside">
+                      {parsingResult.sdd_validation.structure_validation.misplaced_sections.map(
+                        (issue, index) => (
+                          <li key={`misplaced-section-${index}`} className="text-gray-700">
+                            Section: {issue}
+                          </li>
+                        )
+                      )}
+                      {parsingResult.sdd_validation.structure_validation.misplaced_subsections?.map(
+                        (issue, index) => (
+                          <li key={`misplaced-subsection-${index}`} className="text-gray-700">
+                            Subsection: {issue}
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
             </div>
           </div>
         )}
@@ -320,7 +340,7 @@ function ParsingResult() {
                     parsingResult.references_validation.reformatted_references
                   )
                     ? parsingResult.references_validation.reformatted_references
-                        .length
+                      .length
                     : 0)
                 }
                 color="blue"
@@ -335,11 +355,11 @@ function ParsingResult() {
                   (parsingResult.references_validation.reference_validation
                     ?.status === "valid"
                     ? Array.isArray(
-                        parsingResult.references_validation
-                          .reformatted_references
-                      )
+                      parsingResult.references_validation
+                        .reformatted_references
+                    )
                       ? parsingResult.references_validation
-                          .reformatted_references.length
+                        .reformatted_references.length
                       : 0
                     : 0)
                 }
@@ -354,8 +374,8 @@ function ParsingResult() {
                     parsingResult.references_validation.reference_details
                   )
                     ? parsingResult.references_validation.reference_details.filter(
-                        (ref) => ref.is_cited
-                      ).length
+                      (ref) => ref.is_cited
+                    ).length
                     : 0)
                 }
                 color="green"
@@ -369,16 +389,16 @@ function ParsingResult() {
                     parsingResult.references_validation.reference_details
                   )
                     ? parsingResult.references_validation.reference_details.filter(
-                        (ref) => ref.online_verification?.verified
-                      ).length
+                      (ref) => ref.online_verification?.verified
+                    ).length
                     : Array.isArray(
-                        parsingResult.references_validation
-                          .reformatted_references
-                      )
-                    ? parsingResult.references_validation.reformatted_references.filter(
+                      parsingResult.references_validation
+                        .reformatted_references
+                    )
+                      ? parsingResult.references_validation.reformatted_references.filter(
                         (ref) => ref.verification?.verified
                       ).length
-                    : 0)
+                      : 0)
                 }
                 color="blue"
               />
@@ -386,10 +406,10 @@ function ParsingResult() {
 
             <div className="space-y-4">
               {parsingResult.references_validation.reference_details &&
-              Array.isArray(
-                parsingResult.references_validation.reference_details
-              ) &&
-              parsingResult.references_validation.reference_details.length >
+                Array.isArray(
+                  parsingResult.references_validation.reference_details
+                ) &&
+                parsingResult.references_validation.reference_details.length >
                 0 ? (
                 parsingResult.references_validation.reference_details.map(
                   (ref, index) => (
@@ -430,7 +450,7 @@ function ParsingResult() {
                   </div>
                 )
               ) : parsingResult.references_validation.reference_validation
-                  ?.errors ? (
+                ?.errors ? (
                 <div>
                   <p className="text-red-600 font-medium">Validation Errors:</p>
                   <ul className="list-disc list-inside">
@@ -727,11 +747,10 @@ function ParsingResult() {
                               (source, i) => (
                                 <th
                                   key={i}
-                                  className={`p-3 bg-gray-50 font-semibold text-gray-600 text-center min-w-[100px] transform -rotate-45 origin-top-left h-32 ${
-                                    isFigureSection(source)
-                                      ? "text-blue-700"
-                                      : ""
-                                  }`}
+                                  className={`p-3 bg-gray-50 font-semibold text-gray-600 text-center min-w-[100px] transform -rotate-45 origin-top-left h-32 ${isFigureSection(source)
+                                    ? "text-blue-700"
+                                    : ""
+                                    }`}
                                   style={{ width: "40px" }}
                                 >
                                   <div className="inline-block whitespace-nowrap">
@@ -753,16 +772,14 @@ function ParsingResult() {
                               return (
                                 <tr
                                   key={i}
-                                  className={`hover:bg-gray-50 ${
-                                    isImageRow ? "bg-blue-50" : ""
-                                  }`}
+                                  className={`hover:bg-gray-50 ${isImageRow ? "bg-blue-50" : ""
+                                    }`}
                                 >
                                   <td
-                                    className={`p-3 font-medium border-t ${
-                                      isImageRow
-                                        ? "text-blue-700"
-                                        : "text-gray-700"
-                                    }`}
+                                    className={`p-3 font-medium border-t ${isImageRow
+                                      ? "text-blue-700"
+                                      : "text-gray-700"
+                                      }`}
                                   >
                                     {isImageRow ? "📊 " : ""}
                                     {getCleanSectionName(
@@ -968,125 +985,125 @@ function ParsingResult() {
         )}
         {(parsingResult.content_analysis?.spelling_grammar?.length > 0 ||
           parsingResult.spelling_check) && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-xl font-semibold mb-3 flex items-center">
-              <svg
-                className="w-5 h-5 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                />
-              </svg>
-              Spelling and Grammar Analysis
-            </h3>
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h3 className="text-xl font-semibold mb-3 flex items-center">
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                  />
+                </svg>
+                Spelling and Grammar Analysis
+              </h3>
 
-            {parsingResult.spelling_check && (
-              <div className="mb-6">
-                <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                  <h4 className="font-medium text-blue-800 mb-2">
-                    Quick Spell Check Summary
-                  </h4>
-                  <p className="text-sm text-gray-700">
-                    {parsingResult.spelling_check.misspelled_count > 0 ? (
-                      <>
-                        Found{" "}
-                        <span className="font-semibold text-red-600">
-                          {parsingResult.spelling_check.misspelled_count}
-                        </span>{" "}
-                        potential misspelled words in document.
-                      </>
-                    ) : (
-                      <>No spelling issues detected in the document.</>
-                    )}
-                  </p>
-                </div>
+              {parsingResult.spelling_check && (
+                <div className="mb-6">
+                  <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                    <h4 className="font-medium text-blue-800 mb-2">
+                      Quick Spell Check Summary
+                    </h4>
+                    <p className="text-sm text-gray-700">
+                      {parsingResult.spelling_check.misspelled_count > 0 ? (
+                        <>
+                          Found{" "}
+                          <span className="font-semibold text-red-600">
+                            {parsingResult.spelling_check.misspelled_count}
+                          </span>{" "}
+                          potential misspelled words in document.
+                        </>
+                      ) : (
+                        <>No spelling issues detected in the document.</>
+                      )}
+                    </p>
+                  </div>
 
-                {parsingResult.spelling_check.misspelled_count > 0 && (
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="p-4 bg-gray-50 border-b">
-                      <h4 className="font-medium">Potential Misspellings</h4>
-                    </div>
-                    <div className="p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {Object.entries(
-                          parsingResult.spelling_check.misspelled_words
-                        ).map(([word, correction], i) => (
-                          <div
-                            key={i}
-                            className="flex items-center p-2 rounded bg-gray-50"
-                          >
-                            <span className="text-red-600 font-mono">
-                              {word}
-                            </span>
-                            <span className="mx-2">→</span>
-                            <span className="text-green-600 font-mono">
-                              {correction}
-                            </span>
-                          </div>
-                        ))}
+                  {parsingResult.spelling_check.misspelled_count > 0 && (
+                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="p-4 bg-gray-50 border-b">
+                        <h4 className="font-medium">Potential Misspellings</h4>
+                      </div>
+                      <div className="p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {Object.entries(
+                            parsingResult.spelling_check.misspelled_words
+                          ).map(([word, correction], i) => (
+                            <div
+                              key={i}
+                              className="flex items-center p-2 rounded bg-gray-50"
+                            >
+                              <span className="text-red-600 font-mono">
+                                {word}
+                              </span>
+                              <span className="mx-2">→</span>
+                              <span className="text-green-600 font-mono">
+                                {correction}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
 
-            {parsingResult.content_analysis?.spelling_grammar?.length > 0 && (
-              <div>
-                <h4 className="font-medium mb-3 text-gray-700">
-                  Section-Specific Spelling Analysis
-                </h4>
-                {parsingResult.content_analysis倠.spelling_grammar.map(
-                  (result, index) => (
-                    <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg">
-                      <h4 className="font-medium mb-2">
-                        {parsingResult.content_analysis.scope_sources[index] ||
-                          `Section ${index + 1}`}
-                      </h4>
-                      {result.misspelled &&
-                        Object.keys(result.misspelled).length > 0 && (
-                          <div className="mb-2">
-                            <p className="text-sm font-medium text-red-600">
-                              Spelling Issues:
+              {parsingResult.content_analysis?.spelling_grammar?.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-3 text-gray-700">
+                    Section-Specific Spelling Analysis
+                  </h4>
+                  {parsingResult.content_analysis倠.spelling_grammar.map(
+                    (result, index) => (
+                      <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="font-medium mb-2">
+                          {parsingResult.content_analysis.scope_sources[index] ||
+                            `Section ${index + 1}`}
+                        </h4>
+                        {result.misspelled &&
+                          Object.keys(result.misspelled).length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-sm font-medium text-red-600">
+                                Spelling Issues:
+                              </p>
+                              <ul className="list-disc list-inside">
+                                {Object.entries(result.misspelled).map(
+                                  ([word, suggestion], i) => (
+                                    <li key={i} className="text-sm">
+                                      {word} → {suggestion}
+                                    </li>
+                                  )
+                                )}
+                              </ul>
+                            </div>
+                          )}
+                        {result.grammar_suggestions?.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-orange-600">
+                              Grammar Issues:
                             </p>
                             <ul className="list-disc list-inside">
-                              {Object.entries(result.misspelled).map(
-                                ([word, suggestion], i) => (
-                                  <li key={i} className="text-sm">
-                                    {word} → {suggestion}
-                                  </li>
-                                )
-                              )}
+                              {result.grammar_suggestions.map((issue, i) => (
+                                <li key={i} className="text-sm">
+                                  {issue.message}
+                                </li>
+                              ))}
                             </ul>
                           </div>
                         )}
-                      {result.grammar_suggestions?.length > 0 && (
-                        <div>
-                          <p className="text-sm font-medium text-orange-600">
-                            Grammar Issues:
-                          </p>
-                          <ul className="list-disc list-inside">
-                            {result.grammar_suggestions.map((issue, i) => (
-                              <li key={i} className="text-sm">
-                                {issue.message}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )
-                )}
-              </div>
-            )}
-          </div>
-        )}
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
         {/* Business Value Analysis */}
         {console.log(
@@ -1103,7 +1120,7 @@ function ParsingResult() {
                 {(() => {
                   const evaluation =
                     parsingResult.business_value_analysis[
-                      "Business Value Evaluation"
+                    "Business Value Evaluation"
                     ];
                   if (!evaluation)
                     return "No business value evaluation available";
@@ -1149,7 +1166,7 @@ function ParsingResult() {
               Diagram Convention Analysis
             </h2>
             <div className="space-y-4">
-              
+
 
               {console.log(
                 "Diagram Convention - Validation Results Present:",
@@ -1171,11 +1188,10 @@ function ParsingResult() {
                           Diagram: {diagramKey.replace(/_/g, " ")}
                         </h3>
                         <pre
-                          className={`whitespace-pre-wrap text-sm p-3 rounded ${
-                            validationText.includes("Errors Found")
-                              ? "bg-red-100 text-red-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
+                          className={`whitespace-pre-wrap text-sm p-3 rounded ${validationText.includes("Errors Found")
+                            ? "bg-red-100 text-red-800"
+                            : "bg-green-100 text-green-800"
+                            }`}
                         >
                           {validationText || "No validation text provided"}
                         </pre>
@@ -1367,9 +1383,9 @@ function ReferenceCard({ reference, index }) {
                         dangerouslySetInnerHTML={{
                           __html: context
                             ? context.replace(
-                                /\*\*(.*?)\*\*/g,
-                                '<span class="font-bold text-blue-600">$1</span>'
-                              )
+                              /\*\*(.*?)\*\*/g,
+                              '<span class="font-bold text-blue-600">$1</span>'
+                            )
                             : "Context not available",
                         }}
                       ></p>
@@ -1509,9 +1525,9 @@ function EnhancedReferenceCard({ reference, validationDetails }) {
                         dangerouslySetInnerHTML={{
                           __html: citation.context
                             ? citation.context.replace(
-                                /\*\*(.*?)\*\*/g,
-                                '<span class="font-bold text-blue-600">$1</span>'
-                              )
+                              /\*\*(.*?)\*\*/g,
+                              '<span class="font-bold text-blue-600">$1</span>'
+                            )
                             : "Context not available",
                         }}
                       ></p>
