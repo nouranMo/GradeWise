@@ -52,11 +52,6 @@ print("PYTHON SEARCH PATHS:", sys.path)
 # Import script correctly
 import importlib.util
 
-# script_path = os.path.join(YOLO_PATH, "script.py")
-# spec = importlib.util.spec_from_file_location("script", script_path)
-# script = importlib.util.module_from_spec(spec)
-# spec.loader.exec_module(script)
-
 diagram_convention_path = os.path.join(YOLO_PATH, "DiagramConvention.py")
 spec = importlib.util.spec_from_file_location("DiagramConvention", diagram_convention_path)
 diagram_convention = importlib.util.module_from_spec(spec)
@@ -69,9 +64,6 @@ spec.loader.exec_module(LLMValidation_)
 
 # Now you can use process_diagrams from diagram_convention
 process_diagrams = diagram_convention.process_diagrams
-
-# Now you can use process_image from script
-# process_image = script.process_image
 
 
 validate_diagram=LLMValidation_.validate_diagrams
