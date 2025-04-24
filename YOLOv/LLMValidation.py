@@ -1,3 +1,4 @@
+# LLMValidation.py
 import os
 import json
 import google.generativeai as genai
@@ -124,13 +125,14 @@ def validate_uml(json_data, diagram_type):
     return response.text
 
 # 🔹 Step 5: Main Validation Function
-def validate_diagrams(output_base="output_results"):
+def validate_diagrams(output_base="output_results", document_type="SRS"):
     """
-    Validate the diagrams by accessing JSON files in the output_results directory.
+    Validate the diagrams by accessing JSON files in the output_results directory based on document type.
     Args:
-        output_base (str): Base output directory where JSON files are stored
+        output_base (str): Base output directory where JSON files are stored.
+        document_type (str): Type of document ('SRS' or 'SDD') to determine which diagram types to validate.
     Returns:
-        dict: Validation results for each diagram
+        dict: Validation results for each diagram.
     """
     validation_results = {
         "status": "success",
@@ -138,12 +140,22 @@ def validate_diagrams(output_base="output_results"):
         "issues": []
     }
 
-    # Define subdirectories to check
-    diagram_types = {
-        "use_case": os.path.join(output_base, "use_case"),
-        "class": os.path.join(output_base, "class"),
-        "sequence": os.path.join(output_base, "sequence")
-    }
+    # Define subdirectories to check based on document type
+    diagram_types = {}
+    if document_type == "SRS":
+        diagram_types = {
+            "use_case": os.path.join(output_base, "use_case"),
+            "class": os.path.join(output_base, "class")
+        }
+    elif document_type == "SDD":
+        diagram_types = {
+            "sequence": os.path.join(output_base, "sequence"),
+            "class": os.path.join(output_base, "class")
+        }
+    else:
+        validation_results["issues"].append(f"Invalid document type: {document_type}. Must be 'SRS' or 'SDD'.")
+        validation_results["status"] = "error"
+        return validation_results
 
     # Process each diagram type
     for diagram_type, folder in diagram_types.items():

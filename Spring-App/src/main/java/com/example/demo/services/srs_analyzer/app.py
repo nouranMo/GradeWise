@@ -663,7 +663,7 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     document_type=document_type
                 )
                 # Validate diagram conventions using Gemini
-                validation_results = validate_diagram(output_base="output_results")
+                validation_results = validate_diagram(output_base="output_results",document_type=document_type)
                 
                 logger.debug("Diagram Convention Results: %s", {
                 'processing_results': diagram_results,
