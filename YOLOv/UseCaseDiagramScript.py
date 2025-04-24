@@ -26,7 +26,7 @@ def process_use_case_diagram(image_folder, output_folder, model_path):
     results = {}
     
     # Process each image in the folder
-    image_files = [f for f in os.listdir(image_folder) if f.lower().endswith((".png", ".jpg", ".jpeg"))]
+    image_files = [f for f in os.listdir(image_folder) if f.lower().endswith((".png", ".jpg", ".jpeg"))]    
     for image_name in image_files:
         image_path = os.path.join(image_folder, image_name)
         image = cv2.imread(image_path)

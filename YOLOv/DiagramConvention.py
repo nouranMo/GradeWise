@@ -5,23 +5,33 @@ from UseCaseDiagramScript import process_use_case_diagram
 from classDiagramScript import process_class_diagram
 from seqDiagramScript import process_sequence_diagram
 
-def process_diagrams(upload_base="uploads", sequence_base="sequence_diagrams", 
-                    output_base="output_resultss", model_path="runs/detect/train/weights/best.pt"):
-    """Process use case, class, and sequence diagrams."""
-    sequence_folder = sequence_base  
-    class_folder = os.path.join(upload_base, "Preliminary Object-Oriented Domain Analysis")
-    use_case_folder = os.path.join(upload_base, "System Functions")
+def process_diagrams(upload_base="Uploads", 
+                    output_base="output_resultss", model_path="runs/detect/train/weights/best.pt", 
+                    document_type="SRS"):
+    """Process diagrams based on document type: use case and class for SRS, sequence and class for SDD."""
+    # Set folder paths based on document type
+    if document_type == "SRS":
+        use_case_folder = os.path.join(upload_base, "System Functions")
+        class_folder = os.path.join(upload_base, "Preliminary Object-Oriented Domain Analysis")
+    elif document_type == "SDD":
+        sequence_folder = os.path.join(upload_base, "Interaction Viewpoint")
+        class_folder = os.path.join(upload_base, "Logical Viewpoint")
+    else:
+        return {
+            "status": "error",
+            "message": f"Invalid document type: {document_type}. Must be 'SRS' or 'SDD'."
+        }
     
     results = {
         "status": "success",
-        "use_case_diagrams": {},
-        "class_diagrams": {},
-        "sequence_diagrams": {},
+        "use_case_diagrams": {},  # For SRS use case diagrams
+        "class_diagrams": {},     # For SRS and SDD class diagrams
+        "sequence_diagrams": {},  # For SDD sequence diagrams
         "issues": []
     }
     
-    # Process use case diagrams
-    if os.path.exists(use_case_folder):
+    # Process use case diagrams (only for SRS)
+    if document_type == "SRS" and os.path.exists(use_case_folder):
         use_case_output = os.path.join(output_base, "use_case")
         use_case_results = process_use_case_diagram(use_case_folder, use_case_output, model_path)
         if "error" in use_case_results:
@@ -34,7 +44,7 @@ def process_diagrams(upload_base="uploads", sequence_base="sequence_diagrams",
                 sanitized_use_case_results[sanitized_key] = value
             results["use_case_diagrams"] = sanitized_use_case_results
     
-    # Process class diagrams
+    # Process class diagrams (for both SRS and SDD)
     if os.path.exists(class_folder):
         class_output = os.path.join(output_base, "class")
         class_results = process_class_diagram(class_folder, class_output, model_path)
@@ -48,8 +58,8 @@ def process_diagrams(upload_base="uploads", sequence_base="sequence_diagrams",
                 sanitized_class_results[sanitized_key] = value
             results["class_diagrams"] = sanitized_class_results
     
-    # Process sequence diagrams
-    if os.path.exists(sequence_folder):
+    # Process sequence diagrams (only for SDD)
+    if document_type == "SDD" and os.path.exists(sequence_folder):
         sequence_output = os.path.join(output_base, "sequence")
         sequence_results = process_sequence_diagram(sequence_folder, sequence_output, model_path)
         if "error" in sequence_results:

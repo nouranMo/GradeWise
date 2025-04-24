@@ -631,35 +631,44 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                 }
         if analyses.get('DiagramConvention'):
             try:
-                upload_folder = app.config['UPLOAD_FOLDER']
-                sequence_folder = os.path.join(PROJECT_ROOT, "sequence_diagrams")  # Outside uploads
+                upload_folder = app.config['UPLOAD_FOLDER']# Outside uploads
                 os.makedirs(upload_folder, exist_ok=True)
-                os.makedirs(sequence_folder, exist_ok=True)
                 
                 # Extract diagrams from PDF
                 diagram_scopes = text_processor.extract_diagrams_from_pdf(file_path)
                 if diagram_scopes:
-                    use_case_folder = os.path.join(upload_folder, "System Functions")
-                    class_folder = os.path.join(upload_folder, "Preliminary Object-Oriented Domain Analysis")
-                    os.makedirs(use_case_folder, exist_ok=True)
-                    os.makedirs(class_folder, exist_ok=True)
+                    if document_type == "SRS":
+                        use_case_folder = os.path.join(upload_folder, "System Functions")
+                        class_folder = os.path.join(upload_folder, "Preliminary Object-Oriented Domain Analysis")
+                        os.makedirs(use_case_folder, exist_ok=True)
+                        os.makedirs(class_folder, exist_ok=True)
+                    elif document_type == "SDD":
+                        interaction_folder = os.path.join(upload_folder, "Interaction Viewpoint")
+                        logical_folder = os.path.join(upload_folder, "Logical Viewpoint")
+                        os.makedirs(interaction_folder, exist_ok=True)
+                        os.makedirs(logical_folder, exist_ok=True)
                     
                     for diagram_name, diagram_data in diagram_scopes.items():
-                        if "use case" in diagram_name.lower():
-                            diagram_path = os.path.join(use_case_folder, f"{diagram_name}.png")
-                        elif "sequence" in diagram_name.lower():
-                            diagram_path = os.path.join(sequence_folder, f"{diagram_name}.png")
-                        else:  # Default to class diagram
-                            diagram_path = os.path.join(class_folder, f"{diagram_name}.png")
+                        if document_type == "SRS":
+                            if "use case" in diagram_name.lower():
+                                diagram_path = os.path.join(use_case_folder, f"{diagram_name}.png")
+                            
+                            else:  # Default to class diagram
+                                diagram_path = os.path.join(class_folder, f"{diagram_name}.png")
+                        elif document_type == "SDD":
+                            if "sequence" in diagram_name.lower() or "interaction" in diagram_name.lower():
+                                diagram_path = os.path.join(interaction_folder, f"{diagram_name}.png")
+                            else:  # Default to logical (e.g., class diagrams)
+                                diagram_path = os.path.join(logical_folder, f"{diagram_name}.png")
                         with open(diagram_path, 'wb') as f:
                             f.write(diagram_data.get('image', b''))
                 
                 # Process all diagrams
                 diagram_results = process_diagrams(
                     upload_base=upload_folder,
-                    sequence_base=sequence_folder,
                     output_base="output_results",
-                    model_path=os.path.join(YOLO_PATH, "runs/detect/train/weights/best.pt")
+                    model_path=os.path.join(YOLO_PATH, "runs/detect/train/weights/best.pt"),
+                    document_type=document_type
                 )
                 # Validate diagram conventions using Gemini
                 validation_results = validate_diagram(output_base="output_results")
