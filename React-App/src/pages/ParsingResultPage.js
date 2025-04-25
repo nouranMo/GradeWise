@@ -1143,93 +1143,81 @@ function ParsingResult() {
         )}
 
         {/* Diagram Convention Analysis */}
-        {console.log(
-          "Checking Diagram Convention Section - Present:",
-          !!parsingResult?.diagram_convention
-        )}
-        {parsingResult?.diagram_convention && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-              <svg
-                className="w-6 h-6 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-              Diagram Convention Analysis
-            </h2>
-            <div className="space-y-4">
+{console.log(
+  "Checking Diagram Convention Section - Present:",
+  !!parsingResult?.diagram_convention
+)}
+{parsingResult?.diagram_convention && (
+  <div className="bg-white rounded-lg shadow-lg p-6">
+    <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+      <svg
+        className="w-6 h-6 mr-2"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+        />
+      </svg>
+      Diagram Convention Analysis
+    </h2>
+    <div className="space-y-4">
+      {console.log(
+        "Diagram Convention - Validation Results Present:",
+        !!parsingResult.diagram_convention.validation_results
+      )}
+      {parsingResult.diagram_convention.validation_results ? (
+        Object.keys(parsingResult.diagram_convention.validation_results).length >
+        0 ? (
+          Object.entries(
+            parsingResult.diagram_convention.validation_results
+          ).map(([diagramKey, validationText], index) => {
+            console.log(`Rendering Diagram: ${diagramKey}`, validationText);
+            return (
+              <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                <h3 className="font-medium mb-2">
+                  Diagram: {diagramKey.replace(/_/g, " ")}
+                </h3>
+                <pre
+                  className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800"
+                >
+                  {validationText || "No validation text provided"}
+                </pre>
+              </div>
+            );
+          })
+        ) : (
+          <p className="text-gray-600">No validation results found.</p>
+        )
+      ) : (
+        <p className="text-gray-600">No diagram convention data available.</p>
+      )}
 
-
-              {console.log(
-                "Diagram Convention - Validation Results Present:",
-                !!parsingResult.diagram_convention.validation_results
-              )}
-              {parsingResult.diagram_convention.validation_results ? (
-                Object.keys(parsingResult.diagram_convention.validation_results)
-                  .length > 0 ? (
-                  Object.entries(
-                    parsingResult.diagram_convention.validation_results
-                  ).map(([diagramKey, validationText], index) => {
-                    console.log(
-                      `Rendering Diagram: ${diagramKey}`,
-                      validationText
-                    );
-                    return (
-                      <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                        <h3 className="font-medium mb-2">
-                          Diagram: {diagramKey.replace(/_/g, " ")}
-                        </h3>
-                        <pre
-                          className={`whitespace-pre-wrap text-sm p-3 rounded ${validationText.includes("Errors Found")
-                            ? "bg-red-100 text-red-800"
-                            : "bg-green-100 text-green-800"
-                            }`}
-                        >
-                          {validationText || "No validation text provided"}
-                        </pre>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-gray-600">No validation results found.</p>
-                )
-              ) : (
-                <p className="text-gray-600">
-                  No diagram convention data available.
-                </p>
-              )}
-
-              {console.log(
-                "Diagram Convention - Issues Present:",
-                !!(
-                  parsingResult.diagram_convention.issues &&
-                  parsingResult.diagram_convention.issues.length > 0
-                )
-              )}
-              {parsingResult.diagram_convention.issues &&
-                parsingResult.diagram_convention.issues.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="font-medium text-red-600 mb-2">Issues:</h3>
-                    <ul className="list-disc list-inside text-red-600">
-                      {parsingResult.diagram_convention.issues.map(
-                        (issue, idx) => (
-                          <li key={idx}>{issue}</li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
-            </div>
+      {console.log(
+        "Diagram Convention - Issues Present:",
+        !!(
+          parsingResult.diagram_convention.issues &&
+          parsingResult.diagram_convention.issues.length > 0
+        )
+      )}
+      {parsingResult.diagram_convention.issues &&
+        parsingResult.diagram_convention.issues.length > 0 && (
+          <div className="mt-4">
+            <h3 className="font-medium text-red-600 mb-2">Issues:</h3>
+            <ul className="list-disc list-inside text-red-600">
+              {parsingResult.diagram_convention.issues.map((issue, idx) => (
+                <li key={idx}>{issue}</li>
+              ))}
+            </ul>
           </div>
         )}
+    </div>
+  </div>
+)}
       </div>
     </div>
   );
