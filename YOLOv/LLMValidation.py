@@ -88,32 +88,37 @@ def generate_class_prompt(uml_json):
     return prompt
 
 def generate_sequence_prompt(uml_json):
-    num_lifelines = sum(1 for obj in uml_json.get("objects", []) if obj["type"] == "lifeline")
-    num_messages = len(uml_json.get("relationships", []))
+    num_lifelines = sum(1 for obj in uml_json.get("components", []) if obj["type"] == "lifeline")
+    num_actors = sum(1 for obj in uml_json.get("components", []) if obj["type"] == "sequence_actor")
+    num_messages = sum(1 for obj in uml_json.get("components", []) if obj["type"] == "messages")
+    num_fragments = sum(1 for obj in uml_json.get("components", []) if obj["type"] == "fragment")
+    num_activation_bars = sum(1 for obj in uml_json.get("components", []) if obj["type"] == "activtion_bar")  # Note: "activtion_bar" typo in JSON
+    num_return_messages = sum(1 for obj in uml_json.get("components", []) if obj["type"] == "return_message")
 
     prompt = f"""
-    You are an expert in UML Sequence Diagrams. Validate the following JSON structure against standard UML conventions.
+    You are an expert in UML Sequence Diagrams, providing concise validation for a professor who is a domain expert. Validate the UML sequence diagram represented by the following data, focusing on the most critical UML compliance issues and design improvements at the diagram level, without referencing the internal JSON structure.
 
-    #### **Diagram Statistics**
-    - ⏳ **Total Lifelines:** {num_lifelines}
-    - 📩 **Total Messages:** {num_messages}
+    #### *Diagram Statistics*
+    - ⏳ *Total Lifelines:* {num_lifelines}
+    - 👤 *Total Actors:* {num_actors}
+    - 📩 *Total Messages:* {num_messages}
+    - 🖼 *Total Fragments:* {num_fragments}
+    - 📊 *Total Activation Bars:* {num_activation_bars}
+    - 🔙 *Total Return Messages:* {num_return_messages}
 
-    #### **Validation Rules**
-    ✅ Lifelines represent objects or actors.
-    ✅ Messages should follow a logical sequence (e.g., synchronous/asynchronous calls).
-    ✅ Activation bars should align with message calls.
-    ✅ No dangling messages (source and target must exist).
-    ✅ Return messages should match corresponding calls.
+    #### *Validation Rules*
+    ✅ Identify the 3-4 most critical UML issues (e.g., missing return messages, dangling messages, illogical sequence).
+    ✅ Suggest 1 design improvement if applicable (e.g., clearer message flow).
+    ✅ Focus on diagram-level issues only, ignoring internal data structure.
+    ✅ Use concise bullet points (max 5-7 words each) with a small example for each point (e.g., 'Missing return: Actor-System call').
 
-    #### **Input JSON:**
+    #### *Input Data (for context, but do not reference in output):*
     {json.dumps(uml_json, indent=2)}
 
-    #### **Output Format**
-    Format your response using bullet points for each section, with concise explanations limited to a maximum of three sentences per section:
-    - **Errors Found**: List any errors in the UML diagram (max 3 sentences).
-    - **Corrections Needed**: Suggest corrections for the identified errors (max 3 sentences).
-    - **Final Validation Status**: State whether the diagram is Valid or Invalid (max 1 sentence).
-    - **Summary of UML Components**: Summarize the diagram's components (lifelines, messages, etc.) (max 3 sentences).
+    #### *Output Format*
+    Format your response as follows, tailored for a professor:
+    - Components Detected: List the breakdown of components (lifelines, actors, messages, fragments, activation bars, return messages) in one line (e.g., 'Components Detected: 5 lifelines, 1 actor, 3 messages, 1 fragment, 4 activation bars, 1 return message').
+    - Main Validation Points: List the 3-4 most critical UML issues and 1 design improvement (if applicable), with examples, using plain bullet points (max 5-7 words each).
     """
     return prompt
 
