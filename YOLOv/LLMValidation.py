@@ -50,32 +50,40 @@ def generate_use_case_prompt(uml_json):
     return prompt
 
 def generate_class_prompt(uml_json):
-    num_classes = sum(1 for obj in uml_json.get("objects", []) if obj["type"] == "class_box")
+    num_classes = sum(1 for obj in uml_json.get("components", []) if obj["type"] == "class_box")
     num_relationships = len(uml_json.get("relationships", []))
+    num_attributes = sum(
+        len([line for line in obj["text"].split("\n") if line.strip().startswith("-")])
+        for obj in uml_json.get("components", [])
+        if obj["type"] == "class_box" and "text" in obj
+    )
+    num_methods = sum(
+        len([line for line in obj["text"].split("\n") if line.strip().startswith("+")])
+        for obj in uml_json.get("components", [])
+        if obj["type"] == "class_box" and "text" in obj
+    )
 
     prompt = f"""
-    You are an expert in UML Class Diagrams. Validate the following JSON structure against standard UML conventions.
+    You are an expert in UML Class Diagrams, providing concise validation for a professor who is a domain expert. Validate the UML class diagram represented by the following data, focusing on the most critical UML compliance issues and design improvements at the diagram level, without referencing the internal JSON structure.
 
-    #### **Diagram Statistics**
-    - 🧩 **Total Classes:** {num_classes}
-    - 🔗 **Total Relationships:** {num_relationships}
+    #### *Diagram Statistics*
+    - 🧩 *Total Classes:* {num_classes}
+    - 🔗 *Total Relationships:* {num_relationships}
+    - 📋 *Total Attributes:* {num_attributes}
+    - 📋 *Total Methods:* {num_methods}
 
-    #### **Validation Rules**
-    ✅ Classes should have attributes and methods (if specified).
-    ✅ Relationships should be valid (e.g., association, inheritance, aggregation, composition).
-    ✅ No self-referencing classes unless explicitly intended.
-    ✅ Multiplicity should be consistent (e.g., 1, 0..*, etc.).
-    ✅ No duplicate relationships between the same classes.
+    #### *Validation Rules*
+    ✅ Identify the 3-4 most critical UML issues (e.g., missing relationship types, multiplicities), excluding inconsistent notations (e.g., mixed visibility symbols).
+    ✅ Focus on diagram-level issues only, ignoring internal data structure.
+    ✅ Use concise bullet points (max 5-7 words each) with a small example for each point (e.g., 'Missing types: Patient-Therapist association').
 
-    #### **Input JSON:**
+    #### *Input Data (for context, but do not reference in output):*
     {json.dumps(uml_json, indent=2)}
 
-    #### **Output Format**
-    Format your response using bullet points for each section, with concise explanations limited to a maximum of three sentences per section:
-    - **Errors Found**: List any errors in the UML diagram (max 3 sentences).
-    - **Corrections Needed**: Suggest corrections for the identified errors (max 3 sentences).
-    - **Final Validation Status**: State whether the diagram is Valid or Invalid (max 1 sentence).
-    - **Summary of UML Components**: Summarize the diagram's components (classes, relationships, etc.) (max 3 sentences).
+    #### *Output Format*
+    Format your response as follows, tailored for a professor:
+    - Components Detected: List the breakdown of components (classes, attributes, methods, relationships) in one line (e.g., 'Components Detected: 13 classes, 25 attributes, 20 methods, 10 relationships').
+    - Main Validation Points: List the 3-4 most critical UML issues (excluding inconsistent notations), with examples, using plain bullet points (max 5-7 words each).
     """
     return prompt
 
