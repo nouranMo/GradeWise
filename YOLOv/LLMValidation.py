@@ -15,39 +15,36 @@ def load_json(file_path):
 
 # 🔹 Step 3: Generate Prompts for Each Diagram Type
 def generate_use_case_prompt(uml_json):
-    num_actors = sum(1 for obj in uml_json.get("objects", []) if obj["type"] == "use_case_actor")
-    num_use_cases = sum(1 for obj in uml_json.get("objects", []) if obj["type"] == "use_case_oval")
+    num_actors = sum(1 for obj in uml_json.get("components", []) if obj["type"] == "use_case_actor")
+    num_use_cases = sum(1 for obj in uml_json.get("components", []) if obj["type"] == "use_case_oval")
+    num_system_boundaries = sum(1 for obj in uml_json.get("components", []) if obj["type"] == "system_boundry")  # Note: "system_boundry" typo in JSON
     num_relationships = len(uml_json.get("relationships", []))
-    system_boundary_exists = any(obj["type"] == "use_case_diagram" for obj in uml_json.get("objects", []))
-    system_boundary_status = "✅ Yes" if system_boundary_exists else "❌ No (Missing!)"
 
     prompt = f"""
-    You are an expert in UML Use Case Diagrams. Validate the following JSON structure against standard UML conventions.
+    You are an expert in UML Use Case Diagrams, providing concise validation for a professor who is a domain expert. Validate the UML use case diagram represented by the following data, focusing on the most critical UML compliance issues and design improvements at the diagram level, without referencing the internal JSON structure.
 
-    #### **Diagram Statistics**
-    - 🎭 **Total Actors:** {num_actors}
-    - 🔄 **Total Use Cases:** {num_use_cases}
-    - 🔗 **Total Relationships:** {num_relationships}
-    - 🖼️ **System Boundary Exists?** {system_boundary_status}
+    #### *Diagram Statistics*
+    - 🎭 *Total Actors:* {num_actors}
+    - 🔄 *Total Use Cases:* {num_use_cases}
+    - 🖼 *Total System Boundaries:* {num_system_boundaries}
+    - 🔗 *Total Relationships:* {num_relationships}
 
-    #### **Validation Rules**
-    ✅ Actors should only connect to Use Cases.
-    ✅ Every Use Case should be connected to at least one Actor.
-    ✅ Use Cases can only connect to other Use Cases with «include» or «extend».
-    ✅ System boundary should exist, enclosing all use cases while actors remain outside.
-    ✅ No duplicate connections or self-referencing use cases.
+    #### *Validation Rules*
+    ✅ Identify the 3-4 most critical UML issues (e.g., missing system boundary, unconnected use cases, invalid relationships).
+    ✅ Suggest 1 design improvement if applicable (e.g., add more actors).
+    ✅ Focus on diagram-level issues only, ignoring internal data structure.
+    ✅ Use concise bullet points (max 5-7 words each) with a small example for each point (e.g., 'Missing boundary: System scope').
 
-    #### **Input JSON:**
+    #### *Input Data (for context, but do not reference in output):*
     {json.dumps(uml_json, indent=2)}
 
-    #### **Output Format**
-    Format your response using bullet points for each section, with concise explanations limited to a maximum of three sentences per section:
-    - **Errors Found**: List any errors in the UML diagram (max 3 sentences).
-    - **Corrections Needed**: Suggest corrections for the identified errors (max 3 sentences).
-    - **Final Validation Status**: State whether the diagram is Valid or Invalid (max 1 sentence).
-    - **Summary of UML Components**: Summarize the diagram's components (actors, use cases, relationships, etc.) (max 3 sentences).
+    #### *Output Format*
+    Format your response as follows, tailored for a professor:
+    - Components Detected: List the breakdown of components (actors, use cases, system boundaries, relationships) in one line (e.g., 'Components Detected: 2 actors, 5 use cases, 1 system boundary, 6 relationships').
+    - Main Validation Points: List the 3-4 most critical UML issues and 1 design improvement (if applicable), with examples, using plain bullet points (max 5-7 words each).
     """
     return prompt
+
 
 def generate_class_prompt(uml_json):
     num_classes = sum(1 for obj in uml_json.get("components", []) if obj["type"] == "class_box")
