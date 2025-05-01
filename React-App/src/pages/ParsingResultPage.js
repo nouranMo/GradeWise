@@ -1218,6 +1218,219 @@ function ParsingResult() {
     </div>
   </div>
 )}
+
+        {/* Plagiarism Check */}
+        {console.log(
+          "Checking Plagiarism Section - Present:",
+          !!parsingResult?.plagiarism_check
+        )}
+        {parsingResult.plagiarism_check && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Plagiarism Analysis
+            </h2>
+            
+            <div className="space-y-6">
+              {/* Summary Card */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-lg border border-blue-100 shadow-sm">
+                <div className="flex items-center mb-3">
+                  <div className="bg-blue-100 p-2 rounded-full mr-3">
+                    <svg className="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h4 className="font-semibold text-blue-800 text-lg">Plagiarism Check Summary</h4>
+                </div>
+                
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                  <div className="mb-3 md:mb-0">
+                    <p className="text-gray-700">
+                      <span className="font-medium">Analysis completed:</span> {parsingResult.plagiarism_check.total_phrases_checked} phrases analyzed
+                    </p>
+                    <p className="text-gray-700 mt-1">
+                      <span className="font-medium">Search method:</span> Web content comparison
+                    </p>
+                  </div>
+                  
+                  <div className="bg-white px-4 py-3 rounded-lg shadow-sm border border-blue-100">
+                    <p className="font-medium text-center">Result</p>
+                    {parsingResult.plagiarism_check.similar_matches_found > 0 ? (
+                      <p className="text-red-600 font-bold text-center text-lg">
+                        {parsingResult.plagiarism_check.similar_matches_found} matches found
+                      </p>
+                    ) : (
+                      <p className="text-green-600 font-bold text-center text-lg">
+                        No matches found
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Phrases Checked */}
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <div className="p-4 bg-gray-50 border-b flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <h4 className="font-medium">Analyzed Content</h4>
+                </div>
+                <div className="p-4">
+                  <p className="text-sm text-gray-600 mb-3">The following phrases from your document were analyzed for potential plagiarism:</p>
+                  <div className="max-h-60 overflow-y-auto pr-2">
+                    <ul className="space-y-2">
+                      {parsingResult.plagiarism_check.phrases_checked.map((phrase, i) => (
+                        <li key={i} className="p-3 bg-gray-50 rounded text-sm border-l-4 border-blue-400 hover:bg-gray-100 transition-colors">
+                          "{phrase}"
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search Results */}
+              {parsingResult.plagiarism_check.search_results && parsingResult.plagiarism_check.search_results.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                  <div className="p-4 bg-gray-50 border-b flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z" />
+                    </svg>
+                    <h4 className="font-medium">Search Results</h4>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-sm text-gray-600 mb-3">All search results from the analysis (including below threshold matches):</p>
+                    <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
+                      {parsingResult.plagiarism_check.search_results.map((result, i) => (
+                        <div key={i} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="font-medium text-gray-800">Query: "{result.query}"</p>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Similarity: <span className={`font-semibold ${result.similarity > 0.3 ? 'text-red-600' : 'text-gray-700'}`}>
+                                  {Math.round(result.similarity * 100)}%
+                                </span>
+                              </p>
+                            </div>
+                            <div className="flex space-x-2">
+                              <a 
+                                href={result.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                              >
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                View Source
+                              </a>
+                              <a 
+                                href={result.search_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-gray-500 hover:text-gray-700 text-sm flex items-center"
+                              >
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                Search
+                              </a>
+                            </div>
+                          </div>
+                          <div className="mt-2">
+                            <p className="text-sm font-medium text-gray-700">Source: {result.title}</p>
+                            <div className="mt-1 p-2 bg-white rounded border border-gray-200">
+                              <p className="text-xs text-gray-600 italic line-clamp-3">{result.matched_content}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Matches Found */}
+              {parsingResult.plagiarism_check.similar_matches_found > 0 ? (
+                <div className="bg-white border border-red-200 rounded-lg overflow-hidden shadow-sm">
+                  <div className="p-4 bg-red-50 border-b flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <h4 className="font-medium text-red-800">Potential Plagiarism Matches</h4>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-sm text-red-600 mb-3 font-medium">The following content may be plagiarized (similarity above 30%):</p>
+                    <div className="space-y-4">
+                      {parsingResult.plagiarism_check.results.map((match, i) => (
+                        <div key={i} className="p-4 bg-red-50 rounded-lg border border-red-200">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <p className="font-medium text-gray-800">Original phrase:</p>
+                              <p className="text-sm bg-white p-2 rounded border border-red-100 mt-1">"{match.phrase}"</p>
+                            </div>
+                            <div className="bg-white px-3 py-2 rounded-full border border-red-200 text-red-700 font-bold">
+                              {Math.round(match.similarity * 100)}% Match
+                            </div>
+                          </div>
+                          
+                          <div className="mt-3">
+                            <div className="flex justify-between items-center mb-2">
+                              <p className="font-medium text-gray-800">Matched source:</p>
+                              <a 
+                                href={match.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                              >
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                View Full Source
+                              </a>
+                            </div>
+                            <p className="text-sm font-medium mb-1">{match.title}</p>
+                            <div className="p-3 bg-white rounded border border-red-100">
+                              <p className="text-sm text-gray-700">{match.matched_content}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white border border-green-200 rounded-lg overflow-hidden shadow-sm">
+                  <div className="p-4 bg-green-50 border-b flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <h4 className="font-medium text-green-800">No Plagiarism Detected</h4>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-green-600">
+                      No significant similarities were found between your document and existing online content. Your document appears to be original.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Recommendations */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h4 className="font-medium text-gray-700 mb-2">Recommendations</h4>
+                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                  <li>Always cite your sources properly when using external content</li>
+                  <li>Use quotation marks for direct quotes from other works</li>
+                  <li>Paraphrase content in your own words while maintaining the original meaning</li>
+                  <li>Check your document with multiple plagiarism tools for comprehensive results</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

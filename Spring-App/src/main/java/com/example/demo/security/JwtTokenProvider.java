@@ -1,5 +1,6 @@
 package com.example.demo.security;
 
+import com.example.demo.models.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -23,14 +24,54 @@ public class JwtTokenProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
 
-    @Value("${jwt.secret}")
-    private String jwtSecret;
+    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+    private final long validityInMilliseconds = 86400000; // 24 hours
 
-    @Value("${jwt.expiration}")
-    private int jwtExpirationInMs;
+    public String generateToken(User user) {
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + validityInMilliseconds);
 
-    private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("id", user.getId());
+        claims.put("email", user.getEmail());
+        claims.put("role", user.getRole());
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(user.getEmail())
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .signWith(key)
+                .compact();
+    }
+
+    public String getEmailFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return claims.getSubject();
+    }
+
+    public String getRoleFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return (String) claims.get("role");
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public String generateToken(Authentication authentication) {
@@ -40,13 +81,13 @@ public class JwtTokenProvider {
 
     public String generateTokenFromUserDetails(UserDetails userDetails) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
+        Date expiryDate = new Date(now.getTime() + validityInMilliseconds);
 
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .signWith(key)
                 .compact();
     }
 
@@ -60,40 +101,11 @@ public class JwtTokenProvider {
 
     public String getUsername(String token) {
         Claims claims = Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+                .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
         return claims.getSubject();
-    }
-
-    public boolean validateToken(String token) {
-        try {
-            if (token == null || token.isEmpty()) {
-                logger.warn("Token is null or empty");
-                return false;
-            }
-
-            // Check if token has the correct format (contains exactly 2 periods)
-            if (!token.contains(".") || token.split("\\.").length != 3) {
-                logger.warn("JWT strings must contain exactly 2 period characters. Found: {}",
-                        token.contains(".") ? token.split("\\.").length - 1 : 0);
-                return false;
-            }
-
-            Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(token);
-            return true;
-        } catch (Exception e) {
-            logger.error("Invalid JWT token: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
     }
 
     public Date extractExpiration(String token) {
@@ -107,7 +119,7 @@ public class JwtTokenProvider {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+                .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
