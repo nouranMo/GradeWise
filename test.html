@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Test</h1>
+    <button id="testGet">Test GET</button>
+    <button id="testPost">Test POST</button>
+    <button id="testLogin">Test Login</button>
+    <pre id="result"></pre>
+
+    <script>
+        document.getElementById('testGet').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:8080/api/csrf/test');
+                const data = await response.json();
+                document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('result').textContent = error.toString();
+            }
+        });
+
+        document.getElementById('testPost').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:8080/api/csrf/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('result').textContent = error.toString();
+            }
+        });
+
+        document.getElementById('testLogin').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@gmail.com',
+                        password: 'password123'
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('result').textContent = error.toString();
+            }
+        });
+    </script>
+</body>
+</html> 

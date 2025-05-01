@@ -160,18 +160,24 @@ const SignUpPage = () => {
         }),
       });
 
-      const data = await response.json();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Registration failed");
+      }
 
-      if (response.ok) {
-        login(data);
-        toast.success("Account created successfully!");
-        navigate("/dashboard");
+      const data = await response.json();
+      login(data);
+      toast.success("Registration successful!");
+      
+      // Redirect based on role
+      if (data.role === "PROFESSOR") {
+        navigate("/professor");
       } else {
-        throw new Error(data.message || "Registration failed");
+        navigate("/dashboard");
       }
     } catch (error) {
       console.error(error);
-      toast.error(error.message || "Failed to create account");
+      toast.error(error.message || "Failed to register");
     } finally {
       setIsLoading(false);
     }
@@ -366,6 +372,12 @@ const SignUpPage = () => {
             <Link to="/login" className="text-[#ff6464] hover:underline">
               Log in here
             </Link>
+          </p>
+
+          <p className="mt-4 text-sm text-gray-600">
+            Note: All accounts are registered as student accounts by default. 
+            If you are a professor, please contact the administrator after registration 
+            to have your account upgraded to professor status.
           </p>
         </div>
 
