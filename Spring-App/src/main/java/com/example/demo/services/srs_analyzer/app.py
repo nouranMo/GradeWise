@@ -607,6 +607,7 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     "details": str(e)
                 }
 
+
         if analyses.get('BusinessValueAnalysis'):
             print("\nSTARTING BUSINESS VALUE ANALYSIS")
             print("-"*30)
