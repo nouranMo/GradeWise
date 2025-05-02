@@ -358,8 +358,7 @@ function ParsingResult() {
                       parsingResult.references_validation
                         .reformatted_references
                     )
-                      ? parsingResult.references_validation
-                        .reformatted_references.length
+                      ? parsingResult.references_validation.reformatted_references.length
                       : 0
                     : 0)
                 }
@@ -986,122 +985,62 @@ function ParsingResult() {
         {(parsingResult.content_analysis?.spelling_grammar?.length > 0 ||
           parsingResult.spelling_check) && (
             <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-xl font-semibold mb-3 flex items-center">
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                  />
-                </svg>
-                Spelling and Grammar Analysis
-              </h3>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Spelling Analysis</h2>
+              <div className="space-y-6">
+                {/* Quick Spell Check Summary */}
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+                  <h4 className="font-medium text-blue-800 mb-2">
+                    Quick Spell Check Summary
+                  </h4>
+                  <p className="text-sm text-gray-700">
+                    {parsingResult.spelling_check.misspelled_count > 0 ? (
+                      <>
+                        Found{" "}
+                        <span className="font-semibold text-red-600">
+                          {parsingResult.spelling_check.misspelled_count}
+                        </span>{" "}
+                        potential misspelled words in document.
+                      </>
+                    ) : (
+                      <>No spelling issues detected in the document.</>
+                    )}
+                  </p>
+                </div>
 
-              {parsingResult.spelling_check && (
-                <div className="mb-6">
-                  <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                    <h4 className="font-medium text-blue-800 mb-2">
-                      Quick Spell Check Summary
-                    </h4>
-                    <p className="text-sm text-gray-700">
-                      {parsingResult.spelling_check.misspelled_count > 0 ? (
-                        <>
-                          Found{" "}
-                          <span className="font-semibold text-red-600">
-                            {parsingResult.spelling_check.misspelled_count}
-                          </span>{" "}
-                          potential misspelled words in document.
-                        </>
-                      ) : (
-                        <>No spelling issues detected in the document.</>
-                      )}
-                    </p>
-                  </div>
+                {/* Add the SpellingCheckSection component here */}
+                {parsingResult.spelling_check.per_section && (
+                  <SpellingCheckSection spellingData={parsingResult.spelling_check} />
+                )}
 
-                  {parsingResult.spelling_check.misspelled_count > 0 && (
-                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="p-4 bg-gray-50 border-b">
-                        <h4 className="font-medium">Potential Misspellings</h4>
-                      </div>
-                      <div className="p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {Object.entries(
-                            parsingResult.spelling_check.misspelled_words
-                          ).map(([word, correction], i) => (
-                            <div
-                              key={i}
-                              className="flex items-center p-2 rounded bg-gray-50"
-                            >
-                              <span className="text-red-600 font-mono">
-                                {word}
-                              </span>
-                              <span className="mx-2">→</span>
-                              <span className="text-green-600 font-mono">
-                                {correction}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                {/* Keep your existing misspelled words display */}
+                {parsingResult.spelling_check.misspelled_count > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="p-4 bg-gray-50 border-b">
+                      <h4 className="font-medium">Potential Misspellings</h4>
+                    </div>
+                    <div className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {Object.entries(
+                          parsingResult.spelling_check.misspelled_words
+                        ).map(([word, correction], i) => (
+                          <div
+                            key={i}
+                            className="flex items-center p-2 rounded bg-gray-50"
+                          >
+                            <span className="text-red-600 font-mono">
+                              {word}
+                            </span>
+                            <span className="mx-2">→</span>
+                            <span className="text-green-600 font-mono">
+                              {correction}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {parsingResult.content_analysis?.spelling_grammar?.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-3 text-gray-700">
-                    Section-Specific Spelling Analysis
-                  </h4>
-                  {parsingResult.content_analysis倠.spelling_grammar.map(
-                    (result, index) => (
-                      <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium mb-2">
-                          {parsingResult.content_analysis.scope_sources[index] ||
-                            `Section ${index + 1}`}
-                        </h4>
-                        {result.misspelled &&
-                          Object.keys(result.misspelled).length > 0 && (
-                            <div className="mb-2">
-                              <p className="text-sm font-medium text-red-600">
-                                Spelling Issues:
-                              </p>
-                              <ul className="list-disc list-inside">
-                                {Object.entries(result.misspelled).map(
-                                  ([word, suggestion], i) => (
-                                    <li key={i} className="text-sm">
-                                      {word} → {suggestion}
-                                    </li>
-                                  )
-                                )}
-                              </ul>
-                            </div>
-                          )}
-                        {result.grammar_suggestions?.length > 0 && (
-                          <div>
-                            <p className="text-sm font-medium text-orange-600">
-                              Grammar Issues:
-                            </p>
-                            <ul className="list-disc list-inside">
-                              {result.grammar_suggestions.map((issue, i) => (
-                                <li key={i} className="text-sm">
-                                  {issue.message}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1572,28 +1511,26 @@ function ReferenceCard({ reference, index }) {
                 </button>
               </div>
 
-              {showCitations && (
-                <div className="mt-2 space-y-2">
-                  {citations.contexts.map((context, i) => (
-                    <div
-                      key={i}
-                      className="p-2 bg-gray-50 rounded border border-gray-200"
-                    >
-                      <p
-                        className="text-gray-600"
-                        dangerouslySetInnerHTML={{
-                          __html: context
-                            ? context.replace(
-                              /\*\*(.*?)\*\*/g,
-                              '<span class="font-bold text-blue-600">$1</span>'
-                            )
-                            : "Context not available",
-                        }}
-                      ></p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {showCitations &&
+                citations.contexts.map((context, i) => (
+                  <div
+                    key={i}
+                    className="p-2 bg-gray-50 rounded border border-gray-200"
+                  >
+                    <p
+                      className="text-gray-600"
+                      dangerouslySetInnerHTML={{
+                        __html: context
+                          ? context.replace(
+                            /\*\*(.*?)\*\*/g,
+                            '<span class="font-bold text-blue-600">$1</span>'
+                          )
+                          : "Context not available",
+                      }}
+                    ></p>
+                  </div>
+                ))
+              }
             </div>
           )}
       </div>
@@ -1743,21 +1680,84 @@ function EnhancedReferenceCard({ reference, validationDetails }) {
   );
 }
 
-function Badge({ text, color, onClick, className = "" }) {
-  const colors = {
-    green: "bg-green-100 text-green-800",
-    red: "bg-red-100 text-red-800",
-    yellow: "bg-yellow-100 text-yellow-800",
+function Badge({ text, color = "gray", onClick, className = "" }) {
+  const getColorClasses = () => {
+    switch (color) {
+      case "green":
+        return "bg-green-100 text-green-800";
+      case "red":
+        return "bg-red-100 text-red-800";
+      case "yellow":
+        return "bg-yellow-100 text-yellow-800";
+      case "blue":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   return (
     <span
-      className={`${colors[color]} text-xs px-2 py-1 rounded-full ${className}`}
+      className={`${getColorClasses()} text-xs px-2 py-1 rounded-full ${className} ${
+        onClick ? "cursor-pointer" : ""
+      }`}
       onClick={onClick}
-      title={onClick ? "Click to view online" : ""}
     >
       {text}
     </span>
+  );
+}
+
+function SpellingCheckSection({ spellingData }) {
+  // Check if we have per-section spelling data
+  if (!spellingData || !spellingData.per_section || !spellingData.sections) {
+    return (
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold mb-2">Spelling Check</h3>
+        <p>No section-based spelling data available.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6">
+      <h3 className="text-xl font-semibold mb-3">Spelling Check by Section</h3>
+      
+      {Object.entries(spellingData.sections).map(([sectionName, sectionData]) => (
+        <div key={sectionName} className="mb-4 p-4 bg-gray-50 rounded-lg">
+          <h4 className="text-md font-medium mb-2 flex items-center justify-between">
+            <span>{sectionName}</span>
+            <Badge 
+              text={`${sectionData.count} issues`} 
+              color={sectionData.count > 10 ? "red" : sectionData.count > 5 ? "yellow" : "green"} 
+            />
+          </h4>
+          
+          {sectionData.count > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="px-4 py-2 text-left">Misspelled Word</th>
+                    <th className="px-4 py-2 text-left">Suggestion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(sectionData.misspelled).map(([word, suggestion], index) => (
+                    <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                      <td className="px-4 py-2 text-red-600">{word}</td>
+                      <td className="px-4 py-2 text-green-600">{suggestion || "No suggestion"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-green-600">No spelling issues found in this section.</p>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 

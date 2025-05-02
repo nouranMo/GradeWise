@@ -215,6 +215,7 @@ class SectionParser:
         logger.debug(f"Found sections: {', '.join(sections_dict.keys())}")
         return sections_dict
 
+
     @staticmethod
     def validate_structure(parsed_data, document_type):
         """Validate main sections and subsections, flagging matching, missing, and misplaced with explanations."""
@@ -374,3 +375,68 @@ class SectionParser:
 
         logger.info(f"Structure validation completed for {document_type}")
         return validation_results
+
+    @staticmethod
+    def parse_sections_content_analysis(text):
+        """Parse document into sections for content analysis, focusing on SRS sections."""
+        logger.info("Parsing sections for content analysis (SRS)")
+        
+        # Use the SRS predefined structure
+        predefined_structure = SectionParser.PREDEFINED_STRUCTURES["SRS"]
+        main_sections = list(predefined_structure.keys())
+        sections_dict = {}
+        
+        lines = text.splitlines()
+        current_section = None
+        current_content = []
+        
+        # Create regex patterns for section matching
+        section_patterns = {}
+        for section in main_sections:
+            # Create pattern that matches both exact and numbered variations
+            stripped = SectionParser.strip_numbering(section)
+            # Match either the exact section name or the stripped version with any numbering
+            pattern = rf'^(?:{re.escape(section)}|(?:\d+(?:\.\d+)*)?\s*{re.escape(stripped)})(?:\s|$)'
+            section_patterns[section] = re.compile(pattern, re.IGNORECASE)
+        
+        logger.debug(f"Created {len(section_patterns)} section patterns")
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Check if line matches any main section header
+            matched_section = None
+            for section, pattern in section_patterns.items():
+                if pattern.match(line):
+                    matched_section = section
+                    logger.debug(f"Line '{line}' matched section '{section}'")
+                    break
+            
+            if matched_section:
+                # Save previous section content if exists
+                if current_section and current_content:
+                    content = ' '.join(current_content)
+                    sections_dict[current_section] = content
+                    logger.debug(f"Added section '{current_section}' with {len(content)} characters")
+                
+                current_section = matched_section
+                current_content = []
+                logger.debug(f"Found new section: {current_section}")
+            elif current_section:
+                current_content.append(line)
+        
+        # Add the last section
+        if current_section and current_content:
+            content = ' '.join(current_content)
+            sections_dict[current_section] = content
+            logger.debug(f"Added final section '{current_section}' with {len(content)} characters")
+            
+        logger.info(f"Parsed {len(sections_dict)} main sections")
+        if sections_dict:
+            logger.debug("Found sections: " + ", ".join(sections_dict.keys()))
+        else:
+            logger.warning("No sections were found in the document")
+        
+        return sections_dict
