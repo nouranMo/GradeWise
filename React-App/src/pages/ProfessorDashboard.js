@@ -380,7 +380,7 @@ function ProfessorDashboard() {
       const formData = new FormData();
       formData.append("file", uploadData.file);
       formData.append("analyses", JSON.stringify(selectedAnalyses));
-      formData.append("documentType",documentType||"SRS")
+      formData.append("documentType", documentType || "SRS");
       console.log("Uploading document with type:", documentType);
       // Upload file to backend without auth token for now
       const response = await fetch(`${API_URL}/api/documents`, {
@@ -463,7 +463,7 @@ function ProfessorDashboard() {
   };
 
   const handleDocTypeSelection = (type) => {
-    console.log("Selected document type:", type)
+    console.log("Selected document type:", type);
     setDocumentType(type);
     setShowDocTypeModal(false);
 
@@ -480,7 +480,7 @@ function ProfessorDashboard() {
         PlagiarismCheck: false,
         FullAnalysis: false,
       });
-    } else if(type ==="SDD"){
+    } else if (type === "SDD") {
       // SDD
       setSelectedAnalyses({
         SDDValidation: false,
@@ -694,7 +694,10 @@ function ProfessorDashboard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ analyses: selectedAnalyses,documentType: documentType, }),
+        body: JSON.stringify({
+          analyses: selectedAnalyses,
+          documentType: documentType,
+        }),
       });
 
       if (!response.ok) {
@@ -907,7 +910,7 @@ function ProfessorDashboard() {
   // Add this new function to debug document status
   const debugDocumentStatus = (doc) => {
     console.log("Document:", doc);
-    console.log("Selected document type:", documentType)
+    console.log("Selected document type:", documentType);
     console.log("Status:", doc.status);
     console.log("Has results:", !!doc.results);
     console.log(
@@ -1012,18 +1015,19 @@ function ProfessorDashboard() {
                     </div>
                     <button
                       onClick={() => handleDeleteClick(slot, "slot")}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-gray-400 hover:text-red-500 transition-colors duration-300"
                     >
                       <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
                         <path
-                          fillRule="evenodd"
-                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                          clipRule="evenodd"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                         />
                       </svg>
                     </button>
@@ -1246,9 +1250,21 @@ function ProfessorDashboard() {
 
                       <button
                         onClick={() => handleDeleteSubmission(submission.id)}
-                        className="px-3 py-1 text-sm text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors duration-300"
+                        className="text-gray-400 hover:text-red-500 transition-colors duration-300"
                       >
-                        Delete
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
                       </button>
                     </div>
                   </div>
@@ -1373,7 +1389,7 @@ function ProfessorDashboard() {
                         onClick={() =>
                           handleDeleteClick(doc, "professor_document")
                         }
-                        className="text-gray-400 hover:text-red-500"
+                        className="text-gray-400 hover:text-red-500 transition-colors duration-300"
                       >
                         <svg
                           className="w-5 h-5"

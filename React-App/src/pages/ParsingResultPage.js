@@ -1,6 +1,8 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import { useLocation, useNavigate } from "react-router-dom";
+import { pdf } from "@react-pdf/renderer";
+import ReportPDF from "pages/ReportPDF";
 
 // Helper function to determine if a section is a figure
 function isFigureSection(sectionName) {
@@ -92,6 +94,39 @@ function ParsingResult() {
     }
   }, [parsingResult]);
 
+  const handleDownloadPDF = async () => {
+    try {
+      // Create metadata object from parsingResult
+      const metadata = {
+        documentName: parsingResult.document_name || parsingResult.fileName,
+        fileSize: parsingResult.file_size,
+        uploadDate: parsingResult.upload_date || new Date().toLocaleString(),
+        analysisDuration:
+          parsingResult.analysis_duration ||
+          `${parsingResult.processing_time || 0}s`,
+      };
+
+      console.log("Metadata being passed:", metadata); // Debug log
+
+      const blob = await pdf(
+        <ReportPDF parsingResult={parsingResult} metadata={metadata} />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${
+        metadata.documentName || "document"
+      }-analysis-report.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    }
+  };
+
   // Determine which dashboard to go back to
   const handleBackClick = () => {
     const documentType = parsingResult?.document_type || "";
@@ -108,7 +143,9 @@ function ParsingResult() {
   };
 
   if (!parsingResult || parsingResult.status === "error") {
-    console.log("Rendering error state due to missing or invalid parsingResult");
+    console.log(
+      "Rendering error state due to missing or invalid parsingResult"
+    );
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
         <h2 className="text-2xl font-bold text-red-600 mb-4">
@@ -130,12 +167,33 @@ function ParsingResult() {
         {/* Navigation */}
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-800">Analysis Results</h1>
-          <button
-            onClick={handleBackClick}
-            className="px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300 ease-in-out"
-          >
-            Back to Dashboard
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={handleDownloadPDF}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-300 ease-in-out flex items-center"
+            >
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              Download Report
+            </button>
+            <button
+              onClick={handleBackClick}
+              className="px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300 ease-in-out"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         </div>
 
         {/* SRS Structure Validation */}
@@ -175,51 +233,65 @@ function ParsingResult() {
                   color="red"
                 />
               </div>
-              {(parsingResult.srs_validation.structure_validation.missing_sections.length > 0 ||
-                parsingResult.srs_validation.structure_validation.missing_subsections?.length > 0) && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold text-red-600">Missing Sections:</h3>
-                    <ul className="list-disc list-inside">
-                      {parsingResult.srs_validation.structure_validation.missing_sections.map(
-                        (section, index) => (
-                          <li key={`section-${index}`} className="text-gray-700">
-                            Section: {section}
-                          </li>
-                        )
-                      )}
-                      {parsingResult.srs_validation.structure_validation.missing_subsections?.map(
-                        (subsection, index) => (
-                          <li key={`subsection-${index}`} className="text-gray-700">
-                            Subsection: {subsection}
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
-              {(parsingResult.srs_validation.structure_validation.misplaced_sections.length > 0 ||
-                parsingResult.srs_validation.structure_validation.misplaced_subsections?.length > 0) && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold text-red-600">Order Issues:</h3>
-                    <ul className="list-disc list-inside">
-                      {parsingResult.srs_validation.structure_validation.misplaced_sections.map(
-                        (issue, index) => (
-                          <li key={`misplaced-section-${index}`} className="text-gray-700">
-                            Section: {issue}
-                          </li>
-                        )
-                      )}
-                      {parsingResult.srs_validation.structure_validation.misplaced_subsections?.map(
-                        (issue, index) => (
-                          <li key={`misplaced-subsection-${index}`} className="text-gray-700">
-                            Subsection: {issue}
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
-
+              {(parsingResult.srs_validation.structure_validation
+                .missing_sections.length > 0 ||
+                parsingResult.srs_validation.structure_validation
+                  .missing_subsections?.length > 0) && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-red-600">
+                    Missing Sections:
+                  </h3>
+                  <ul className="list-disc list-inside">
+                    {parsingResult.srs_validation.structure_validation.missing_sections.map(
+                      (section, index) => (
+                        <li key={`section-${index}`} className="text-gray-700">
+                          Section: {section}
+                        </li>
+                      )
+                    )}
+                    {parsingResult.srs_validation.structure_validation.missing_subsections?.map(
+                      (subsection, index) => (
+                        <li
+                          key={`subsection-${index}`}
+                          className="text-gray-700"
+                        >
+                          Subsection: {subsection}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+              {(parsingResult.srs_validation.structure_validation
+                .misplaced_sections.length > 0 ||
+                parsingResult.srs_validation.structure_validation
+                  .misplaced_subsections?.length > 0) && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-red-600">Order Issues:</h3>
+                  <ul className="list-disc list-inside">
+                    {parsingResult.srs_validation.structure_validation.misplaced_sections.map(
+                      (issue, index) => (
+                        <li
+                          key={`misplaced-section-${index}`}
+                          className="text-gray-700"
+                        >
+                          Section: {issue}
+                        </li>
+                      )
+                    )}
+                    {parsingResult.srs_validation.structure_validation.misplaced_subsections?.map(
+                      (issue, index) => (
+                        <li
+                          key={`misplaced-subsection-${index}`}
+                          className="text-gray-700"
+                        >
+                          Subsection: {issue}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -262,50 +334,65 @@ function ParsingResult() {
                 />
               </div>
 
-              {(parsingResult.sdd_validation.structure_validation.missing_sections.length > 0 ||
-                parsingResult.sdd_validation.structure_validation.missing_subsections?.length > 0) && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold text-red-600">Missing Sections:</h3>
-                    <ul className="list-disc list-inside">
-                      {parsingResult.sdd_validation.structure_validation.missing_sections.map(
-                        (section, index) => (
-                          <li key={`section-${index}`} className="text-gray-700">
-                            Section: {section}
-                          </li>
-                        )
-                      )}
-                      {parsingResult.sdd_validation.structure_validation.missing_subsections?.map(
-                        (subsection, index) => (
-                          <li key={`subsection-${index}`} className="text-gray-700">
-                            Subsection: {subsection}
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
-              {(parsingResult.sdd_validation.structure_validation.misplaced_sections.length > 0 ||
-                parsingResult.sdd_validation.structure_validation.misplaced_subsections?.length > 0) && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold text-red-600">Order Issues:</h3>
-                    <ul className="list-disc list-inside">
-                      {parsingResult.sdd_validation.structure_validation.misplaced_sections.map(
-                        (issue, index) => (
-                          <li key={`misplaced-section-${index}`} className="text-gray-700">
-                            Section: {issue}
-                          </li>
-                        )
-                      )}
-                      {parsingResult.sdd_validation.structure_validation.misplaced_subsections?.map(
-                        (issue, index) => (
-                          <li key={`misplaced-subsection-${index}`} className="text-gray-700">
-                            Subsection: {issue}
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
+              {(parsingResult.sdd_validation.structure_validation
+                .missing_sections.length > 0 ||
+                parsingResult.sdd_validation.structure_validation
+                  .missing_subsections?.length > 0) && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-red-600">
+                    Missing Sections:
+                  </h3>
+                  <ul className="list-disc list-inside">
+                    {parsingResult.sdd_validation.structure_validation.missing_sections.map(
+                      (section, index) => (
+                        <li key={`section-${index}`} className="text-gray-700">
+                          Section: {section}
+                        </li>
+                      )
+                    )}
+                    {parsingResult.sdd_validation.structure_validation.missing_subsections?.map(
+                      (subsection, index) => (
+                        <li
+                          key={`subsection-${index}`}
+                          className="text-gray-700"
+                        >
+                          Subsection: {subsection}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+              {(parsingResult.sdd_validation.structure_validation
+                .misplaced_sections.length > 0 ||
+                parsingResult.sdd_validation.structure_validation
+                  .misplaced_subsections?.length > 0) && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-red-600">Order Issues:</h3>
+                  <ul className="list-disc list-inside">
+                    {parsingResult.sdd_validation.structure_validation.misplaced_sections.map(
+                      (issue, index) => (
+                        <li
+                          key={`misplaced-section-${index}`}
+                          className="text-gray-700"
+                        >
+                          Section: {issue}
+                        </li>
+                      )
+                    )}
+                    {parsingResult.sdd_validation.structure_validation.misplaced_subsections?.map(
+                      (issue, index) => (
+                        <li
+                          key={`misplaced-subsection-${index}`}
+                          className="text-gray-700"
+                        >
+                          Subsection: {issue}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -340,7 +427,7 @@ function ParsingResult() {
                     parsingResult.references_validation.reformatted_references
                   )
                     ? parsingResult.references_validation.reformatted_references
-                      .length
+                        .length
                     : 0)
                 }
                 color="blue"
@@ -355,11 +442,11 @@ function ParsingResult() {
                   (parsingResult.references_validation.reference_validation
                     ?.status === "valid"
                     ? Array.isArray(
-                      parsingResult.references_validation
-                        .reformatted_references
-                    )
+                        parsingResult.references_validation
+                          .reformatted_references
+                      )
                       ? parsingResult.references_validation
-                        .reformatted_references.length
+                          .reformatted_references.length
                       : 0
                     : 0)
                 }
@@ -374,8 +461,8 @@ function ParsingResult() {
                     parsingResult.references_validation.reference_details
                   )
                     ? parsingResult.references_validation.reference_details.filter(
-                      (ref) => ref.is_cited
-                    ).length
+                        (ref) => ref.is_cited
+                      ).length
                     : 0)
                 }
                 color="green"
@@ -389,16 +476,16 @@ function ParsingResult() {
                     parsingResult.references_validation.reference_details
                   )
                     ? parsingResult.references_validation.reference_details.filter(
-                      (ref) => ref.online_verification?.verified
-                    ).length
+                        (ref) => ref.online_verification?.verified
+                      ).length
                     : Array.isArray(
-                      parsingResult.references_validation
-                        .reformatted_references
-                    )
-                      ? parsingResult.references_validation.reformatted_references.filter(
+                        parsingResult.references_validation
+                          .reformatted_references
+                      )
+                    ? parsingResult.references_validation.reformatted_references.filter(
                         (ref) => ref.verification?.verified
                       ).length
-                      : 0)
+                    : 0)
                 }
                 color="blue"
               />
@@ -406,10 +493,10 @@ function ParsingResult() {
 
             <div className="space-y-4">
               {parsingResult.references_validation.reference_details &&
-                Array.isArray(
-                  parsingResult.references_validation.reference_details
-                ) &&
-                parsingResult.references_validation.reference_details.length >
+              Array.isArray(
+                parsingResult.references_validation.reference_details
+              ) &&
+              parsingResult.references_validation.reference_details.length >
                 0 ? (
                 parsingResult.references_validation.reference_details.map(
                   (ref, index) => (
@@ -450,7 +537,7 @@ function ParsingResult() {
                   </div>
                 )
               ) : parsingResult.references_validation.reference_validation
-                ?.errors ? (
+                  ?.errors ? (
                 <div>
                   <p className="text-red-600 font-medium">Validation Errors:</p>
                   <ul className="list-disc list-inside">
@@ -598,7 +685,11 @@ function ParsingResult() {
                             });
                           }
 
-                          if (isRow1Diagram && !isRow2Diagram && similarity > 0.5) {
+                          if (
+                            isRow1Diagram &&
+                            !isRow2Diagram &&
+                            similarity > 0.5
+                          ) {
                             diagramRelationships.push({
                               diagram: sections[i],
                               section: sections[j],
@@ -747,10 +838,11 @@ function ParsingResult() {
                               (source, i) => (
                                 <th
                                   key={i}
-                                  className={`p-3 bg-gray-50 font-semibold text-gray-600 text-center min-w-[100px] transform -rotate-45 origin-top-left h-32 ${isFigureSection(source)
-                                    ? "text-blue-700"
-                                    : ""
-                                    }`}
+                                  className={`p-3 bg-gray-50 font-semibold text-gray-600 text-center min-w-[100px] transform -rotate-45 origin-top-left h-32 ${
+                                    isFigureSection(source)
+                                      ? "text-blue-700"
+                                      : ""
+                                  }`}
                                   style={{ width: "40px" }}
                                 >
                                   <div className="inline-block whitespace-nowrap">
@@ -772,14 +864,16 @@ function ParsingResult() {
                               return (
                                 <tr
                                   key={i}
-                                  className={`hover:bg-gray-50 ${isImageRow ? "bg-blue-50" : ""
-                                    }`}
+                                  className={`hover:bg-gray-50 ${
+                                    isImageRow ? "bg-blue-50" : ""
+                                  }`}
                                 >
                                   <td
-                                    className={`p-3 font-medium border-t ${isImageRow
-                                      ? "text-blue-700"
-                                      : "text-gray-700"
-                                      }`}
+                                    className={`p-3 font-medium border-t ${
+                                      isImageRow
+                                        ? "text-blue-700"
+                                        : "text-gray-700"
+                                    }`}
                                   >
                                     {isImageRow ? "📊 " : ""}
                                     {getCleanSectionName(
@@ -985,125 +1079,125 @@ function ParsingResult() {
         )}
         {(parsingResult.content_analysis?.spelling_grammar?.length > 0 ||
           parsingResult.spelling_check) && (
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-xl font-semibold mb-3 flex items-center">
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                  />
-                </svg>
-                Spelling and Grammar Analysis
-              </h3>
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h3 className="text-xl font-semibold mb-3 flex items-center">
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                />
+              </svg>
+              Spelling and Grammar Analysis
+            </h3>
 
-              {parsingResult.spelling_check && (
-                <div className="mb-6">
-                  <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                    <h4 className="font-medium text-blue-800 mb-2">
-                      Quick Spell Check Summary
-                    </h4>
-                    <p className="text-sm text-gray-700">
-                      {parsingResult.spelling_check.misspelled_count > 0 ? (
-                        <>
-                          Found{" "}
-                          <span className="font-semibold text-red-600">
-                            {parsingResult.spelling_check.misspelled_count}
-                          </span>{" "}
-                          potential misspelled words in document.
-                        </>
-                      ) : (
-                        <>No spelling issues detected in the document.</>
-                      )}
-                    </p>
-                  </div>
+            {parsingResult.spelling_check && (
+              <div className="mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                  <h4 className="font-medium text-blue-800 mb-2">
+                    Quick Spell Check Summary
+                  </h4>
+                  <p className="text-sm text-gray-700">
+                    {parsingResult.spelling_check.misspelled_count > 0 ? (
+                      <>
+                        Found{" "}
+                        <span className="font-semibold text-red-600">
+                          {parsingResult.spelling_check.misspelled_count}
+                        </span>{" "}
+                        potential misspelled words in document.
+                      </>
+                    ) : (
+                      <>No spelling issues detected in the document.</>
+                    )}
+                  </p>
+                </div>
 
-                  {parsingResult.spelling_check.misspelled_count > 0 && (
-                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="p-4 bg-gray-50 border-b">
-                        <h4 className="font-medium">Potential Misspellings</h4>
-                      </div>
-                      <div className="p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {Object.entries(
-                            parsingResult.spelling_check.misspelled_words
-                          ).map(([word, correction], i) => (
-                            <div
-                              key={i}
-                              className="flex items-center p-2 rounded bg-gray-50"
-                            >
-                              <span className="text-red-600 font-mono">
-                                {word}
-                              </span>
-                              <span className="mx-2">→</span>
-                              <span className="text-green-600 font-mono">
-                                {correction}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                {parsingResult.spelling_check.misspelled_count > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="p-4 bg-gray-50 border-b">
+                      <h4 className="font-medium">Potential Misspellings</h4>
+                    </div>
+                    <div className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {Object.entries(
+                          parsingResult.spelling_check.misspelled_words
+                        ).map(([word, correction], i) => (
+                          <div
+                            key={i}
+                            className="flex items-center p-2 rounded bg-gray-50"
+                          >
+                            <span className="text-red-600 font-mono">
+                              {word}
+                            </span>
+                            <span className="mx-2">→</span>
+                            <span className="text-green-600 font-mono">
+                              {correction}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
+            )}
 
-              {parsingResult.content_analysis?.spelling_grammar?.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-3 text-gray-700">
-                    Section-Specific Spelling Analysis
-                  </h4>
-                  {parsingResult.content_analysis倠.spelling_grammar.map(
-                    (result, index) => (
-                      <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium mb-2">
-                          {parsingResult.content_analysis.scope_sources[index] ||
-                            `Section ${index + 1}`}
-                        </h4>
-                        {result.misspelled &&
-                          Object.keys(result.misspelled).length > 0 && (
-                            <div className="mb-2">
-                              <p className="text-sm font-medium text-red-600">
-                                Spelling Issues:
-                              </p>
-                              <ul className="list-disc list-inside">
-                                {Object.entries(result.misspelled).map(
-                                  ([word, suggestion], i) => (
-                                    <li key={i} className="text-sm">
-                                      {word} → {suggestion}
-                                    </li>
-                                  )
-                                )}
-                              </ul>
-                            </div>
-                          )}
-                        {result.grammar_suggestions?.length > 0 && (
-                          <div>
-                            <p className="text-sm font-medium text-orange-600">
-                              Grammar Issues:
+            {parsingResult.content_analysis?.spelling_grammar?.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-3 text-gray-700">
+                  Section-Specific Spelling Analysis
+                </h4>
+                {parsingResult.content_analysis倠.spelling_grammar.map(
+                  (result, index) => (
+                    <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium mb-2">
+                        {parsingResult.content_analysis.scope_sources[index] ||
+                          `Section ${index + 1}`}
+                      </h4>
+                      {result.misspelled &&
+                        Object.keys(result.misspelled).length > 0 && (
+                          <div className="mb-2">
+                            <p className="text-sm font-medium text-red-600">
+                              Spelling Issues:
                             </p>
                             <ul className="list-disc list-inside">
-                              {result.grammar_suggestions.map((issue, i) => (
-                                <li key={i} className="text-sm">
-                                  {issue.message}
-                                </li>
-                              ))}
+                              {Object.entries(result.misspelled).map(
+                                ([word, suggestion], i) => (
+                                  <li key={i} className="text-sm">
+                                    {word} → {suggestion}
+                                  </li>
+                                )
+                              )}
                             </ul>
                           </div>
                         )}
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                      {result.grammar_suggestions?.length > 0 && (
+                        <div>
+                          <p className="text-sm font-medium text-orange-600">
+                            Grammar Issues:
+                          </p>
+                          <ul className="list-disc list-inside">
+                            {result.grammar_suggestions.map((issue, i) => (
+                              <li key={i} className="text-sm">
+                                {issue.message}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Business Value Analysis */}
         {console.log(
@@ -1120,7 +1214,7 @@ function ParsingResult() {
                 {(() => {
                   const evaluation =
                     parsingResult.business_value_analysis[
-                    "Business Value Evaluation"
+                      "Business Value Evaluation"
                     ];
                   if (!evaluation)
                     return "No business value evaluation available";
@@ -1143,81 +1237,86 @@ function ParsingResult() {
         )}
 
         {/* Diagram Convention Analysis */}
-{console.log(
-  "Checking Diagram Convention Section - Present:",
-  !!parsingResult?.diagram_convention
-)}
-{parsingResult?.diagram_convention && (
-  <div className="bg-white rounded-lg shadow-lg p-6">
-    <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-      <svg
-        className="w-6 h-6 mr-2"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-        />
-      </svg>
-      Diagram Convention Analysis
-    </h2>
-    <div className="space-y-4">
-      {console.log(
-        "Diagram Convention - Validation Results Present:",
-        !!parsingResult.diagram_convention.validation_results
-      )}
-      {parsingResult.diagram_convention.validation_results ? (
-        Object.keys(parsingResult.diagram_convention.validation_results).length >
-        0 ? (
-          Object.entries(
-            parsingResult.diagram_convention.validation_results
-          ).map(([diagramKey, validationText], index) => {
-            console.log(`Rendering Diagram: ${diagramKey}`, validationText);
-            return (
-              <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-medium mb-2">
-                  Diagram: {diagramKey.replace(/_/g, " ")}
-                </h3>
-                <pre
-                  className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800"
-                >
-                  {validationText || "No validation text provided"}
-                </pre>
-              </div>
-            );
-          })
-        ) : (
-          <p className="text-gray-600">No validation results found.</p>
-        )
-      ) : (
-        <p className="text-gray-600">No diagram convention data available.</p>
-      )}
+        {console.log(
+          "Checking Diagram Convention Section - Present:",
+          !!parsingResult?.diagram_convention
+        )}
+        {parsingResult?.diagram_convention && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+              <svg
+                className="w-6 h-6 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+              Diagram Convention Analysis
+            </h2>
+            <div className="space-y-4">
+              {console.log(
+                "Diagram Convention - Validation Results Present:",
+                !!parsingResult.diagram_convention.validation_results
+              )}
+              {parsingResult.diagram_convention.validation_results ? (
+                Object.keys(parsingResult.diagram_convention.validation_results)
+                  .length > 0 ? (
+                  Object.entries(
+                    parsingResult.diagram_convention.validation_results
+                  ).map(([diagramKey, validationText], index) => {
+                    console.log(
+                      `Rendering Diagram: ${diagramKey}`,
+                      validationText
+                    );
+                    return (
+                      <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                        <h3 className="font-medium mb-2">
+                          Diagram: {diagramKey.replace(/_/g, " ")}
+                        </h3>
+                        <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
+                          {validationText || "No validation text provided"}
+                        </pre>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-gray-600">No validation results found.</p>
+                )
+              ) : (
+                <p className="text-gray-600">
+                  No diagram convention data available.
+                </p>
+              )}
 
-      {console.log(
-        "Diagram Convention - Issues Present:",
-        !!(
-          parsingResult.diagram_convention.issues &&
-          parsingResult.diagram_convention.issues.length > 0
-        )
-      )}
-      {parsingResult.diagram_convention.issues &&
-        parsingResult.diagram_convention.issues.length > 0 && (
-          <div className="mt-4">
-            <h3 className="font-medium text-red-600 mb-2">Issues:</h3>
-            <ul className="list-disc list-inside text-red-600">
-              {parsingResult.diagram_convention.issues.map((issue, idx) => (
-                <li key={idx}>{issue}</li>
-              ))}
-            </ul>
+              {console.log(
+                "Diagram Convention - Issues Present:",
+                !!(
+                  parsingResult.diagram_convention.issues &&
+                  parsingResult.diagram_convention.issues.length > 0
+                )
+              )}
+              {parsingResult.diagram_convention.issues &&
+                parsingResult.diagram_convention.issues.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="font-medium text-red-600 mb-2">Issues:</h3>
+                    <ul className="list-disc list-inside text-red-600">
+                      {parsingResult.diagram_convention.issues.map(
+                        (issue, idx) => (
+                          <li key={idx}>{issue}</li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
+            </div>
           </div>
         )}
-    </div>
-  </div>
-)}
       </div>
     </div>
   );
@@ -1285,7 +1384,9 @@ function ReferenceCard({ reference, index }) {
           <Badge
             text={verification.verified ? "Verified Online" : "Unverified"}
             color={verification.verified ? "green" : "yellow"}
-            onClick={verification.verified ? handleVerificationClick : undefined}
+            onClick={
+              verification.verified ? handleVerificationClick : undefined
+            }
             className={
               verification.verified ? "cursor-pointer hover:opacity-80" : ""
             }
@@ -1371,9 +1472,9 @@ function ReferenceCard({ reference, index }) {
                         dangerouslySetInnerHTML={{
                           __html: context
                             ? context.replace(
-                              /\*\*(.*?)\*\*/g,
-                              '<span class="font-bold text-blue-600">$1</span>'
-                            )
+                                /\*\*(.*?)\*\*/g,
+                                '<span class="font-bold text-blue-600">$1</span>'
+                              )
                             : "Context not available",
                         }}
                       ></p>
@@ -1513,9 +1614,9 @@ function EnhancedReferenceCard({ reference, validationDetails }) {
                         dangerouslySetInnerHTML={{
                           __html: citation.context
                             ? citation.context.replace(
-                              /\*\*(.*?)\*\*/g,
-                              '<span class="font-bold text-blue-600">$1</span>'
-                            )
+                                /\*\*(.*?)\*\*/g,
+                                '<span class="font-bold text-blue-600">$1</span>'
+                              )
                             : "Context not available",
                         }}
                       ></p>

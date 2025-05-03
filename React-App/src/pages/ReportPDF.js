@@ -1,261 +1,437 @@
-// ReportPDF.js
 import React from "react";
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import {
+  Page,
+  Text,
+  View,
+  Document,
+  StyleSheet,
+  pdf,
+} from "@react-pdf/renderer";
+import { Font } from "@react-pdf/renderer";
 
-// PDF-specific styles - cannot use Tailwind here
+// Register font
+Font.register({
+  family: "Roboto",
+  src: "https://cdnjs.cloudflare.com/ajax/libs/ink/3.1.10/fonts/Roboto/roboto-light-webfont.ttf",
+});
+
+// Styles
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
-    backgroundColor: "white",
-  },
-  section: {
-    marginBottom: 20,
-    padding: 10,
+    padding: 40,
+    fontFamily: "Roboto",
   },
   header: {
     fontSize: 24,
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#1a365d",
+  },
+  dateTime: {
+    fontSize: 10,
+    color: "#666",
+    marginBottom: 20,
+    textAlign: "right",
+  },
+  section: {
+    margin: 10,
+    padding: 10,
+    flexGrow: 1,
+  },
+  sectionTitle: {
+    fontSize: 18,
     marginBottom: 10,
-    color: "#111827", // gray-900
+    color: "#2d3748",
+    borderBottom: "1 solid #e2e8f0",
+    paddingBottom: 5,
+  },
+  subsectionTitle: {
+    fontSize: 14,
+    marginBottom: 8,
+    color: "#4a5568",
+    fontWeight: "bold",
+  },
+  statContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    flexWrap: "wrap",
+  },
+  stat: {
+    padding: 10,
+    backgroundColor: "#f3f4f6",
+    borderRadius: 5,
+    margin: 5,
+    minWidth: "45%",
+  },
+  text: {
+    fontSize: 12,
+    marginBottom: 5,
+    color: "#4a5568",
+  },
+  reference: {
+    marginBottom: 10,
+    padding: 10,
+    backgroundColor: "#f9fafb",
+    borderRadius: 4,
+  },
+  infoSection: {
+    marginBottom: 20,
+    padding: 10,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 5,
+  },
+  infoRow: {
+    flexDirection: "row",
+    marginBottom: 10,
+  },
+  infoColumn: {
+    flex: 1,
+  },
+  label: {
+    fontSize: 10,
+    color: "#666",
+    marginBottom: 2,
+  },
+  value: {
+    fontSize: 12,
+    color: "#000",
+  },
+  errorText: {
+    color: "#e53e3e",
+    fontSize: 12,
+    marginBottom: 5,
+  },
+  successText: {
+    color: "#38a169",
+    fontSize: 12,
+    marginBottom: 5,
+  },
+  warningText: {
+    color: "#d97706",
+    fontSize: 12,
+    marginBottom: 5,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 30,
+    left: 40,
+    right: 40,
+    fontSize: 10,
+    color: "#666",
+    textAlign: "center",
+    borderTop: "1 solid #e2e8f0",
+    paddingTop: 10,
+  },
+  pageNumber: {
+    position: "absolute",
+    bottom: 30,
+    right: 40,
+    fontSize: 10,
+    color: "#666",
   },
   subheader: {
     fontSize: 14,
-    color: "#6B7280", // gray-500
-    marginBottom: 20,
+    fontWeight: "bold",
+    color: "#e53e3e",
+    marginTop: 15,
+    marginBottom: 8,
   },
-  documentInfoSection: {
-    backgroundColor: "#F3F4F6", // gray-100
-    padding: 15,
-    marginBottom: 20,
-    borderRadius: 8,
-  },
-  infoGrid: {
-    display: "flex",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  infoItem: {
-    width: "45%",
-  },
-  label: {
+  bulletItem: {
     fontSize: 12,
-    color: "#6B7280", // gray-500
+    color: "#4a5568",
+    marginLeft: 20,
     marginBottom: 4,
   },
-  value: {
-    fontSize: 14,
-    color: "#111827", // gray-900
+  noIssuesText: {
+    fontSize: 12,
+    color: "#38a169",
+    marginLeft: 20,
+    marginBottom: 4,
+    fontStyle: "italic",
   },
-  analysisSection: {
-    marginBottom: 15,
-    borderBottom: 1,
-    borderBottomColor: "#E5E7EB", // gray-200
-    paddingBottom: 15,
-  },
-  analysisSectionHeader: {
-    fontSize: 18,
-    color: "#111827", // gray-900
-    marginBottom: 10,
-    fontWeight: "bold",
-  },
-  statusBadge: {
-    padding: "4 8",
+  detailSection: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: "#fff5f5",
     borderRadius: 4,
-    fontSize: 12,
-    marginLeft: 8,
   },
-  statusSuccess: {
-    backgroundColor: "#DEF7EC", // green-100
-    color: "#03543F", // green-900
-  },
-  statusError: {
-    backgroundColor: "#FDE8E8", // red-100
-    color: "#9B1C1C", // red-900
-  },
-  statusWarning: {
-    backgroundColor: "#FDF6B2", // yellow-100
-    color: "#723B13", // yellow-900
-  },
-  contentText: {
-    fontSize: 12,
-    color: "#374151", // gray-700
-    lineHeight: 1.5,
-  },
-  listItem: {
-    flexDirection: "row",
+  missingSectionTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#e53e3e",
     marginBottom: 5,
   },
-  bullet: {
-    width: 10,
+  missingSectionText: {
     fontSize: 12,
+    color: "#4a5568",
+    marginLeft: 15,
+    marginBottom: 3,
   },
-  matrixTable: {
-    width: "100%",
-    marginTop: 10,
+  statSuccess: {
+    backgroundColor: "#f0fff4",
   },
-  matrixCell: {
-    padding: 5,
-    fontSize: 10,
-    borderBottom: 1,
-    borderBottomColor: "#E5E7EB", // gray-200
+  statError: {
+    backgroundColor: "#fff5f5",
   },
-  recommendationsSection: {
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: "#F3F4F6", // gray-100
-    borderRadius: 8,
+  valueSuccess: {
+    color: "#38a169",
   },
-  recommendationsHeader: {
-    fontSize: 18,
-    color: "#111827", // gray-900
-    marginBottom: 10,
-  },
-  recommendationItem: {
-    marginBottom: 8,
-    fontSize: 12,
-    color: "#374151", // gray-700
+  valueError: {
+    color: "#e53e3e",
   },
 });
 
-const ReportPDF = ({ parsingResult, documentInfo, recommendations }) => {
-  const formatDuration = (seconds) => {
-    if (!seconds || isNaN(seconds)) return "N/A";
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return minutes === 0
-      ? `${remainingSeconds} seconds`
-      : `${minutes} min ${remainingSeconds} sec`;
-  };
+const ReportPDF = ({ parsingResult, metadata }) => (
+  <Document>
+    <Page size="A4" style={styles.page}>
+      {/* Header */}
+      <Text style={styles.header}>Document Analysis Report</Text>
+      <Text style={styles.dateTime}>
+        Generated on {new Date().toLocaleString()}
+      </Text>
 
-  const getStatusStyle = (status) => {
-    if (!status) return null;
-    status = status.toLowerCase();
-    if (["success", "pass", "passed"].includes(status))
-      return styles.statusSuccess;
-    if (["error", "fail", "failed"].includes(status)) return styles.statusError;
-    return styles.statusWarning;
-  };
-
-  const renderAnalysisContent = (type, data) => {
-    switch (type) {
-      case "references_validation":
-        return data.reformatted_references?.map((ref, index) => (
-          <View key={index} style={styles.listItem}>
-            <Text style={styles.contentText}>
-              Original: {ref.original}
-              {"\n"}
-              Reformatted: {ref.reformatted}
+      {/* Document Information */}
+      <View style={styles.infoSection}>
+        <View style={styles.infoRow}>
+          <View style={styles.infoColumn}>
+            <Text style={styles.label}>Document Name</Text>
+            <Text style={styles.value}>
+              {metadata?.documentName ||
+                parsingResult?.document_name ||
+                "Not available"}
             </Text>
           </View>
-        ));
-
-      case "content_analysis":
-        if (data.similarity_matrix && data.scope_sources) {
-          return (
-            <View style={styles.matrixTable}>
-              {data.similarity_matrix.map((row, i) => (
-                <View key={i} style={{ flexDirection: "row" }}>
-                  {row.map((value, j) => (
-                    <Text key={j} style={styles.matrixCell}>
-                      {Math.round(value * 100)}%
-                    </Text>
-                  ))}
-                </View>
-              ))}
-            </View>
-          );
-        }
-        return null;
-
-      case "business_value_analysis":
-        if (data["Business Value Evaluation"]) {
-          return (
-            <Text style={styles.contentText}>
-              {data["Business Value Evaluation"]}
+          <View style={styles.infoColumn}>
+            <Text style={styles.label}>File Size</Text>
+            <Text style={styles.value}>
+              {metadata?.fileSize ||
+                parsingResult?.file_size ||
+                "Not available"}
             </Text>
-          );
-        }
-        return null;
+          </View>
+        </View>
+        <View style={styles.infoRow}>
+          <View style={styles.infoColumn}>
+            <Text style={styles.label}>Upload Date</Text>
+            <Text style={styles.value}>
+              {metadata?.uploadDate ||
+                parsingResult?.upload_date ||
+                "Not available"}
+            </Text>
+          </View>
+          <View style={styles.infoColumn}>
+            <Text style={styles.label}>Analysis Duration</Text>
+            <Text style={styles.value}>
+              {metadata?.analysisDuration ||
+                parsingResult?.analysis_duration ||
+                "Not available"}
+            </Text>
+          </View>
+        </View>
+      </View>
 
-      default:
-        return (
-          <Text style={styles.contentText}>
-            {JSON.stringify(data, null, 2)}
-          </Text>
-        );
-    }
-  };
-
-  return (
-    <Document>
-      <Page size="A4" style={styles.page}>
-        {/* Header */}
+      {/* Structure Analysis */}
+      {(parsingResult.srs_validation || parsingResult.sdd_validation) && (
         <View style={styles.section}>
-          <Text style={styles.header}>Analysis Report</Text>
-          <Text style={styles.subheader}>
-            Generated on {new Date().toLocaleString()}
-          </Text>
-        </View>
+          <Text style={styles.sectionTitle}>Structure Analysis</Text>
 
-        {/* Document Info */}
-        <View style={styles.documentInfoSection}>
-          <View style={styles.infoGrid}>
-            <View style={styles.infoItem}>
-              <Text style={styles.label}>Document Name</Text>
-              <Text style={styles.value}>{documentInfo?.name || "N/A"}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.label}>File Size</Text>
-              <Text style={styles.value}>{documentInfo?.size || "N/A"}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.label}>Upload Date</Text>
-              <Text style={styles.value}>{documentInfo?.date || "N/A"}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.label}>Analysis Duration</Text>
-              <Text style={styles.value}>
-                {formatDuration(documentInfo?.duration)}
-              </Text>
-            </View>
-          </View>
-        </View>
+          {/* SRS Validation */}
+          {parsingResult.srs_validation && (
+            <View style={styles.section}>
+              <Text style={styles.subsectionTitle}>SRS Structure</Text>
+              <View style={styles.statContainer}>
+                <View style={[styles.stat, { backgroundColor: "#f0fff4" }]}>
+                  <Text style={styles.label}>Matching Sections</Text>
+                  <Text style={[styles.value, { color: "#38a169" }]}>
+                    {
+                      parsingResult.srs_validation.structure_validation
+                        .matching_sections.length
+                    }
+                  </Text>
+                </View>
+                <View style={[styles.stat, { backgroundColor: "#fff5f5" }]}>
+                  <Text style={styles.label}>Missing Sections</Text>
+                  <Text style={[styles.value, { color: "#e53e3e" }]}>
+                    {
+                      parsingResult.srs_validation.structure_validation
+                        .missing_sections.length
+                    }
+                  </Text>
+                </View>
+                <View style={[styles.stat, { backgroundColor: "#fff5f5" }]}>
+                  <Text style={styles.label}>Order Issues</Text>
+                  <Text style={[styles.value, { color: "#e53e3e" }]}>
+                    {
+                      parsingResult.srs_validation.structure_validation
+                        .misplaced_sections.length
+                    }
+                  </Text>
+                </View>
+              </View>
 
-        {/* Analysis Sections */}
-        {Object.entries(parsingResult || {}).map(([key, value]) => (
-          <View key={key} style={styles.analysisSection}>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text style={styles.analysisSectionHeader}>
-                {key
-                  .replace(/_/g, " ")
-                  .replace(/\b\w/g, (l) => l.toUpperCase())}
-              </Text>
-              {value.status && (
-                <Text
-                  style={[styles.statusBadge, getStatusStyle(value.status)]}
-                >
-                  {value.status}
+              <Text style={styles.subheader}>Missing Sections:</Text>
+              {parsingResult.srs_validation.structure_validation
+                .missing_sections.length > 0 ? (
+                parsingResult.srs_validation.structure_validation.missing_sections.map(
+                  (section, index) => (
+                    <Text key={index} style={styles.bulletItem}>
+                      • {section}
+                    </Text>
+                  )
+                )
+              ) : (
+                <Text style={styles.noIssuesText}>
+                  No missing sections found
                 </Text>
               )}
-            </View>
-            {renderAnalysisContent(key, value)}
-          </View>
-        ))}
 
-        {/* Recommendations */}
-        {recommendations && (
-          <View style={styles.recommendationsSection}>
-            <Text style={styles.recommendationsHeader}>Recommendations</Text>
-            {recommendations.recommendations.split("\n").map((rec, index) => (
-              <Text key={index} style={styles.recommendationItem}>
-                • {rec}
+              <Text style={styles.subheader}>Missing Subsections:</Text>
+              {parsingResult.srs_validation.structure_validation
+                .missing_subsections?.length > 0 ? (
+                parsingResult.srs_validation.structure_validation.missing_subsections.map(
+                  (subsection, index) => (
+                    <Text key={index} style={styles.bulletItem}>
+                      • {subsection}
+                    </Text>
+                  )
+                )
+              ) : (
+                <Text style={styles.noIssuesText}>
+                  No missing subsections found
+                </Text>
+              )}
+
+              <Text style={styles.subheader}>Order Issues:</Text>
+              {parsingResult.srs_validation.structure_validation
+                .misplaced_sections.length > 0 ? (
+                parsingResult.srs_validation.structure_validation.misplaced_sections.map(
+                  (section, index) => (
+                    <Text key={index} style={styles.bulletItem}>
+                      • {section}
+                    </Text>
+                  )
+                )
+              ) : (
+                <Text style={styles.noIssuesText}>No order issues found</Text>
+              )}
+            </View>
+          )}
+
+          {/* SDD Validation */}
+          {parsingResult.sdd_validation && (
+            <View style={styles.section}>
+              <Text style={styles.subsectionTitle}>SDD Structure</Text>
+              <View style={styles.statContainer}>
+                <View style={styles.stat}>
+                  <Text style={styles.text}>
+                    Matching Sections:{" "}
+                    {
+                      parsingResult.sdd_validation.structure_validation
+                        .matching_sections.length
+                    }
+                  </Text>
+                </View>
+                <View style={styles.stat}>
+                  <Text style={styles.text}>
+                    Missing Sections:{" "}
+                    {
+                      parsingResult.sdd_validation.structure_validation
+                        .missing_sections.length
+                    }
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* References Analysis */}
+      {parsingResult.references_validation && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>References Analysis</Text>
+          <View style={styles.statContainer}>
+            <View style={styles.stat}>
+              <Text style={styles.text}>
+                Total References:{" "}
+                {parsingResult.references_validation.statistics
+                  ?.total_references || 0}
               </Text>
-            ))}
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.text}>
+                Valid References:{" "}
+                {parsingResult.references_validation.statistics
+                  ?.valid_references || 0}
+              </Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.text}>
+                Cited References:{" "}
+                {parsingResult.references_validation.statistics
+                  ?.cited_references || 0}
+              </Text>
+            </View>
           </View>
-        )}
-      </Page>
-    </Document>
-  );
-};
+        </View>
+      )}
+
+      {/* Content Analysis */}
+      {parsingResult.content_analysis && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Content Analysis</Text>
+          {parsingResult.content_analysis.similarity_matrix && (
+            <View style={styles.section}>
+              <Text style={styles.subsectionTitle}>Content Similarity</Text>
+              <Text style={styles.text}>
+                Number of Sections Analyzed:{" "}
+                {parsingResult.content_analysis.scope_sources?.length || 0}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Spelling and Grammar */}
+      {parsingResult.spelling_check && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Spelling and Grammar Analysis</Text>
+          <View style={styles.statContainer}>
+            <View style={styles.stat}>
+              <Text style={styles.text}>
+                Misspelled Words:{" "}
+                {parsingResult.spelling_check.misspelled_count || 0}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Business Value Analysis */}
+      {parsingResult.business_value_analysis && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Business Value Analysis</Text>
+          <Text style={styles.text}>
+            {parsingResult.business_value_analysis[
+              "Business Value Evaluation"
+            ] || "No business value evaluation available"}
+          </Text>
+        </View>
+      )}
+
+      {/* Footer */}
+      <Text style={styles.footer}>
+        Document Analysis Report • Generated by Analysis System
+      </Text>
+
+      <Text
+        style={styles.pageNumber}
+        render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
+        fixed
+      />
+    </Page>
+  </Document>
+);
 
 export default ReportPDF;
