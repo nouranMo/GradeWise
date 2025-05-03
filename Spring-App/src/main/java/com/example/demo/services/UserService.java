@@ -1,5 +1,6 @@
 package com.example.demo.services;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,13 +36,17 @@ public class UserService implements UserDetailsService {
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getEmail())
                 .password(user.getPassword())
-                .authorities("ROLE_USER")
+                .authorities("ROLE_" + user.getRole())
                 .build();
     }
 
-    public User registerUser(String email, String password, String firstName, String lastName) {
+    public User registerUser(String email, String password, String firstName, String lastName, String role) {
         if (userRepository.findByEmail(email).isPresent()) {
             throw new IllegalArgumentException("Email already exists");
+        }
+
+        if (role == null || (!role.equals("PROFESSOR") && !role.equals("STUDENT"))) {
+            role = "STUDENT";
         }
 
         User user = new User();
@@ -49,6 +54,7 @@ public class UserService implements UserDetailsService {
         user.setPassword(passwordEncoder.encode(password));
         user.setFirstName(firstName);
         user.setLastName(lastName);
+        user.setRole(role);
         user.setEnabled(true);
 
         return userRepository.save(user);
@@ -75,5 +81,13 @@ public class UserService implements UserDetailsService {
 
     public User save(User user) {
         return userRepository.save(user);
+    }
+
+    public List<User> findAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public User findById(String id) {
+        return userRepository.findById(id).orElse(null);
     }
 }

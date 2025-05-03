@@ -2,22 +2,21 @@ package com.example.demo.controllers;
 
 import com.example.demo.models.User;
 import com.example.demo.services.UserService;
+import com.example.demo.security.JwtTokenProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Collections;
+import java.util.Base64;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -27,105 +26,104 @@ public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     @Autowired
-    private AuthenticationManager authenticationManager;
-
-    @Autowired
     private UserService userService;
 
     @Autowired
-    private PasswordEncoder passwordEncoder;
+    private JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@RequestBody Map<String, String> loginRequest) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            String email = loginRequest.get("email");
-            String password = loginRequest.get("password");
-
-            logger.info("Login attempt for user: {}", email);
-
-            // Attempt authentication
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email, password));
-
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            // Get user details
-            User user = userService.findByEmail(email);
-
-            logger.info("User authenticated successfully: {}", user.getEmail());
-
+            logger.info("Login attempt for: " + loginRequest.getEmail());
+            
+            User user = userService.authenticateUser(loginRequest.getEmail(), loginRequest.getPassword());
+            logger.info("User authenticated successfully: " + user.getEmail());
+            
+            // Generate JWT token using the provider
+            String token = jwtTokenProvider.generateToken(user);
+            logger.info("JWT token generated successfully");
+            
+            // Create response with user details and token
             Map<String, Object> response = new HashMap<>();
-            response.put("status", "success");
             response.put("message", "Login successful");
-
-            Map<String, Object> userData = new HashMap<>();
-            userData.put("id", user.getId());
-            userData.put("email", user.getEmail());
-            userData.put("firstName", user.getFirstName());
-            userData.put("lastName", user.getLastName());
-            // Don't try to access roles since it doesn't exist
-
-            response.put("user", userData);
-
+            
+            // Create user map safely handling null values
+            Map<String, Object> userMap = new HashMap<>();
+            userMap.put("id", user.getId());
+            userMap.put("email", user.getEmail());
+            userMap.put("firstName", user.getFirstName() != null ? user.getFirstName() : "");
+            userMap.put("lastName", user.getLastName() != null ? user.getLastName() : "");
+            userMap.put("role", user.getRole() != null ? user.getRole() : "");
+            
+            response.put("user", userMap);
+            response.put("token", token);
+            response.put("status", "success");
+            
+            logger.info("Login response prepared successfully");
             return ResponseEntity.ok(response);
-        } catch (AuthenticationException e) {
-            logger.error("Authentication failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("status", "error", "message", "Invalid email or password"));
         } catch (Exception e) {
-            logger.error("Error during authentication: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("status", "error", "message", "Authentication failed: " + e.getMessage()));
+            logger.error("Login error: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Authentication failed"));
         }
     }
 
+    // Add this method to generate a simple JWT token
+    private String generateJwtToken(User user) {
+        // This is a simple implementation - in production, use a proper JWT library
+        String secretKey = "YourSuperSecretKeyThatIsAtLeast512BitsLongAndSecureEnoughForHS512Algorithm1234567890";
+        
+        long now = System.currentTimeMillis();
+        long expirationTime = now + 86400000; // 24 hours
+        
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", user.getEmail());
+        claims.put("id", user.getId());
+        claims.put("role", user.getRole());
+        claims.put("iat", now);
+        claims.put("exp", expirationTime);
+        
+        // In a real implementation, you would use the JWT library to sign this
+        // For now, we'll just create a simple encoded string
+        String encodedClaims = Base64.getEncoder().encodeToString(claims.toString().getBytes());
+        String encodedHeader = Base64.getEncoder().encodeToString("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes());
+        String signature = Base64.getEncoder().encodeToString(
+            (encodedHeader + "." + encodedClaims + secretKey).getBytes()
+        );
+        
+        return encodedHeader + "." + encodedClaims + "." + signature;
+    }
+
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody Map<String, Object> signUpRequest) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest) {
         try {
-            String email = (String) signUpRequest.get("email");
-            String password = (String) signUpRequest.get("password");
-            String firstName = (String) signUpRequest.get("firstName");
-            String lastName = (String) signUpRequest.get("lastName");
-
-            logger.info("Registration attempt for email: {}", email);
-
-            // Check if email exists
-            if (userService.findByEmail(email) != null) {
-                logger.warn("Email {} is already in use", email);
-                return ResponseEntity.badRequest()
-                        .body(Map.of("status", "error", "message", "Email is already in use"));
+            // Default role is STUDENT for all miuegypt.edu.eg emails
+            String role = "STUDENT";
+            
+            // Only set as PROFESSOR for admin@gmail.com (for testing)
+            if (registerRequest.getEmail().equals("admin@gmail.com")) {
+                role = "PROFESSOR";
             }
-
-            // Create new user using the same pattern as in UserController
-            User newUser = new User();
-            newUser.setEmail(email);
-            newUser.setPassword(passwordEncoder.encode(password));
-            newUser.setFirstName(firstName);
-            newUser.setLastName(lastName);
-            newUser.setEnabled(true);
-
-            // Save the user
-            User user = userService.save(newUser);
-
-            logger.info("User registered successfully: {}", user.getEmail());
-
+            
+            User user = userService.registerUser(
+                registerRequest.getEmail(), 
+                registerRequest.getPassword(),
+                registerRequest.getFirstName(),
+                registerRequest.getLastName(),
+                role
+            );
+            
+            // Create response with user details including role
             Map<String, Object> response = new HashMap<>();
-            response.put("status", "success");
-            response.put("message", "User registered successfully");
-
-            Map<String, Object> userData = new HashMap<>();
-            userData.put("id", user.getId());
-            userData.put("email", user.getEmail());
-            userData.put("firstName", user.getFirstName());
-            userData.put("lastName", user.getLastName());
-
-            response.put("user", userData);
-
+            response.put("id", user.getId());
+            response.put("email", user.getEmail());
+            response.put("firstName", user.getFirstName());
+            response.put("lastName", user.getLastName());
+            response.put("role", user.getRole());
+            
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("Registration failed: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("status", "error", "message", "Registration failed: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 }

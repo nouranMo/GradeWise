@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -13,6 +13,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [csrfToken, setCsrfToken] = useState("");
 
   const [errors, setErrors] = useState({
     email: "",
@@ -25,6 +26,26 @@ const LoginPage = () => {
   const [isFormValidated, setIsFormValidated] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  useEffect(() => {
+    const fetchCsrfToken = async () => {
+      try {
+        const response = await fetch("http://localhost:8080/api/auth/csrf-token", {
+          method: "GET",
+          credentials: "include",
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setCsrfToken(data.token);
+        }
+      } catch (error) {
+        console.error("Failed to fetch CSRF token:", error);
+      }
+    };
+    
+    fetchCsrfToken();
+  }, []);
 
   React.useEffect(() => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -72,6 +93,8 @@ const LoginPage = () => {
 
     setIsLoading(true);
     try {
+      console.log("Attempting login with email:", email);
+      
       const response = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: {
@@ -81,6 +104,7 @@ const LoginPage = () => {
           email,
           password,
         }),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -89,11 +113,36 @@ const LoginPage = () => {
       }
 
       const data = await response.json();
-      login(data);
+      console.log("Login successful, user data:", data);
+      
+      // Store the token if it exists
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        console.log("Token stored in localStorage");
+      }
+      
+      // Extract the user object from the response
+      const userData = data.user || data;
+      
+      // Log the actual user data we're storing
+      console.log("Storing user data:", userData);
+      
+      login(userData);
       toast.success("Login successful!");
-      navigate("/dashboard");
+      
+      // Redirect based on email (not role)
+      if (userData.email === "admin@gmail.com") {
+        console.log("Admin detected, redirecting to admin panel");
+        navigate("/admin");
+      } else if (userData.role === "PROFESSOR") {
+        console.log("Professor detected, redirecting to professor dashboard");
+        navigate("/professor");
+      } else {
+        console.log("Student detected, redirecting to student dashboard");
+        navigate("/dashboard");
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Login error:", error);
       toast.error(error.message || "Failed to login");
     } finally {
       setIsLoading(false);
@@ -201,6 +250,24 @@ const LoginPage = () => {
                 "Login"
               )}
             </button>
+
+            {email === "admin@gmail.com" && (
+              <div className="mt-4 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (password) {
+                      navigate("/admin");
+                    } else {
+                      toast.error("Please enter your password");
+                    }
+                  }}
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  Direct Access to Admin Panel
+                </button>
+              </div>
+            )}
           </form>
 
           <p className="mt-6 text-center text-sm sm:text-base">

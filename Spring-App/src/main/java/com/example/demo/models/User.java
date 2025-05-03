@@ -25,6 +25,8 @@ public class User {
 
     private boolean enabled = true;
 
+    private String role; // "STUDENT" or "PROFESSOR"
+
     // Getters and Setters
     public String getId() {
         return id;
@@ -72,5 +74,13 @@ public class User {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 }

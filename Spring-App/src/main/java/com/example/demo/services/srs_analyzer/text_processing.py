@@ -181,8 +181,21 @@ class TextProcessor:
         logger.info("Parsing document sections")
         
         try:
-            # Use SectionParser to get only the main sections
-            sections_dict = SectionParser.parse_sections(text)
+            # Add more debug logging
+            logger.info(f"Document length: {len(text)} characters")
+            
+            # Check if text is empty or too short
+            if not text or len(text) < 100:
+                logger.warning("Document text is too short or empty")
+                return []
+            
+            # Use SectionParser to get only the main sections for SRS documents
+            sections_dict = SectionParser.parse_sections_content_analysis(text)
+            
+            # Log the sections found
+            logger.info(f"Found {len(sections_dict)} sections in the document")
+            for section_title in sections_dict.keys():
+                logger.info(f"Found section: {section_title}")
             
             # Convert dictionary to list format for compatibility
             segments = []
@@ -193,7 +206,7 @@ class TextProcessor:
             
             return segments
         except Exception as e:
-            logger.error(f"Error parsing document sections: {e}")
+            logger.error(f"Error parsing document sections: {e}", exc_info=True)
             return []
 
     def extract_sections_with_figures(self, text: str):
@@ -265,27 +278,21 @@ class TextProcessor:
                 logger.debug("Text too short for summarization, returning original")
                 return text
 
-            # Generate summary using model
-            model = openai.ChatCompletion.create(
-                model="gpt-4-vision-preview",
+            # Generate summary using updated OpenAI API
+            client = openai.OpenAI()
+            response = client.chat.completions.create(
+                model="gpt-4",
                 messages=[
                     {
                         "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": f"Summarize this text concisely, focusing on key points: {text}"
-                            }
-                        ]
+                        "content": f"Summarize this text concisely, focusing on key points: {text}"
                     }
                 ],
                 max_tokens=max_length * 4,
-                temperature=0.3,
-                top_p=0.8,
-                top_k=40
+                temperature=0.3
             )
             
-            return model.choices[0].message.content
+            return response.choices[0].message.content
         except Exception as e:
             logger.error(f"Error generating section scope: {e}")
             # Fallback: return truncated version of original text
@@ -607,7 +614,8 @@ class TextProcessor:
             
             Format the response as a clear, structured system scope."""
             
-            response = openai.ChatCompletion.create(
+            client = openai.OpenAI()
+            response = client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {
@@ -825,9 +833,10 @@ class TextProcessor:
                         Boundaries: [System boundaries and interfaces]
                         """
                         
-                        # Call OpenAI vision model
-                        response = openai.ChatCompletion.create(
-                            model="gpt-4o-mini",
+                        # Call OpenAI vision model with updated API
+                        client = openai.OpenAI()
+                        response = client.chat.completions.create(
+                            model="gpt-4-vision-preview",
                             messages=[
                                 {
                                     "role": "user",

@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "contexts/AuthContext";
+import { ProtectedRoute } from 'components/ProtectedRoute';
 
 import LandingPage from "pages/LandingPage";
 import Dashboard from "pages/Dashboard";
@@ -13,8 +14,11 @@ import UMLparsing from "components/uml/UMLparsing";
 import SectionExtraction from "components/uml/sectionExtraction";
 import ParsingResultPage from "pages/ParsingResultPage";
 import UMLReport from "components/uml/UMLReport";
+import AdminPanel from "pages/AdminPanel";
 
 function App() {
+  console.log("App rendering with routes including /admin");
+
   return (
     <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
       <AuthProvider>
@@ -22,17 +26,54 @@ function App() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-
-            {/* /professor should be merged with /dashboard with a condition that checks role */}
-            <Route path="/professor" element={<ProfessorDashboard />} />
-
-            <Route path="/report" element={<Report />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/umlparsing" element={<UMLparsing />} />
-            <Route path="/sectionextraction" element={<SectionExtraction />} />
-            <Route path="/umlreport" element={<UMLReport />} />
-            <Route path="/parsing-result" element={<ParsingResultPage />} />
+            
+            {/* Protected Student Routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute requiredRole="STUDENT">
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* Protected Professor Routes */}
+            <Route path="/professor" element={
+              <ProtectedRoute requiredRole="PROFESSOR">
+                <ProfessorDashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* Routes that need authentication but not specific role */}
+            <Route path="/report" element={
+              <ProtectedRoute>
+                <Report />
+              </ProtectedRoute>
+            } />
+            <Route path="/umlparsing" element={
+              <ProtectedRoute>
+                <UMLparsing />
+              </ProtectedRoute>
+            } />
+            <Route path="/sectionextraction" element={
+              <ProtectedRoute>
+                <SectionExtraction />
+              </ProtectedRoute>
+            } />
+            <Route path="/umlreport" element={
+              <ProtectedRoute>
+                <UMLReport />
+              </ProtectedRoute>
+            } />
+            <Route path="/parsing-result" element={
+              <ProtectedRoute>
+                <ParsingResultPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute requiredRole="ADMIN">
+                {console.log("Admin route accessed")}
+                <AdminPanel />
+              </ProtectedRoute>
+            } />
           </Routes>
         </Router>
       </AuthProvider>

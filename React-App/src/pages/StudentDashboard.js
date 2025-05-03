@@ -19,13 +19,18 @@ const StudentDashboard = () => {
       console.log("Fetching student submissions from API");
       setIsLoading(true);
 
+      // Get the authentication token
+      const token = localStorage.getItem("token");
+      
       // Add a cache-busting parameter to avoid browser caching
       const response = await fetch(
         `${API_URL}/api/submissions/student?t=${new Date().getTime()}`,
         {
           headers: {
             "Cache-Control": "no-cache",
-            Pragma: "no-cache",
+            "Pragma": "no-cache",
+            "Authorization": `Bearer ${token || ""}`,
+            "Content-Type": "application/json"
           },
         }
       );
@@ -50,6 +55,11 @@ const StudentDashboard = () => {
           clearInterval(refreshInterval);
           setRefreshInterval(null);
         }
+      } else if (response.status === 401 || response.status === 403) {
+        // Handle unauthorized or forbidden
+        console.error("Authentication error:", response.status);
+        toast.error("Please log in to view your submissions");
+        navigate("/login");
       } else {
         console.error(
           "Failed to fetch student submissions:",

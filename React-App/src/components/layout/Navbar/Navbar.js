@@ -40,11 +40,11 @@ const userMenuItems = [
 ];
 
 export default function NavBar() {
-  const { user, logout } = useAuth();
+  const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
-  const isAuthenticated = !!user;
-  const userEmail = user?.email;
+  const isAuthenticated = !!currentUser;
+  const userEmail = currentUser?.email;
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -77,7 +77,7 @@ export default function NavBar() {
 
       {/* Desktop Menu */}
       <div className="hidden md:block">
-        {isAuthenticated && user ? (
+        {isAuthenticated && currentUser ? (
           <DropdownMenu.Root
             open={isDropdownOpen}
             onOpenChange={setIsDropdownOpen}
@@ -133,13 +133,22 @@ export default function NavBar() {
             </button>
           </Link>
         )}
+
+        {currentUser && currentUser.email === "admin@gmail.com" && (
+          <Link 
+            to="/admin" 
+            className="text-gray-800 hover:text-red-600 px-3 py-2 rounded-md text-sm font-medium ml-4"
+          >
+            Admin Panel
+          </Link>
+        )}
       </div>
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="absolute top-full left-0 right-0 bg-white shadow-lg md:hidden">
           <div className="p-4">
-            {isAuthenticated && user ? (
+            {isAuthenticated && currentUser ? (
               <>
                 <div className="px-4 py-2 text-sm text-gray-600">
                   {userEmail}
