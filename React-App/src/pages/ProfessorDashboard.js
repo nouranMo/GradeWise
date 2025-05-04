@@ -492,6 +492,7 @@ function ProfessorDashboard() {
         SpellCheck: false,
         PlagiarismCheck: false,
         FullAnalysis: false,
+        ContentAnalysis: false,
       });
     }
 

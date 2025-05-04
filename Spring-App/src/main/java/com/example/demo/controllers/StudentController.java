@@ -4,6 +4,9 @@ import com.example.demo.models.DocumentModel;
 import com.example.demo.models.SubmissionModel;
 import com.example.demo.services.DocumentService;
 import com.example.demo.services.SubmissionService;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +17,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/student")
@@ -56,9 +55,9 @@ public class StudentController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "name", required = false) String name) {
         try {
-            System.out.println("Received student file upload request");
-            System.out.println("File name: " + file.getOriginalFilename());
-            System.out.println("File size: " + file.getSize());
+            logger.info("Received student file upload request");
+            logger.info("File name: {}", file.getOriginalFilename());
+            logger.info("File size: {}", file.getSize());
 
             if (file.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
@@ -66,25 +65,30 @@ public class StudentController {
 
             // Get current user
             String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-            System.out.println("Current student: " + currentUserEmail);
+            logger.info("Current student: {}", currentUserEmail);
 
-            // Save document without analysis preferences (will be analyzed later when
-            // submitted)
+            // Save document without analysis preferences (will be analyzed later when submitted)
             DocumentModel document = documentService.saveDocumentWithoutAnalysis(
                     currentUserEmail,
                     file,
                     name != null ? name : file.getOriginalFilename());
 
-            System.out.println("Student document saved with ID: " + document.getId());
-            System.out.println("Document saved at path: " + document.getFilePath());
+            logger.info("Student document saved with ID: {}", document.getId());
+            logger.info("Document saved at path: {}", document.getFilePath());
+            
+            // Ensure the document has a status that makes it visible
+            if (document.getStatus() == null) {
+                document.setStatus("Uploaded");
+                documentService.saveDocument(document.getName(), null, null, document.getUserId());
+                logger.info("Updated document status to 'Uploaded'");
+            }
 
             // Return response with document
             return ResponseEntity.ok(Map.of(
                     "message", "Document uploaded successfully",
                     "document", document));
         } catch (Exception e) {
-            System.out.println("Error uploading student document: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error uploading student document: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to upload document: " + e.getMessage()));
         }

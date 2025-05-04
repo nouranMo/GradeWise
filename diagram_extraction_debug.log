@@ -1,0 +1,36 @@
+Extracting and analyzing diagrams from PDF
+Starting diagram extraction from: uploads\1746381134_4426894d-bcf3-479e-bc74-cdfce9ae46a2.pdf
+PDF has 31 pages
+Found 37 sections in the PDF
+Found important figure: Figure_9_System_Overview of type system overview
+Found important figure: Figure_9_System_Overview of type system overview
+Found important figure: Figure_15_First_Phase_of_Project_Plan_Gantt_Chart of type gantt chart
+Found important figure: Figure_15_First_Phase_of_Project_Plan_Gantt_Chart of type gantt chart
+Found section about system overview: Section_3_2_System_Overview
+Found section about system context: Section_3_4_System_Context
+Found 4 important figures: ['Figure_9_System_Overview', 'Figure_15_First_Phase_of_Project_Plan_Gantt_Chart', 'Section_3_2_System_Overview', 'Section_3_4_System_Context']
+Added placeholder scope for System Overview
+Added placeholder scope for System Context Diagram
+Added placeholder scope for Use Case Diagram
+Added placeholder scope for EERD
+Added placeholder scope for Entity Relationship Diagram
+Added placeholder scope for Class Diagram
+Added placeholder scope for Gantt Chart
+Extracting images for 4 important figures
+Target figure names: ['Figure_9_System_Overview', 'Figure_15_First_Phase_of_Project_Plan_Gantt_Chart', 'Section_3_2_System_Overview', 'Section_3_4_System_Context', 'system_overview', 'gantt_chart', 'system_overview', 'system_context']
+Extracted 23 images from PDF: ['uploads\\Academic\\page_5img1.png', 'uploads\\Academic\\page_6img1.png', 'uploads\\WorxAR\\page_7img1.png', 'uploads\\WorxAR\\page_7img2.png', 'uploads\\WorxAR\\page_7img3.png', 'uploads\\WorxAR\\page_7img4.png', 'uploads\\Re’flekt One\\page_8img1.png', 'uploads\\Re’flekt One\\page_8img2.png', 'uploads\\AR instructions overlay and object tracking\\page_9img1.png', 'uploads\\System Context\\page_11img1.png', 'uploads\\System Functions\\page_13img1.png', 'uploads\\Dataset\\page_19img1.png', 'uploads\\Database\\page_21img1.png', 'uploads\\Preliminary Object-Oriented Domain Analysis\\page_22img1.png', 'uploads\\Project Plan\\page_24img1.png', 'uploads\\Project Plan\\page_25img1.png', 'uploads\\Project Plan\\page_25img2.png', 'uploads\\Project Plan\\page_26img1.png', 'uploads\\Project Plan\\page_26img2.png', 'uploads\\Project Plan\\page_26img3.png', 'uploads\\Abou Ghaly Motors Collaboration\\page_28img1.png', 'uploads\\Abou Ghaly Motors Collaboration\\page_29img1.png', 'uploads\\Wikitude Edu License\\page_30img1.png']
+Processing figures of type: system overview
+Found 2 figures of type system overview: ['Figure_9_System_Overview', 'Section_3_2_System_Overview']
+Processing figures of type: system context
+Found 1 figures of type system context: ['Section_3_4_System_Context']
+Processing figures of type: use case
+No figures found of type use case
+Processing figures of type: eerd
+No figures found of type eerd
+Processing figures of type: entity relationship
+No figures found of type entity relationship
+Processing figures of type: class diagram
+No figures found of type class diagram
+Processing figures of type: gantt chart
+Found 1 figures of type gantt chart: ['Figure_15_First_Phase_of_Project_Plan_Gantt_Chart']
+Finished diagram extraction. Found 7 diagram scopes: ['System Overview', 'System Context Diagram', 'Use Case Diagram', 'EERD', 'Entity Relationship Diagram', 'Class Diagram', 'Gantt Chart']

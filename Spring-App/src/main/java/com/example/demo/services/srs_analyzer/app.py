@@ -402,8 +402,9 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     "figure_count": 0
                 }
 
-                print("Parsing document sections...")
-                sections = text_processor.parse_document_sections(pdf_text)
+                print(f"Parsing document sections for document type: {document_type}...")
+                # Pass document_type to parse_document_sections
+                sections = text_processor.parse_document_sections(pdf_text, document_type)
                 content_analysis["sections"] = sections
                 print(f"Found {len(sections)} sections")
 
@@ -469,17 +470,33 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     print(f"Added {len(diagram_scopes)} diagram scopes")
 
                 if all_scopes:
-                    print("\nCreating similarity matrix...")
+                    print("\nCreating filtered similarity matrix...")
                     section_titles = [section.split('\n', 1)[0] for section in sections]
                     if diagram_scopes:
                         section_titles.extend(diagram_scopes.keys())
                     
-                    content_analysis["scope_sources"] = section_titles
-                    content_analysis["similarity_matrix"] = similarity_analyzer.create_similarity_matrix(all_scopes)
-                    print(f"Created similarity matrix with {len(section_titles)} scopes")
+                    # Use the filtered similarity matrix function
+                    filtered_matrix, filtered_section_titles, relationship_analyses = similarity_analyzer.create_filtered_similarity_matrix(all_scopes)
+                    
+                    content_analysis["scope_sources"] = filtered_section_titles
+                    content_analysis["similarity_matrix"] = filtered_matrix
+                    content_analysis["relationship_analyses"] = relationship_analyses
+                    
+                    print(f"Created filtered similarity matrix with {len(filtered_section_titles)} scopes")
+                    print(f"Generated {len(relationship_analyses)} relationship analyses")
 
-                diagram_count = len([scope for scope in content_analysis["scope_sources"] if scope.startswith("Diagram_")])
-                
+                # Process diagram relationships
+                diagram_relationships = similarity_analyzer.analyze_diagram_relationships(
+                    content_analysis["similarity_matrix"], 
+                    content_analysis["scope_sources"]
+                )
+
+                # Add diagram relationships to the response
+                content_analysis["diagram_relationships"] = diagram_relationships["diagram_relationships"]
+                content_analysis["diagram_count"] = diagram_relationships["diagram_count"]
+
+                print(f"Found {diagram_relationships['diagram_count']} diagrams with {len(diagram_relationships['diagram_relationships'])} relationships")
+
                 # Improved important diagrams detection - more permissive matching
                 important_diagrams = []
                 important_diagram_types = [
@@ -559,32 +576,6 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                 print(f"scope_sources ({len(content_analysis['scope_sources'])}): {content_analysis['scope_sources']}")
                 print(f"important_diagrams ({len(important_diagrams)}): {important_diagrams}")
                 
-                # Always regenerate the similarity matrix
-                print("\nRegenerating similarity matrix with ALL required diagram types")
-                
-                # Create a fresh copy of all_scopes to ensure consistency
-                final_scopes = dict(all_scopes)
-                content_analysis["similarity_matrix"] = similarity_analyzer.create_similarity_matrix(final_scopes)
-                
-                # Debug the created matrix
-                matrix = content_analysis["similarity_matrix"]
-                if matrix:
-                    print(f"Matrix dimensions: {len(matrix)} x {len(matrix[0]) if matrix else 0}")
-                else:
-                    print("WARNING: Created matrix is empty!")
-                
-                print(f"Final important diagrams list ({len(important_diagrams)}): {important_diagrams}")
-                
-                # Make sure scope_sources matches the matrix dimensions
-                if len(content_analysis["scope_sources"]) != len(matrix):
-                    print("WARNING: Scope sources length doesn't match matrix dimensions!")
-                    print(f"Scope sources: {len(content_analysis['scope_sources'])}, Matrix: {len(matrix)}")
-                    
-                    # Fix scope_sources to match matrix if needed
-                    if len(final_scopes) == len(matrix):
-                        print("Fixing scope_sources to match matrix dimensions")
-                        content_analysis["scope_sources"] = list(final_scopes.keys())
-                
                 response["content_analysis"] = {
                     "similarity_matrix": content_analysis["similarity_matrix"],
                     "scope_sources": content_analysis["scope_sources"],
@@ -593,10 +584,12 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     "important_diagrams": important_diagrams,
                     "sections": sections,
                     "diagram_analysis": {
-                        "total_diagrams": diagram_count,
+                        "total_diagrams": diagram_relationships["diagram_count"],
                         "important_diagrams": important_diagrams,
-                        "diagram_scopes": diagram_scopes
-                    }
+                        "diagram_scopes": diagram_scopes,
+                        "diagram_relationships": content_analysis.get("diagram_relationships", [])
+                    },
+                    "relationship_analyses": content_analysis.get("relationship_analyses", {})
                 }
                 print("Content analysis completed")
 

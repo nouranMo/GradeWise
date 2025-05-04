@@ -378,12 +378,27 @@ class SectionParser:
         return validation_results
 
     @staticmethod
-    def parse_sections_content_analysis(text):
-        """Parse document into sections for content analysis, focusing on SRS sections."""
-        logger.info("Parsing sections for content analysis (SRS)")
+    def parse_sections_content_analysis(text, document_type="SRS"):
+        """Parse document into sections for content analysis.
         
-        # Use the SRS predefined structure
-        predefined_structure = SectionParser.PREDEFINED_STRUCTURES["SRS"]
+        Args:
+            text (str): The document text to parse
+            document_type (str): The type of document ('SRS' or 'SDD')
+        
+        Returns:
+            dict: A dictionary of section titles and their content
+        """
+        logger.info(f"Parsing sections for content analysis ({document_type})")
+        
+        # Use the appropriate predefined structure based on document type
+        if document_type == "SRS":
+            predefined_structure = SectionParser.PREDEFINED_STRUCTURES["SRS"]
+        elif document_type == "SDD":
+            predefined_structure = SectionParser.PREDEFINED_STRUCTURES["SDD"]
+        else:
+            logger.warning(f"Unknown document type: {document_type}, defaulting to SRS")
+            predefined_structure = SectionParser.PREDEFINED_STRUCTURES["SRS"]
+        
         main_sections = list(predefined_structure.keys())
         sections_dict = {}
         
@@ -400,7 +415,7 @@ class SectionParser:
             pattern = rf'^(?:{re.escape(section)}|(?:\d+(?:\.\d+)*)?\s*{re.escape(stripped)})(?:\s|$)'
             section_patterns[section] = re.compile(pattern, re.IGNORECASE)
         
-        logger.debug(f"Created {len(section_patterns)} section patterns")
+        logger.debug(f"Created {len(section_patterns)} section patterns for {document_type}")
         
         for line in lines:
             line = line.strip()
