@@ -1,0 +1,1031 @@
+{
+    "diagram_type": "class",
+    "components": [
+        {
+            "id": 1,
+            "type": "methods",
+            "coords": [
+                678,
+                562,
+                839,
+                621
+            ]
+        },
+        {
+            "id": 2,
+            "type": "methods",
+            "coords": [
+                66,
+                701,
+                229,
+                758
+            ]
+        },
+        {
+            "id": 3,
+            "type": "methods",
+            "coords": [
+                678,
+                210,
+                838,
+                275
+            ]
+        },
+        {
+            "id": 4,
+            "type": "class_box",
+            "coords": [
+                1073,
+                129,
+                1237,
+                252
+            ],
+            "text": "Text\nld: int\n-|-hame: String\n-description: String"
+        },
+        {
+            "id": 5,
+            "type": "methods",
+            "coords": [
+                859,
+                330,
+                1019,
+                370
+            ]
+        },
+        {
+            "id": 6,
+            "type": "class_name",
+            "coords": [
+                680,
+                433,
+                840,
+                457
+            ]
+        },
+        {
+            "id": 7,
+            "type": "class_name",
+            "coords": [
+                899,
+                533,
+                1063,
+                560
+            ]
+        },
+        {
+            "id": 8,
+            "type": "class_name",
+            "coords": [
+                680,
+                668,
+                841,
+                692
+            ]
+        },
+        {
+            "id": 9,
+            "type": "class_name",
+            "coords": [
+                1079,
+                138,
+                1234,
+                165
+            ]
+        },
+        {
+            "id": 10,
+            "type": "class_box",
+            "coords": [
+                895,
+                0,
+                1067,
+                120
+            ],
+            "text": "-deserlption: String"
+        },
+        {
+            "id": 11,
+            "type": "class_name",
+            "coords": [
+                9,
+                356,
+                172,
+                382
+            ]
+        },
+        {
+            "id": 12,
+            "type": "attributes",
+            "coords": [
+                678,
+                323,
+                838,
+                352
+            ]
+        },
+        {
+            "id": 13,
+            "type": "class_name",
+            "coords": [
+                228,
+                354,
+                390,
+                387
+            ]
+        },
+        {
+            "id": 14,
+            "type": "methods",
+            "coords": [
+                680,
+                750,
+                841,
+                802
+            ]
+        },
+        {
+            "id": 15,
+            "type": "methods",
+            "coords": [
+                450,
+                461,
+                609,
+                495
+            ]
+        },
+        {
+            "id": 16,
+            "type": "class_box",
+            "coords": [
+                674,
+                292,
+                843,
+                413
+            ],
+            "text": "-handler: InstructlonHan\n+handleQ: boolean\n+LogQ: boolean"
+        },
+        {
+            "id": 17,
+            "type": "attributes",
+            "coords": [
+                9,
+                381,
+                173,
+                410
+            ]
+        },
+        {
+            "id": 18,
+            "type": "class_name",
+            "coords": [
+                681,
+                297,
+                839,
+                323
+            ]
+        },
+        {
+            "id": 19,
+            "type": "class_name",
+            "coords": [
+                859,
+                219,
+                1018,
+                245
+            ]
+        },
+        {
+            "id": 20,
+            "type": "attributes",
+            "coords": [
+                448,
+                380,
+                611,
+                410
+            ]
+        },
+        {
+            "id": 21,
+            "type": "class_box",
+            "coords": [
+                465,
+                604,
+                635,
+                706
+            ],
+            "text": "-wrappee: Report\n4BaseDecorator(Report)"
+        },
+        {
+            "id": 22,
+            "type": "attributes",
+            "coords": [
+                679,
+                136,
+                837,
+                168
+            ]
+        },
+        {
+            "id": 23,
+            "type": "class_box",
+            "coords": [
+                675,
+                665,
+                847,
+                803
+            ],
+            "text": "\u2018CarCompany\n-deserlption: String"
+        },
+        {
+            "id": 24,
+            "type": "methods",
+            "coords": [
+                9,
+                455,
+                171,
+                496
+            ]
+        },
+        {
+            "id": 25,
+            "type": "class_name",
+            "coords": [
+                68,
+                606,
+                228,
+                648
+            ]
+        },
+        {
+            "id": 26,
+            "type": "class_name",
+            "coords": [
+                678,
+                104,
+                839,
+                136
+            ]
+        },
+        {
+            "id": 27,
+            "type": "methods",
+            "coords": [
+                227,
+                449,
+                390,
+                494
+            ]
+        },
+        {
+            "id": 28,
+            "type": "class_name",
+            "coords": [
+                470,
+                610,
+                630,
+                637
+            ]
+        },
+        {
+            "id": 29,
+            "type": "class_box",
+            "coords": [
+                892,
+                523,
+                1065,
+                782
+            ],
+            "text": "len |"
+        },
+        {
+            "id": 30,
+            "type": "class_box",
+            "coords": [
+                672,
+                101,
+                846,
+                277
+            ],
+            "text": ""
+        },
+        {
+            "id": 31,
+            "type": "class_box",
+            "coords": [
+                274,
+                701,
+                440,
+                746
+            ],
+            "text": "ConereteDecorator"
+        },
+        {
+            "id": 32,
+            "type": "class_box",
+            "coords": [
+                60,
+                601,
+                234,
+                763
+            ],
+            "text": "Report\nulntertacen l\n-ProcedureName: String\n-date_and_time: date\n~fef_no: String"
+        },
+        {
+            "id": 33,
+            "type": "class_box",
+            "coords": [
+                441,
+                347,
+                616,
+                501
+            ],
+            "text": "owned _cars: List<Car>\n#8electProcedure(Car, P\nHequestRemoteAssistar\n#vlewNearbyCenters():L"
+        },
+        {
+            "id": 34,
+            "type": "class_box",
+            "coords": [
+                671,
+                429,
+                847,
+                622
+            ],
+            "text": "-car_model: CarModel\n-body_style: enum\n-transmission_type:"
+        },
+        {
+            "id": 35,
+            "type": "class_box",
+            "coords": [
+                3,
+                346,
+                177,
+                501
+            ],
+            "text": "Technician\n-Isavallable: boolean\n#eheckAvallablity(: boc\n#aoceptRemoteassistan\n\u2018HnakeComment): Step"
+        },
+        {
+            "id": 36,
+            "type": "class_name",
+            "coords": [
+                444,
+                356,
+                611,
+                381
+            ]
+        },
+        {
+            "id": 37,
+            "type": "attributes",
+            "coords": [
+                680,
+                692,
+                842,
+                724
+            ]
+        },
+        {
+            "id": 38,
+            "type": "methods",
+            "coords": [
+                900,
+                85,
+                1061,
+                111
+            ]
+        },
+        {
+            "id": 39,
+            "type": "attributes",
+            "coords": [
+                1079,
+                190,
+                1235,
+                222
+            ]
+        },
+        {
+            "id": 40,
+            "type": "class_name",
+            "coords": [
+                230,
+                1,
+                389,
+                25
+            ]
+        },
+        {
+            "id": 41,
+            "type": "class_box",
+            "coords": [
+                856,
+                213,
+                1024,
+                372
+            ],
+            "text": "shame: String\n|toverlayinstructions(:\n|eannotate():"
+        },
+        {
+            "id": 42,
+            "type": "methods",
+            "coords": [
+                469,
+                671,
+                631,
+                700
+            ]
+        },
+        {
+            "id": 43,
+            "type": "class_box",
+            "coords": [
+                221,
+                0,
+                396,
+                296
+            ],
+            "text": "| ___ Account |\new |"
+        },
+        {
+            "id": 44,
+            "type": "methods",
+            "coords": [
+                230,
+                467,
+                389,
+                491
+            ]
+        },
+        {
+            "id": 45,
+            "type": "methods",
+            "coords": [
+                861,
+                302,
+                1020,
+                372
+            ]
+        },
+        {
+            "id": 46,
+            "type": "methods",
+            "coords": [
+                227,
+                231,
+                391,
+                295
+            ]
+        },
+        {
+            "id": 47,
+            "type": "methods",
+            "coords": [
+                1079,
+                189,
+                1233,
+                247
+            ]
+        },
+        {
+            "id": 48,
+            "type": "methods",
+            "coords": [
+                678,
+                354,
+                840,
+                410
+            ]
+        },
+        {
+            "id": 49,
+            "type": "attributes",
+            "coords": [
+                471,
+                636,
+                630,
+                670
+            ]
+        },
+        {
+            "id": 50,
+            "type": "attributes",
+            "coords": [
+                228,
+                385,
+                390,
+                417
+            ]
+        },
+        {
+            "id": 51,
+            "type": "class_box",
+            "coords": [
+                676,
+                0,
+                841,
+                85
+            ],
+            "text": "Handler\nulnterfacen\n+handie@: boolean"
+        },
+        {
+            "id": 52,
+            "type": "class_box",
+            "coords": [
+                1073,
+                280,
+                1236,
+                446
+            ],
+            "text": "3DModel\nld: int\nshame: String\n-description: String\n-animatlon: String\napanderfl"
+        },
+        {
+            "id": 53,
+            "type": "attributes",
+            "coords": [
+                859,
+                245,
+                1016,
+                272
+            ]
+        },
+        {
+            "id": 54,
+            "type": "methods",
+            "coords": [
+                12,
+                467,
+                170,
+                492
+            ]
+        },
+        {
+            "id": 55,
+            "type": "attributes",
+            "coords": [
+                899,
+                56,
+                1061,
+                85
+            ]
+        },
+        {
+            "id": 56,
+            "type": "attributes",
+            "coords": [
+                449,
+                410,
+                609,
+                442
+            ]
+        },
+        {
+            "id": 57,
+            "type": "class_box",
+            "coords": [
+                221,
+                349,
+                396,
+                496
+            ],
+            "text": "[smn"
+        },
+        {
+            "id": 58,
+            "type": "attributes",
+            "coords": [
+                859,
+                271,
+                1016,
+                302
+            ]
+        },
+        {
+            "id": 59,
+            "type": "class_name",
+            "coords": [
+                900,
+                4,
+                1061,
+                32
+            ]
+        },
+        {
+            "id": 60,
+            "type": "methods",
+            "coords": [
+                898,
+                641,
+                1060,
+                721
+            ]
+        },
+        {
+            "id": 61,
+            "type": "attributes",
+            "coords": [
+                679,
+                162,
+                837,
+                194
+            ]
+        },
+        {
+            "id": 62,
+            "type": "methods",
+            "coords": [
+                680,
+                776,
+                839,
+                800
+            ]
+        },
+        {
+            "id": 63,
+            "type": "methods",
+            "coords": [
+                231,
+                269,
+                389,
+                294
+            ]
+        },
+        {
+            "id": 64,
+            "type": "attributes",
+            "coords": [
+                233,
+                50,
+                390,
+                79
+            ]
+        },
+        {
+            "id": 65,
+            "type": "attributes",
+            "coords": [
+                901,
+                30,
+                1060,
+                57
+            ]
+        },
+        {
+            "id": 66,
+            "type": "methods",
+            "coords": [
+                226,
+                160,
+                392,
+                294
+            ]
+        },
+        {
+            "id": 67,
+            "type": "attributes",
+            "coords": [
+                679,
+                136,
+                838,
+                194
+            ]
+        },
+        {
+            "id": 68,
+            "type": "methods",
+            "coords": [
+                1079,
+                218,
+                1235,
+                247
+            ]
+        },
+        {
+            "id": 69,
+            "type": "attributes",
+            "coords": [
+                900,
+                556,
+                1063,
+                589
+            ]
+        },
+        {
+            "id": 70,
+            "type": "class_box",
+            "coords": [
+                223,
+                0,
+                396,
+                164
+            ],
+            "text": "| ___ Account |\new |"
+        },
+        {
+            "id": 71,
+            "type": "class_box",
+            "coords": [
+                0,
+                552,
+                156,
+                589
+            ],
+            "text": "ConereteReport"
+        },
+        {
+            "id": 72,
+            "type": "attributes",
+            "coords": [
+                679,
+                456,
+                839,
+                484
+            ]
+        },
+        {
+            "id": 73,
+            "type": "attributes",
+            "coords": [
+                1080,
+                163,
+                1233,
+                191
+            ]
+        },
+        {
+            "id": 74,
+            "type": "methods",
+            "coords": [
+                67,
+                728,
+                225,
+                757
+            ]
+        },
+        {
+            "id": 75,
+            "type": "attributes",
+            "coords": [
+                68,
+                648,
+                229,
+                676
+            ]
+        },
+        {
+            "id": 76,
+            "type": "class_name",
+            "coords": [
+                1076,
+                288,
+                1238,
+                316
+            ]
+        },
+        {
+            "id": 77,
+            "type": "attributes",
+            "coords": [
+                228,
+                401,
+                390,
+                442
+            ]
+        },
+        {
+            "id": 78,
+            "type": "methods",
+            "coords": [
+                900,
+                767,
+                1061,
+                804
+            ]
+        },
+        {
+            "id": 79,
+            "type": "attributes",
+            "coords": [
+                679,
+                510,
+                837,
+                537
+            ]
+        },
+        {
+            "id": 80,
+            "type": "attributes",
+            "coords": [
+                682,
+                692,
+                842,
+                747
+            ]
+        },
+        {
+            "id": 81,
+            "type": "methods",
+            "coords": [
+                678,
+                497,
+                840,
+                623
+            ]
+        },
+        {
+            "id": 82,
+            "type": "attributes",
+            "coords": [
+                9,
+                410,
+                173,
+                441
+            ]
+        },
+        {
+            "id": 83,
+            "type": "attributes",
+            "coords": [
+                680,
+                483,
+                837,
+                509
+            ]
+        },
+        {
+            "id": 84,
+            "type": "attributes",
+            "coords": [
+                1076,
+                557,
+                1236,
+                585
+            ]
+        },
+        {
+            "id": 85,
+            "type": "attributes",
+            "coords": [
+                901,
+                615,
+                1063,
+                643
+            ]
+        },
+        {
+            "id": 86,
+            "type": "attributes",
+            "coords": [
+                230,
+                24,
+                390,
+                50
+            ]
+        },
+        {
+            "id": 87,
+            "type": "attributes",
+            "coords": [
+                860,
+                303,
+                1015,
+                336
+            ]
+        },
+        {
+            "id": 88,
+            "type": "methods",
+            "coords": [
+                1078,
+                608,
+                1236,
+                651
+            ]
+        },
+        {
+            "id": 89,
+            "type": "attributes",
+            "coords": [
+                234,
+                79,
+                390,
+                104
+            ]
+        },
+        {
+            "id": 90,
+            "type": "methods",
+            "coords": [
+                899,
+                712,
+                1060,
+                747
+            ]
+        },
+        {
+            "id": 91,
+            "type": "methods",
+            "coords": [
+                449,
+                444,
+                610,
+                496
+            ]
+        },
+        {
+            "id": 92,
+            "type": "class_name",
+            "coords": [
+                680,
+                0,
+                837,
+                30
+            ]
+        }
+    ],
+    "relationships": [
+        {
+            "from": 23,
+            "to": 29,
+            "line": "normal"
+        },
+        {
+            "from": 21,
+            "to": 23,
+            "line": "normal"
+        },
+        {
+            "from": 23,
+            "to": 29,
+            "line": "normal"
+        },
+        {
+            "from": 21,
+            "to": 31,
+            "line": "normal"
+        },
+        {
+            "from": 21,
+            "to": 23,
+            "line": "normal"
+        },
+        {
+            "from": 31,
+            "to": 32,
+            "line": "normal"
+        },
+        {
+            "from": 23,
+            "to": 29,
+            "line": "normal"
+        },
+        {
+            "from": 32,
+            "to": 35,
+            "line": "normal"
+        },
+        {
+            "from": 29,
+            "to": 52,
+            "line": "normal"
+        },
+        {
+            "from": 16,
+            "to": 21,
+            "line": "normal"
+        },
+        {
+            "from": 33,
+            "to": 30,
+            "line": "normal"
+        },
+        {
+            "from": 43,
+            "to": 35,
+            "line": "normal"
+        },
+        {
+            "from": 4,
+            "to": 10,
+            "line": "normal"
+        },
+        {
+            "from": 10,
+            "to": 30,
+            "line": "normal"
+        },
+        {
+            "from": 4,
+            "to": 10,
+            "line": "normal"
+        },
+        {
+            "from": 30,
+            "to": 51,
+            "line": "normal"
+        },
+        {
+            "from": 30,
+            "to": 51,
+            "line": "normal"
+        }
+    ]
+}
