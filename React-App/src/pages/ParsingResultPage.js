@@ -406,39 +406,45 @@ function CollapsibleSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+    <div className="bg-white rounded-lg shadow-lg mb-6">
       <div
-        className="flex justify-between items-center cursor-pointer"
+        className="p-6 cursor-pointer w-full"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <div className="flex items-center">
-          {icon && <span className="mr-2">{icon}</span>}
-          <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
-          {badgeContent && <span className="ml-3">{badgeContent}</span>}
-        </div>
-        <button
-          className="text-gray-500 hover:text-gray-700 transition-colors"
-          aria-label={isOpen ? "Collapse section" : "Expand section"}
-        >
-          <svg
-            className={`w-6 h-6 transform transition-transform ${
-              isOpen ? "rotate-180" : ""
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex justify-between items-center">
+          <div className="flex items-center">
+            {icon && <span className="mr-2">{icon}</span>}
+            <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+            {badgeContent && <span className="ml-3">{badgeContent}</span>}
+          </div>
+          <button
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+            aria-label={isOpen ? "Collapse section" : "Expand section"}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </button>
+            <svg
+              className={`w-6 h-6 transform transition-transform ${
+                isOpen ? "rotate-180" : ""
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      {isOpen && <div className="mt-4">{children}</div>}
+      {isOpen && <div className="px-6 pb-6">{children}</div>}
     </div>
   );
 }
