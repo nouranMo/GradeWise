@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -404,29 +404,53 @@ function CollapsibleSection({
   badgeContent = null,
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isRecent, setIsRecent] = useState(false);
+  const sectionRef = useRef(null);
+
+  const handleClick = () => {
+    // Store current scroll position
+    const currentScroll = window.scrollY;
+
+    setIsOpen(!isOpen);
+    setIsRecent(true);
+
+    // Restore scroll position after state update
+    setTimeout(() => {
+      window.scrollTo(0, currentScroll);
+    }, 0);
+
+    setTimeout(() => setIsRecent(false), 2000);
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg mb-6">
+    <div
+      ref={sectionRef}
+      className={`bg-white rounded-lg shadow-lg mb-4 transition-all duration-700 ease-in-out ${
+        isRecent ? "ring-2 ring-blue-200" : "ring-0 ring-transparent"
+      }`}
+    >
       <div
-        className="p-6 cursor-pointer w-full"
-        onClick={() => setIsOpen(!isOpen)}
+        className={`p-4 cursor-pointer w-full transition-all duration-700 ease-in-out ${
+          isRecent ? "bg-blue-50" : "bg-white"
+        }`}
+        onClick={handleClick}
       >
         <div className="flex justify-between items-center">
           <div className="flex items-center">
             {icon && <span className="mr-2">{icon}</span>}
-            <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+            <h2 className="text-xl font-bold text-gray-800">{title}</h2>
             {badgeContent && <span className="ml-3">{badgeContent}</span>}
           </div>
           <button
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-gray-500 hover:text-gray-700 transition-colors duration-300"
             aria-label={isOpen ? "Collapse section" : "Expand section"}
             onClick={(e) => {
               e.stopPropagation();
-              setIsOpen(!isOpen);
+              handleClick();
             }}
           >
             <svg
-              className={`w-6 h-6 transform transition-transform ${
+              className={`w-5 h-5 transform transition-transform duration-300 ease-in-out ${
                 isOpen ? "rotate-180" : ""
               }`}
               fill="none"
@@ -444,7 +468,13 @@ function CollapsibleSection({
         </div>
       </div>
 
-      {isOpen && <div className="px-6 pb-6">{children}</div>}
+      <div
+        className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${
+          isOpen ? "max-h-[2000px]" : "max-h-0"
+        }`}
+      >
+        <div className="px-4 pb-4">{children}</div>
+      </div>
     </div>
   );
 }
@@ -611,13 +641,18 @@ function ParsingResult() {
         </div>
 
         {/* Document Summary */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+          {" "}
+          {/* Reduced padding and margin */}
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">
+              <h2 className="text-xl font-bold text-gray-800 mb-2">
                 Document Details
-              </h2>
-              <p className="text-gray-600 mt-2">
+              </h2>{" "}
+              {/* Changed from text-2xl */}
+              <p className="text-sm text-gray-600">
+                {" "}
+                {/* Changed to text-sm */}
                 Document Type:{" "}
                 {parsingResult.srs_validation
                   ? "SRS"
@@ -625,11 +660,15 @@ function ParsingResult() {
                   ? "SDD"
                   : "Not specified"}
               </p>
-              <p className="text-gray-600">
+              <p className="text-sm text-gray-600">
+                {" "}
+                {/* Changed to text-sm */}
                 Document Name: {parsingResult.document_name || "Untitled"}
               </p>
             </div>
-            <div className="bg-blue-50 px-4 py-2 rounded-lg">
+            <div className="bg-blue-50 px-3 py-1 rounded-lg">
+              {" "}
+              {/* Reduced padding */}
               <p className="text-sm text-blue-800">
                 Analysis Date: {new Date().toLocaleDateString()}
               </p>
