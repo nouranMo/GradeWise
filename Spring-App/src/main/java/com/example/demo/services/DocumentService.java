@@ -313,4 +313,20 @@ public class DocumentService {
 
         return document;
     }
+
+    /**
+     * Update an existing document
+     * 
+     * @param document The document to update
+     * @return The updated document
+     */
+    public DocumentModel updateDocument(DocumentModel document) {
+        // Validate document
+        if (document.getId() == null) {
+            throw new IllegalArgumentException("Document ID cannot be null for update operation");
+        }
+        
+        // Save to repository
+        return documentRepository.save(document);
+    }
 }

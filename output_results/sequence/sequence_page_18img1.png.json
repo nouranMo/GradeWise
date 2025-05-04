@@ -1,0 +1,26 @@
+{
+    "diagram_type": "sequence",
+    "components": [
+        {
+            "id": 1,
+            "type": "messages",
+            "coords": [
+                126,
+                322,
+                294,
+                336
+            ]
+        },
+        {
+            "id": 2,
+            "type": "messages",
+            "coords": [
+                231,
+                575,
+                376,
+                592
+            ]
+        }
+    ],
+    "relationships": []
+}

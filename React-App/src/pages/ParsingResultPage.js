@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -7,39 +7,18 @@ function isFigureSection(sectionName) {
   if (!sectionName) return false;
 
   const lowerName = sectionName.toLowerCase();
-  const figureDiagrams = [
-    "System Overview",
-    "System Context",
-    "Use Case",
-    "EERD",
-    "Entity Relationship",
-    "Class Diagram",
-    "Gantt Chart",
-    "Sequence Diagram",
-    "Activity Diagram",
-    "Component Diagram",
-  ];
-
-  for (const diagram of figureDiagrams) {
-    if (lowerName.includes(diagram.toLowerCase())) {
-      console.log(`Found diagram match: ${sectionName} matches ${diagram}`);
-      return true;
-    }
-  }
-
-  if (sectionName.startsWith("Figure:")) return true;
-
-  if (
-    lowerName.includes("diagram") ||
-    lowerName.includes("chart") ||
-    lowerName.includes("model") ||
-    lowerName.includes("uml")
-  ) {
-    console.log(`Found diagram by pattern: ${sectionName}`);
-    return true;
-  }
-
-  return false;
+  return (
+    lowerName.includes('diagram') ||
+    lowerName.includes('figure') ||
+    lowerName.includes('chart') ||
+    lowerName.includes('graph') ||
+    lowerName.includes('eerd') ||
+    lowerName.includes('uml') ||
+    lowerName.includes('class diagram') ||
+    lowerName.includes('sequence diagram') ||
+    lowerName.includes('use case') ||
+    lowerName.includes('entity relationship')
+  );
 }
 
 // Helper function to clean up section names
@@ -48,6 +27,297 @@ function getCleanSectionName(sectionName) {
   let cleanName = sectionName.replace(/^Figure:\s*/, "");
   cleanName = cleanName.replace(/^\d+(\.\d+)*\s+/, "");
   return cleanName;
+}
+
+function RelationshipGraph({ 
+  matrix, 
+  scopeSources, 
+  relationshipAnalyses = {}
+}) {
+  const [selectedRelationship, setSelectedRelationship] = useState(null);
+  const [showDiagrams, setShowDiagrams] = useState(true);
+  
+  // Skip rendering if no data
+  if (!matrix || !scopeSources || matrix.length === 0 || scopeSources.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <h3 className="text-xl font-semibold mb-4">Section Relationships</h3>
+        <p className="text-gray-500">No relationship data available.</p>
+      </div>
+    );
+  }
+  
+  // Check if we have relationship analyses
+  const hasRelationshipAnalyses = relationshipAnalyses && Object.keys(relationshipAnalyses).length > 0;
+  
+  // If we have relationship analyses, use them directly
+  let relationships = [];
+  
+  let diagramRels = []; // New array for diagram relationships
+  
+  if (hasRelationshipAnalyses) {
+    // Create relationships from the relationship analyses
+    relationships = Object.keys(relationshipAnalyses).map(key => {
+      const [source, target] = key.split('|');
+      const analysis = relationshipAnalyses[key];
+      
+      return {
+        source,
+        target,
+        key,
+        strength: analysis.similarity_score,
+        hasAnalysis: true,
+        isDiagram: isFigureSection(source) || isFigureSection(target) // Check if either section is a diagram
+      };
+    });
+  } else {
+    // If no relationship analyses, create them from the similarity matrix
+    for (let i = 0; i < matrix.length; i++) {
+      for (let j = i + 1; j < matrix[i].length; j++) {
+        if (matrix[i][j] > 0.3) { // Only show relationships above threshold
+          const isDiagram = isFigureSection(scopeSources[i]) || isFigureSection(scopeSources[j]);
+          
+          relationships.push({
+            source: scopeSources[i],
+            target: scopeSources[j],
+            strength: matrix[i][j],
+            key: `${scopeSources[i]}|${scopeSources[j]}`,
+            hasAnalysis: false,
+            isDiagram
+          });
+        }
+      }
+    }
+  }
+  
+  // Extract diagram relationships
+  diagramRels = relationships.filter(rel => rel.isDiagram);
+  
+  // Filter out diagram relationships from main relationships if not showing diagrams
+  const textRelationships = relationships.filter(rel => !rel.isDiagram);
+  
+  // Combine relationships based on toggle
+  const displayRelationships = showDiagrams ? relationships : textRelationships;
+  
+  // Sort relationships by strength
+  displayRelationships.sort((a, b) => b.strength - a.strength);
+  
+  // Get the top relationships (limit to 10 for clarity)
+  const topRelationships = displayRelationships.slice(0, 10);
+  
+  // Get the selected relationship analysis
+  const selectedAnalysis = selectedRelationship ? relationshipAnalyses[selectedRelationship] : null;
+  
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-semibold">Key Section Relationships</h3>
+        
+        {/* Toggle for diagram relationships */}
+        <div className="flex items-center">
+          <span className="text-sm text-gray-600 mr-2">Include Diagrams</span>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              className="sr-only peer" 
+              checked={showDiagrams}
+              onChange={() => setShowDiagrams(!showDiagrams)}
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+      </div>
+      
+      {diagramRels.length > 0 && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+          <p className="text-sm text-blue-800">
+            <span className="font-medium">📊 Note:</span> {diagramRels.length} diagram-to-section relationships found. 
+            {showDiagrams ? ' These are included in the list below.' : ' Toggle the switch above to include them.'}
+          </p>
+        </div>
+      )}
+      
+      {topRelationships.length === 0 ? (
+        <p className="text-gray-500">No significant relationships found between sections.</p>
+      ) : (
+        <div>
+          <div className="grid grid-cols-1 gap-4">
+            {topRelationships.map((rel) => {
+              const analysis = relationshipAnalyses[rel.key];
+              const strengthColor = 
+                rel.strength > 0.7 ? "bg-green-100 border-green-300" :
+                rel.strength > 0.5 ? "bg-blue-100 border-blue-300" :
+                "bg-yellow-100 border-yellow-300";
+              
+              // Add special styling for diagram relationships
+              const isDiagramClass = rel.isDiagram ? "border-l-4 border-l-blue-500" : "";
+              
+              return (
+                <div 
+                  key={rel.key}
+                  className={`p-4 rounded-lg border ${strengthColor} ${isDiagramClass} cursor-pointer hover:shadow-md transition-shadow`}
+                  onClick={() => setSelectedRelationship(rel.key)}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium text-gray-800">
+                      {rel.isDiagram && <span className="mr-1">📊</span>}
+                      {getCleanSectionName(rel.source)} ↔ {getCleanSectionName(rel.target)}
+                    </h4>
+                    <span className="text-sm font-medium px-2 py-1 rounded-full bg-gray-200">
+                      {Math.round(rel.strength * 100)}%
+                    </span>
+                  </div>
+                  
+                  {analysis ? (
+                    <>
+                      <div className="mb-2">
+                        <span className="inline-block px-2 py-1 text-xs font-medium rounded bg-gray-200 text-gray-800 mr-2">
+                          {analysis.relationship_strength}
+                        </span>
+                        {analysis.section1_type && analysis.section2_type && (
+                          <span className="text-xs text-gray-500">
+                            {analysis.section1_type} ↔ {analysis.section2_type}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {analysis.description}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      {rel.isDiagram ? 
+                        "Diagram relationship - click to analyze" : 
+                        "No detailed analysis available"}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Selected relationship details */}
+          {selectedRelationship && relationshipAnalyses[selectedRelationship] && (
+            <div className="mt-6 p-5 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-medium text-gray-800">
+                  Detailed Relationship Analysis
+                </h4>
+                <button 
+                  onClick={() => setSelectedRelationship(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="space-y-5">
+                <div className="flex flex-col md:flex-row md:justify-between md:space-x-4">
+                  <div>
+                    <h5 className="font-medium text-gray-700">Relationship Strength</h5>
+                    <p className="text-sm mt-1">
+                      <span className={`font-semibold ${
+                        relationshipAnalyses[selectedRelationship].relationship_strength === "Strong" ? "text-green-600" :
+                        relationshipAnalyses[selectedRelationship].relationship_strength === "Moderate" ? "text-blue-600" :
+                        "text-yellow-600"
+                      }`}>
+                        {relationshipAnalyses[selectedRelationship].relationship_strength}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-gray-700">Similarity Score</h5>
+                    <p className="text-sm mt-1">
+                      <span className="font-semibold">
+                        {Math.round(relationshipAnalyses[selectedRelationship].similarity_score * 100)}%
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-gray-700">Section Types</h5>
+                    <p className="text-sm mt-1">
+                      {relationshipAnalyses[selectedRelationship].section1_type} ↔ {relationshipAnalyses[selectedRelationship].section2_type}
+                    </p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h5 className="font-medium text-gray-700 mb-2">Description</h5>
+                  <p className="text-sm bg-white p-3 rounded border border-gray-200">
+                    {relationshipAnalyses[selectedRelationship].description}
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 className="font-medium text-gray-700 mb-2">
+                      <span className="text-green-600 mr-1">✓</span> Consistent Elements
+                    </h5>
+                    <ul className="list-disc list-inside text-sm bg-green-50 p-3 rounded border border-green-100">
+                      {relationshipAnalyses[selectedRelationship].consistent_elements.map((item, i) => (
+                        <li key={i} className="mb-1 last:mb-0">{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h5 className="font-medium text-gray-700 mb-2">
+                      <span className="text-red-600 mr-1">⚠</span> Inconsistencies
+                    </h5>
+                    <ul className="list-disc list-inside text-sm bg-red-50 p-3 rounded border border-red-100">
+                      {relationshipAnalyses[selectedRelationship].inconsistencies.length > 0 ? (
+                        relationshipAnalyses[selectedRelationship].inconsistencies.map((item, i) => (
+                          <li key={i} className="mb-1 last:mb-0">{item}</li>
+                        ))
+                      ) : (
+                        <li>No inconsistencies found</li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+                
+                <div>
+                  <h5 className="font-medium text-gray-700 mb-2">
+                    <span className="text-blue-600 mr-1">💡</span> Recommendation
+                  </h5>
+                  <p className="text-sm bg-blue-50 p-3 rounded border border-blue-100">
+                    {relationshipAnalyses[selectedRelationship].recommendation}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Add diagram relationships display */}
+      {diagramRels.length > 0 && showDiagrams && (
+        <div className="mt-6">
+          <h4 className="text-lg font-semibold mb-3">Diagram Relationships</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {diagramRels.map((rel, idx) => (
+              <div key={idx} className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <h5 className="font-medium text-blue-800 mb-2">
+                  {rel.source}
+                </h5>
+                <p className="text-sm text-gray-600 mb-2">Related to:</p>
+                <ul className="list-disc list-inside text-sm">
+                  <li className="mb-1">
+                    <span className="font-medium">{rel.target}</span>
+                    <span className="text-gray-500 ml-1">
+                      ({Math.round(rel.strength * 100)}% similarity)
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ParsingResult() {
@@ -106,6 +376,58 @@ function ParsingResult() {
       navigate("/dashboard");
     }
   };
+
+  // Add this near the top of your ParsingResult component
+  useEffect(() => {
+    if (parsingResult?.content_analysis?.relationship_analyses) {
+      console.log("Relationship analyses available:", 
+        Object.keys(parsingResult.content_analysis.relationship_analyses).length);
+      console.log("Sample analysis:", 
+        Object.values(parsingResult.content_analysis.relationship_analyses)[0]);
+    } else {
+      console.log("No relationship analyses available in the parsing result");
+    }
+  }, [parsingResult]);
+
+  // Add this to your useEffect
+  useEffect(() => {
+    console.log("Full parsing result:", parsingResult);
+    
+    if (parsingResult?.content_analysis) {
+      console.log("Content analysis keys:", Object.keys(parsingResult.content_analysis));
+      
+      // Check if relationship_analyses exists directly in content_analysis
+      if (parsingResult.content_analysis.relationship_analyses) {
+        console.log("Relationship analyses found at expected location");
+      } 
+      // Check if it might be nested deeper
+      else if (parsingResult.content_analysis.similarity_analysis?.relationship_analyses) {
+        console.log("Relationship analyses found in similarity_analysis");
+      }
+      // Check if it might be at the root level
+      else if (parsingResult.relationship_analyses) {
+        console.log("Relationship analyses found at root level");
+      }
+      else {
+        console.log("Relationship analyses not found in any expected location");
+      }
+    }
+  }, [parsingResult]);
+
+  // Add this useEffect to debug the data
+  useEffect(() => {
+    if (parsingResult?.content_analysis) {
+      console.log("Content analysis:", parsingResult.content_analysis);
+      console.log("Relationship analyses:", parsingResult.content_analysis.relationship_analyses);
+      
+      if (parsingResult.content_analysis.relationship_analyses) {
+        console.log("Number of relationship analyses:", 
+          Object.keys(parsingResult.content_analysis.relationship_analyses).length);
+        console.log("First relationship analysis:", 
+          Object.entries(parsingResult.content_analysis.relationship_analyses)[0]);
+      }
+    }
+  }, [parsingResult]);
 
   if (!parsingResult || parsingResult.status === "error") {
     console.log("Rendering error state due to missing or invalid parsingResult");
@@ -510,439 +832,15 @@ function ParsingResult() {
           !!parsingResult?.content_analysis
         )}
         {parsingResult.content_analysis && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-              <svg
-                className="w-6 h-6 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-              Content Analysis
-            </h2>
-
-            {parsingResult.content_analysis.similarity_matrix &&
-              parsingResult.content_analysis.scope_sources && (
-                <div className="mb-8">
-                  <h3 className="text-xl font-semibold mb-4 text-gray-700 flex items-center">
-                    <svg
-                      className="w-5 h-5 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                      />
-                    </svg>
-                    Section Similarity Analysis
-                    {parsingResult.content_analysis.figures_included && (
-                      <span className="ml-2 text-sm text-blue-600 font-normal">
-                        (Including {parsingResult.content_analysis.figure_count}{" "}
-                        figures)
-                      </span>
-                    )}
-                  </h3>
-
-                  <div className="bg-white p-4 rounded-lg shadow-inner mb-6">
-                    <h4 className="font-medium text-lg mb-3 text-gray-700">
-                      Key Insights
-                    </h4>
-                    {(() => {
-                      const matrix =
-                        parsingResult.content_analysis.similarity_matrix;
-                      const sections =
-                        parsingResult.content_analysis.scope_sources;
-
-                      if (!matrix || !sections || matrix.length === 0) {
-                        return <p>No similarity data available</p>;
-                      }
-
-                      let mostDissimilar = { i: 0, j: 1, value: 1 };
-                      let mostSimilar = { i: 0, j: 1, value: 0 };
-                      let diagramSimilarities = [];
-                      let diagramRelationships = [];
-
-                      for (let i = 0; i < matrix.length; i++) {
-                        for (let j = 0; j < matrix[i].length; j++) {
-                          if (i === j) continue;
-
-                          const similarity = matrix[i][j];
-                          const isRow1Diagram = isFigureSection(sections[i]);
-                          const isRow2Diagram = isFigureSection(sections[j]);
-
-                          if (similarity < mostDissimilar.value) {
-                            mostDissimilar = { i, j, value: similarity };
-                          }
-
-                          if (similarity > mostSimilar.value) {
-                            mostSimilar = { i, j, value: similarity };
-                          }
-
-                          if (isRow1Diagram && isRow2Diagram) {
-                            diagramSimilarities.push({
-                              diagram1: sections[i],
-                              diagram2: sections[j],
-                              similarity,
-                            });
-                          }
-
-                          if (isRow1Diagram && !isRow2Diagram && similarity > 0.5) {
-                            diagramRelationships.push({
-                              diagram: sections[i],
-                              section: sections[j],
-                              similarity,
-                            });
-                          } else if (
-                            isRow2Diagram &&
-                            !isRow1Diagram &&
-                            similarity > 0.5
-                          ) {
-                            diagramRelationships.push({
-                              diagram: sections[j],
-                              section: sections[i],
-                              similarity,
-                            });
-                          }
-                        }
-                      }
-
-                      diagramRelationships.sort(
-                        (a, b) => b.similarity - a.similarity
-                      );
-
-                      return (
-                        <div className="space-y-4">
-                          <div className="p-4 bg-red-50 rounded-lg border border-red-100">
-                            <h5 className="font-medium text-red-800 mb-1">
-                              Most Different Sections
-                            </h5>
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">
-                                {getCleanSectionName(
-                                  sections[mostDissimilar.i]
-                                )}
-                              </span>{" "}
-                              and{" "}
-                              <span className="font-medium">
-                                {getCleanSectionName(
-                                  sections[mostDissimilar.j]
-                                )}
-                              </span>{" "}
-                              are the least similar at{" "}
-                              <span className="font-bold text-red-700">
-                                {Math.round(mostDissimilar.value * 100)}%
-                              </span>{" "}
-                              similarity
-                            </p>
-                          </div>
-
-                          <div className="p-4 bg-green-50 rounded-lg border border-green-100">
-                            <h5 className="font-medium text-green-800 mb-1">
-                              Most Similar Sections
-                            </h5>
-                            <p className="text-sm text-gray-700">
-                              <span className="font-medium">
-                                {getCleanSectionName(sections[mostSimilar.i])}
-                              </span>{" "}
-                              and{" "}
-                              <span className="font-medium">
-                                {getCleanSectionName(sections[mostSimilar.j])}
-                              </span>{" "}
-                              are the most similar at{" "}
-                              <span className="font-bold text-green-700">
-                                {Math.round(mostSimilar.value * 100)}%
-                              </span>{" "}
-                              similarity
-                            </p>
-                          </div>
-
-                          {diagramRelationships.length > 0 && (
-                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                              <h5 className="font-medium text-blue-800 mb-1">
-                                Key Diagram Relationships
-                              </h5>
-                              <div className="space-y-2">
-                                {diagramRelationships
-                                  .slice(0, 3)
-                                  .map((rel, idx) => (
-                                    <p
-                                      key={idx}
-                                      className="text-sm text-gray-700"
-                                    >
-                                      <span className="inline-block mr-1">
-                                        📊
-                                      </span>
-                                      <span className="font-medium">
-                                        {getCleanSectionName(rel.diagram)}
-                                      </span>{" "}
-                                      strongly relates to{" "}
-                                      <span className="font-medium">
-                                        {getCleanSectionName(rel.section)}
-                                      </span>{" "}
-                                      with{" "}
-                                      <span className="font-bold text-blue-700">
-                                        {Math.round(rel.similarity * 100)}%
-                                      </span>{" "}
-                                      similarity
-                                    </p>
-                                  ))}
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
-                            <h5 className="font-medium text-purple-800 mb-1">
-                              Analysis Tip
-                            </h5>
-                            <p className="text-sm text-gray-700">
-                              {mostDissimilar.value < 0.3 ? (
-                                <>
-                                  Some sections appear to have very{" "}
-                                  <strong>low similarity</strong>. Consider
-                                  reviewing the document for consistency and
-                                  proper section coverage.
-                                </>
-                              ) : mostSimilar.value > 0.8 ? (
-                                <>
-                                  Some non-identical sections have{" "}
-                                  <strong>very high similarity</strong>.
-                                  Consider reviewing for potential duplication
-                                  of content.
-                                </>
-                              ) : (
-                                <>
-                                  The document has a balanced similarity
-                                  distribution between sections, which typically
-                                  indicates good structure.
-                                </>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  <div className="bg-white p-4 rounded-lg shadow-inner">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full">
-                        <thead>
-                          <tr>
-                            <th className="p-3 bg-gray-50 rounded-tl-lg font-semibold text-gray-600 text-left min-w-[200px]">
-                              Section
-                            </th>
-                            {parsingResult.content_analysis.scope_sources.map(
-                              (source, i) => (
-                                <th
-                                  key={i}
-                                  className={`p-3 bg-gray-50 font-semibold text-gray-600 text-center min-w-[100px] transform -rotate-45 origin-top-left h-32 ${isFigureSection(source)
-                                    ? "text-blue-700"
-                                    : ""
-                                    }`}
-                                  style={{ width: "40px" }}
-                                >
-                                  <div className="inline-block whitespace-nowrap">
-                                    {isFigureSection(source)
-                                      ? "📊 " + getCleanSectionName(source)
-                                      : getCleanSectionName(source)}
-                                  </div>
-                                </th>
-                              )
-                            )}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {parsingResult.content_analysis.similarity_matrix.map(
-                            (row, i) => {
-                              const isImageRow = isFigureSection(
-                                parsingResult.content_analysis.scope_sources[i]
-                              );
-                              return (
-                                <tr
-                                  key={i}
-                                  className={`hover:bg-gray-50 ${isImageRow ? "bg-blue-50" : ""
-                                    }`}
-                                >
-                                  <td
-                                    className={`p-3 font-medium border-t ${isImageRow
-                                      ? "text-blue-700"
-                                      : "text-gray-700"
-                                      }`}
-                                  >
-                                    {isImageRow ? "📊 " : ""}
-                                    {getCleanSectionName(
-                                      parsingResult.content_analysis
-                                        .scope_sources[i]
-                                    )}
-                                  </td>
-                                  {row.map((value, j) => {
-                                    const intensity = Math.round(value * 100);
-                                    const isImageCol = isFigureSection(
-                                      parsingResult.content_analysis
-                                        .scope_sources[j]
-                                    );
-                                    const getColor = (intensity) => {
-                                      if (i === j) return "bg-gray-100";
-                                      if (isImageRow && isImageCol) {
-                                        const hue = 260;
-                                        const saturation = 90;
-                                        const lightness = 100 - intensity;
-                                        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-                                      } else if (isImageRow || isImageCol) {
-                                        const hue = 200;
-                                        const saturation = 90;
-                                        const lightness = 100 - intensity;
-                                        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-                                      } else {
-                                        const hue = 200;
-                                        const saturation = 90;
-                                        const lightness = 100 - intensity;
-                                        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-                                      }
-                                    };
-
-                                    return (
-                                      <td
-                                        key={j}
-                                        className="p-3 border-t text-center relative group"
-                                        style={{
-                                          backgroundColor: getColor(intensity),
-                                          color:
-                                            intensity > 50 ? "white" : "black",
-                                        }}
-                                      >
-                                        <span className="font-medium">
-                                          {intensity}%
-                                        </span>
-                                        <div className="absolute hidden group-hover:block bg-gray-800 text-white text-sm rounded px-2 py-1 left-1/2 transform -translate-x-1/2 -translate-y-full -mt-1 z-10">
-                                          {isImageRow ? "📊 " : ""}
-                                          {getCleanSectionName(
-                                            parsingResult.content_analysis
-                                              .scope_sources[i]
-                                          )}{" "}
-                                          ↔ {isImageCol ? "📊 " : ""}
-                                          {getCleanSectionName(
-                                            parsingResult.content_analysis
-                                              .scope_sources[j]
-                                          )}
-                                        </div>
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              );
-                            }
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center">
-                          <div className="w-24 h-4 bg-gradient-to-r from-white to-blue-500 rounded mr-2"></div>
-                          <span>Section Similarity (0-100%)</span>
-                        </div>
-                        {parsingResult.content_analysis.figures_included && (
-                          <div className="flex items-center">
-                            <div className="w-24 h-4 bg-gradient-to-r from-white to-purple-500 rounded mr-2"></div>
-                            <span>Figure-to-Figure Similarity</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <span>
-                          • Diagonal cells show self-similarity (100%)
-                        </span>
-                        <span>• 📊 indicates figure content</span>
-                        <span>• Hover over cells for details</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            {parsingResult.content_analysis.sections && (
-              <div className="mt-8">
-                <h3 className="text-xl font-semibold mb-4 text-gray-700 flex items-center">
-                  <svg
-                    className="w-5 h-5 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16m-7 6h7"
-                    />
-                  </svg>
-                  Section Details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {parsingResult.content_analysis.sections.map(
-                    (section, index) => {
-                      const [title, ...contentParts] = section.split("\n");
-                      const content = contentParts.join("\n");
-
-                      return (
-                        <div
-                          key={index}
-                          className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200"
-                        >
-                          <div className="p-4 border-b bg-gray-50">
-                            <h4 className="font-medium text-lg text-gray-800">
-                              {title.replace(/^\d+(\.\d+)*\s+/, "")}
-                            </h4>
-                          </div>
-                          <div className="p-4">
-                            <div className="prose prose-sm max-h-60 overflow-y-auto">
-                              {(() => {
-                                if (typeof content === "string") {
-                                  return content.split("\n").map(
-                                    (paragraph, i) =>
-                                      paragraph.trim() && (
-                                        <p
-                                          key={i}
-                                          className="text-gray-600 mb-2"
-                                        >
-                                          {paragraph}
-                                        </p>
-                                      )
-                                  );
-                                } else if (typeof content === "object") {
-                                  return (
-                                    <p className="text-gray-600">
-                                      {JSON.stringify(content, null, 2)}
-                                    </p>
-                                  );
-                                } else {
-                                  return (
-                                    <p className="text-gray-600">
-                                      {String(content)}
-                                    </p>
-                                  );
-                                }
-                              })()}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                  )}
-                </div>
-              </div>
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h3 className="text-xl font-semibold mb-4">Content Analysis</h3>
+            
+            {parsingResult.content_analysis.relationship_analyses && (
+              <RelationshipGraph 
+                matrix={parsingResult.content_analysis.similarity_matrix}
+                scopeSources={parsingResult.content_analysis.scope_sources}
+                relationshipAnalyses={parsingResult.content_analysis.relationship_analyses}
+              />
             )}
           </div>
         )}
@@ -989,23 +887,23 @@ function ParsingResult() {
               <div className="space-y-6">
                 {/* Quick Spell Check Summary */}
                 <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
-                  <h4 className="font-medium text-blue-800 mb-2">
-                    Quick Spell Check Summary
-                  </h4>
-                  <p className="text-sm text-gray-700">
-                    {parsingResult.spelling_check.misspelled_count > 0 ? (
-                      <>
-                        Found{" "}
-                        <span className="font-semibold text-red-600">
-                          {parsingResult.spelling_check.misspelled_count}
-                        </span>{" "}
-                        potential misspelled words in document.
-                      </>
-                    ) : (
-                      <>No spelling issues detected in the document.</>
-                    )}
-                  </p>
-                </div>
+                    <h4 className="font-medium text-blue-800 mb-2">
+                      Quick Spell Check Summary
+                    </h4>
+                    <p className="text-sm text-gray-700">
+                      {parsingResult.spelling_check.misspelled_count > 0 ? (
+                        <>
+                          Found{" "}
+                          <span className="font-semibold text-red-600">
+                            {parsingResult.spelling_check.misspelled_count}
+                          </span>{" "}
+                          potential misspelled words in document.
+                        </>
+                      ) : (
+                        <>No spelling issues detected in the document.</>
+                      )}
+                    </p>
+                  </div>
 
                 {/* Add the SpellingCheckSection component here */}
                 {parsingResult.spelling_check.per_section && (
@@ -1013,34 +911,34 @@ function ParsingResult() {
                 )}
 
                 {/* Keep your existing misspelled words display */}
-                {parsingResult.spelling_check.misspelled_count > 0 && (
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="p-4 bg-gray-50 border-b">
-                      <h4 className="font-medium">Potential Misspellings</h4>
-                    </div>
-                    <div className="p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {Object.entries(
-                          parsingResult.spelling_check.misspelled_words
-                        ).map(([word, correction], i) => (
-                          <div
-                            key={i}
-                            className="flex items-center p-2 rounded bg-gray-50"
-                          >
-                            <span className="text-red-600 font-mono">
-                              {word}
-                            </span>
-                            <span className="mx-2">→</span>
-                            <span className="text-green-600 font-mono">
-                              {correction}
-                            </span>
-                          </div>
-                        ))}
+                  {parsingResult.spelling_check.misspelled_count > 0 && (
+                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="p-4 bg-gray-50 border-b">
+                        <h4 className="font-medium">Potential Misspellings</h4>
+                      </div>
+                      <div className="p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {Object.entries(
+                            parsingResult.spelling_check.misspelled_words
+                          ).map(([word, correction], i) => (
+                            <div
+                              key={i}
+                              className="flex items-center p-2 rounded bg-gray-50"
+                            >
+                              <span className="text-red-600 font-mono">
+                                {word}
+                              </span>
+                              <span className="mx-2">→</span>
+                              <span className="text-green-600 font-mono">
+                                {correction}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
             </div>
           )}
 
@@ -1513,22 +1411,22 @@ function ReferenceCard({ reference, index }) {
 
               {showCitations &&
                 citations.contexts.map((context, i) => (
-                  <div
-                    key={i}
-                    className="p-2 bg-gray-50 rounded border border-gray-200"
-                  >
-                    <p
-                      className="text-gray-600"
-                      dangerouslySetInnerHTML={{
-                        __html: context
-                          ? context.replace(
-                            /\*\*(.*?)\*\*/g,
-                            '<span class="font-bold text-blue-600">$1</span>'
-                          )
-                          : "Context not available",
-                      }}
-                    ></p>
-                  </div>
+                    <div
+                      key={i}
+                      className="p-2 bg-gray-50 rounded border border-gray-200"
+                    >
+                      <p
+                        className="text-gray-600"
+                        dangerouslySetInnerHTML={{
+                          __html: context
+                            ? context.replace(
+                              /\*\*(.*?)\*\*/g,
+                              '<span class="font-bold text-blue-600">$1</span>'
+                            )
+                            : "Context not available",
+                        }}
+                      ></p>
+                    </div>
                 ))
               }
             </div>
