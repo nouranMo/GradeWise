@@ -604,6 +604,33 @@ function ParsingResult() {
           </button>
         </div>
 
+        {/* Document Summary */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">
+                Document Details
+              </h2>
+              <p className="text-gray-600 mt-2">
+                Document Type:{" "}
+                {parsingResult.srs_validation
+                  ? "SRS"
+                  : parsingResult.sdd_validation
+                  ? "SDD"
+                  : "Not specified"}
+              </p>
+              <p className="text-gray-600">
+                Document Name: {parsingResult.document_name || "Untitled"}
+              </p>
+            </div>
+            <div className="bg-blue-50 px-4 py-2 rounded-lg">
+              <p className="text-sm text-blue-800">
+                Analysis Date: {new Date().toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* SRS Structure Validation */}
         {console.log(
           "Checking SRS Validation Section - Present:",
