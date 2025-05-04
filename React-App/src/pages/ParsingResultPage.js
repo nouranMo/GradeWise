@@ -8,16 +8,16 @@ function isFigureSection(sectionName) {
 
   const lowerName = sectionName.toLowerCase();
   return (
-    lowerName.includes('diagram') ||
-    lowerName.includes('figure') ||
-    lowerName.includes('chart') ||
-    lowerName.includes('graph') ||
-    lowerName.includes('eerd') ||
-    lowerName.includes('uml') ||
-    lowerName.includes('class diagram') ||
-    lowerName.includes('sequence diagram') ||
-    lowerName.includes('use case') ||
-    lowerName.includes('entity relationship')
+    lowerName.includes("diagram") ||
+    lowerName.includes("figure") ||
+    lowerName.includes("chart") ||
+    lowerName.includes("graph") ||
+    lowerName.includes("eerd") ||
+    lowerName.includes("uml") ||
+    lowerName.includes("class diagram") ||
+    lowerName.includes("sequence diagram") ||
+    lowerName.includes("use case") ||
+    lowerName.includes("entity relationship")
   );
 }
 
@@ -29,16 +29,21 @@ function getCleanSectionName(sectionName) {
   return cleanName;
 }
 
-function RelationshipGraph({ 
-  matrix, 
-  scopeSources, 
-  relationshipAnalyses = {}
+function RelationshipGraph({
+  matrix,
+  scopeSources,
+  relationshipAnalyses = {},
 }) {
   const [selectedRelationship, setSelectedRelationship] = useState(null);
   const [showDiagrams, setShowDiagrams] = useState(true);
-  
+
   // Skip rendering if no data
-  if (!matrix || !scopeSources || matrix.length === 0 || scopeSources.length === 0) {
+  if (
+    !matrix ||
+    !scopeSources ||
+    matrix.length === 0 ||
+    scopeSources.length === 0
+  ) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
         <h3 className="text-xl font-semibold mb-4">Section Relationships</h3>
@@ -46,80 +51,86 @@ function RelationshipGraph({
       </div>
     );
   }
-  
+
   // Check if we have relationship analyses
-  const hasRelationshipAnalyses = relationshipAnalyses && Object.keys(relationshipAnalyses).length > 0;
-  
+  const hasRelationshipAnalyses =
+    relationshipAnalyses && Object.keys(relationshipAnalyses).length > 0;
+
   // If we have relationship analyses, use them directly
   let relationships = [];
-  
+
   let diagramRels = []; // New array for diagram relationships
-  
+
   if (hasRelationshipAnalyses) {
     // Create relationships from the relationship analyses
-    relationships = Object.keys(relationshipAnalyses).map(key => {
-      const [source, target] = key.split('|');
+    relationships = Object.keys(relationshipAnalyses).map((key) => {
+      const [source, target] = key.split("|");
       const analysis = relationshipAnalyses[key];
-      
+
       return {
         source,
         target,
         key,
         strength: analysis.similarity_score,
         hasAnalysis: true,
-        isDiagram: isFigureSection(source) || isFigureSection(target) // Check if either section is a diagram
+        isDiagram: isFigureSection(source) || isFigureSection(target), // Check if either section is a diagram
       };
     });
   } else {
     // If no relationship analyses, create them from the similarity matrix
     for (let i = 0; i < matrix.length; i++) {
       for (let j = i + 1; j < matrix[i].length; j++) {
-        if (matrix[i][j] > 0.3) { // Only show relationships above threshold
-          const isDiagram = isFigureSection(scopeSources[i]) || isFigureSection(scopeSources[j]);
-          
+        if (matrix[i][j] > 0.3) {
+          // Only show relationships above threshold
+          const isDiagram =
+            isFigureSection(scopeSources[i]) ||
+            isFigureSection(scopeSources[j]);
+
           relationships.push({
             source: scopeSources[i],
             target: scopeSources[j],
             strength: matrix[i][j],
             key: `${scopeSources[i]}|${scopeSources[j]}`,
             hasAnalysis: false,
-            isDiagram
+            isDiagram,
           });
         }
       }
     }
   }
-  
+
   // Extract diagram relationships
-  diagramRels = relationships.filter(rel => rel.isDiagram);
-  
+  diagramRels = relationships.filter((rel) => rel.isDiagram);
+
   // Filter out diagram relationships from main relationships if not showing diagrams
-  const textRelationships = relationships.filter(rel => !rel.isDiagram);
-  
+  const textRelationships = relationships.filter((rel) => !rel.isDiagram);
+
   // Combine relationships based on toggle
   const displayRelationships = showDiagrams ? relationships : textRelationships;
-  
+
   // Sort relationships by strength
   displayRelationships.sort((a, b) => b.strength - a.strength);
-  
+
   // Get the top relationships (limit to 10 for clarity)
   const topRelationships = displayRelationships.slice(0, 10);
-  
+
   // Get the selected relationship analysis
-  const selectedAnalysis = selectedRelationship ? relationshipAnalyses[selectedRelationship] : null;
-  
+  const selectedAnalysis = selectedRelationship
+    ? relationshipAnalyses[selectedRelationship]
+    : null;
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">Key Section Relationships</h3>
-        
+
         {/* Toggle for diagram relationships */}
         <div className="flex items-center">
           <span className="text-sm text-gray-600 mr-2">Include Diagrams</span>
           <label className="relative inline-flex items-center cursor-pointer">
-            <input 
-              type="checkbox" 
-              className="sr-only peer" 
+            <input
+              type="checkbox"
+              className="sr-only peer"
               checked={showDiagrams}
               onChange={() => setShowDiagrams(!showDiagrams)}
             />
@@ -127,33 +138,42 @@ function RelationshipGraph({
           </label>
         </div>
       </div>
-      
+
       {diagramRels.length > 0 && (
         <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
           <p className="text-sm text-blue-800">
-            <span className="font-medium">📊 Note:</span> {diagramRels.length} diagram-to-section relationships found. 
-            {showDiagrams ? ' These are included in the list below.' : ' Toggle the switch above to include them.'}
+            <span className="font-medium">📊 Note:</span> {diagramRels.length}{" "}
+            diagram-to-section relationships found.
+            {showDiagrams
+              ? " These are included in the list below."
+              : " Toggle the switch above to include them."}
           </p>
         </div>
       )}
-      
+
       {topRelationships.length === 0 ? (
-        <p className="text-gray-500">No significant relationships found between sections.</p>
+        <p className="text-gray-500">
+          No significant relationships found between sections.
+        </p>
       ) : (
         <div>
           <div className="grid grid-cols-1 gap-4">
             {topRelationships.map((rel) => {
               const analysis = relationshipAnalyses[rel.key];
-              const strengthColor = 
-                rel.strength > 0.7 ? "bg-green-100 border-green-300" :
-                rel.strength > 0.5 ? "bg-blue-100 border-blue-300" :
-                "bg-yellow-100 border-yellow-300";
-              
+              const strengthColor =
+                rel.strength > 0.7
+                  ? "bg-green-100 border-green-300"
+                  : rel.strength > 0.5
+                  ? "bg-blue-100 border-blue-300"
+                  : "bg-yellow-100 border-yellow-300";
+
               // Add special styling for diagram relationships
-              const isDiagramClass = rel.isDiagram ? "border-l-4 border-l-blue-500" : "";
-              
+              const isDiagramClass = rel.isDiagram
+                ? "border-l-4 border-l-blue-500"
+                : "";
+
               return (
-                <div 
+                <div
                   key={rel.key}
                   className={`p-4 rounded-lg border ${strengthColor} ${isDiagramClass} cursor-pointer hover:shadow-md transition-shadow`}
                   onClick={() => setSelectedRelationship(rel.key)}
@@ -161,13 +181,14 @@ function RelationshipGraph({
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="font-medium text-gray-800">
                       {rel.isDiagram && <span className="mr-1">📊</span>}
-                      {getCleanSectionName(rel.source)} ↔ {getCleanSectionName(rel.target)}
+                      {getCleanSectionName(rel.source)} ↔{" "}
+                      {getCleanSectionName(rel.target)}
                     </h4>
                     <span className="text-sm font-medium px-2 py-1 rounded-full bg-gray-200">
                       {Math.round(rel.strength * 100)}%
                     </span>
                   </div>
-                  
+
                   {analysis ? (
                     <>
                       <div className="mb-2">
@@ -186,109 +207,163 @@ function RelationshipGraph({
                     </>
                   ) : (
                     <p className="text-sm text-gray-500 italic">
-                      {rel.isDiagram ? 
-                        "Diagram relationship - click to analyze" : 
-                        "No detailed analysis available"}
+                      {rel.isDiagram
+                        ? "Diagram relationship - click to analyze"
+                        : "No detailed analysis available"}
                     </p>
                   )}
                 </div>
               );
             })}
           </div>
-          
+
           {/* Selected relationship details */}
-          {selectedRelationship && relationshipAnalyses[selectedRelationship] && (
-            <div className="mt-6 p-5 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="text-lg font-medium text-gray-800">
-                  Detailed Relationship Analysis
-                </h4>
-                <button 
-                  onClick={() => setSelectedRelationship(null)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-              
-              <div className="space-y-5">
-                <div className="flex flex-col md:flex-row md:justify-between md:space-x-4">
-                  <div>
-                    <h5 className="font-medium text-gray-700">Relationship Strength</h5>
-                    <p className="text-sm mt-1">
-                      <span className={`font-semibold ${
-                        relationshipAnalyses[selectedRelationship].relationship_strength === "Strong" ? "text-green-600" :
-                        relationshipAnalyses[selectedRelationship].relationship_strength === "Moderate" ? "text-blue-600" :
-                        "text-yellow-600"
-                      }`}>
-                        {relationshipAnalyses[selectedRelationship].relationship_strength}
-                      </span>
-                    </p>
-                  </div>
-                  <div>
-                    <h5 className="font-medium text-gray-700">Similarity Score</h5>
-                    <p className="text-sm mt-1">
-                      <span className="font-semibold">
-                        {Math.round(relationshipAnalyses[selectedRelationship].similarity_score * 100)}%
-                      </span>
-                    </p>
-                  </div>
-                  <div>
-                    <h5 className="font-medium text-gray-700">Section Types</h5>
-                    <p className="text-sm mt-1">
-                      {relationshipAnalyses[selectedRelationship].section1_type} ↔ {relationshipAnalyses[selectedRelationship].section2_type}
-                    </p>
-                  </div>
+          {selectedRelationship &&
+            relationshipAnalyses[selectedRelationship] && (
+              <div className="mt-6 p-5 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-lg font-medium text-gray-800">
+                    Detailed Relationship Analysis
+                  </h4>
+                  <button
+                    onClick={() => setSelectedRelationship(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
                 </div>
-                
-                <div>
-                  <h5 className="font-medium text-gray-700 mb-2">Description</h5>
-                  <p className="text-sm bg-white p-3 rounded border border-gray-200">
-                    {relationshipAnalyses[selectedRelationship].description}
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div className="space-y-5">
+                  <div className="flex flex-col md:flex-row md:justify-between md:space-x-4">
+                    <div>
+                      <h5 className="font-medium text-gray-700">
+                        Relationship Strength
+                      </h5>
+                      <p className="text-sm mt-1">
+                        <span
+                          className={`font-semibold ${
+                            relationshipAnalyses[selectedRelationship]
+                              .relationship_strength === "Strong"
+                              ? "text-green-600"
+                              : relationshipAnalyses[selectedRelationship]
+                                  .relationship_strength === "Moderate"
+                              ? "text-blue-600"
+                              : "text-yellow-600"
+                          }`}
+                        >
+                          {
+                            relationshipAnalyses[selectedRelationship]
+                              .relationship_strength
+                          }
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700">
+                        Similarity Score
+                      </h5>
+                      <p className="text-sm mt-1">
+                        <span className="font-semibold">
+                          {Math.round(
+                            relationshipAnalyses[selectedRelationship]
+                              .similarity_score * 100
+                          )}
+                          %
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700">
+                        Section Types
+                      </h5>
+                      <p className="text-sm mt-1">
+                        {
+                          relationshipAnalyses[selectedRelationship]
+                            .section1_type
+                        }{" "}
+                        ↔{" "}
+                        {
+                          relationshipAnalyses[selectedRelationship]
+                            .section2_type
+                        }
+                      </p>
+                    </div>
+                  </div>
+
                   <div>
                     <h5 className="font-medium text-gray-700 mb-2">
-                      <span className="text-green-600 mr-1">✓</span> Consistent Elements
+                      Description
                     </h5>
-                    <ul className="list-disc list-inside text-sm bg-green-50 p-3 rounded border border-green-100">
-                      {relationshipAnalyses[selectedRelationship].consistent_elements.map((item, i) => (
-                        <li key={i} className="mb-1 last:mb-0">{item}</li>
-                      ))}
-                    </ul>
+                    <p className="text-sm bg-white p-3 rounded border border-gray-200">
+                      {relationshipAnalyses[selectedRelationship].description}
+                    </p>
                   </div>
-                  
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-2">
+                        <span className="text-green-600 mr-1">✓</span>{" "}
+                        Consistent Elements
+                      </h5>
+                      <ul className="list-disc list-inside text-sm bg-green-50 p-3 rounded border border-green-100">
+                        {relationshipAnalyses[
+                          selectedRelationship
+                        ].consistent_elements.map((item, i) => (
+                          <li key={i} className="mb-1 last:mb-0">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-2">
+                        <span className="text-red-600 mr-1">⚠</span>{" "}
+                        Inconsistencies
+                      </h5>
+                      <ul className="list-disc list-inside text-sm bg-red-50 p-3 rounded border border-red-100">
+                        {relationshipAnalyses[selectedRelationship]
+                          .inconsistencies.length > 0 ? (
+                          relationshipAnalyses[
+                            selectedRelationship
+                          ].inconsistencies.map((item, i) => (
+                            <li key={i} className="mb-1 last:mb-0">
+                              {item}
+                            </li>
+                          ))
+                        ) : (
+                          <li>No inconsistencies found</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+
                   <div>
                     <h5 className="font-medium text-gray-700 mb-2">
-                      <span className="text-red-600 mr-1">⚠</span> Inconsistencies
+                      <span className="text-blue-600 mr-1">💡</span>{" "}
+                      Recommendation
                     </h5>
-                    <ul className="list-disc list-inside text-sm bg-red-50 p-3 rounded border border-red-100">
-                      {relationshipAnalyses[selectedRelationship].inconsistencies.length > 0 ? (
-                        relationshipAnalyses[selectedRelationship].inconsistencies.map((item, i) => (
-                          <li key={i} className="mb-1 last:mb-0">{item}</li>
-                        ))
-                      ) : (
-                        <li>No inconsistencies found</li>
-                      )}
-                    </ul>
+                    <p className="text-sm bg-blue-50 p-3 rounded border border-blue-100">
+                      {
+                        relationshipAnalyses[selectedRelationship]
+                          .recommendation
+                      }
+                    </p>
                   </div>
                 </div>
-                
-                <div>
-                  <h5 className="font-medium text-gray-700 mb-2">
-                    <span className="text-blue-600 mr-1">💡</span> Recommendation
-                  </h5>
-                  <p className="text-sm bg-blue-50 p-3 rounded border border-blue-100">
-                    {relationshipAnalyses[selectedRelationship].recommendation}
-                  </p>
-                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       )}
 
@@ -298,10 +373,11 @@ function RelationshipGraph({
           <h4 className="text-lg font-semibold mb-3">Diagram Relationships</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {diagramRels.map((rel, idx) => (
-              <div key={idx} className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                <h5 className="font-medium text-blue-800 mb-2">
-                  {rel.source}
-                </h5>
+              <div
+                key={idx}
+                className="p-4 bg-blue-50 rounded-lg border border-blue-100"
+              >
+                <h5 className="font-medium text-blue-800 mb-2">{rel.source}</h5>
                 <p className="text-sm text-gray-600 mb-2">Related to:</p>
                 <ul className="list-disc list-inside text-sm">
                   <li className="mb-1">
@@ -316,6 +392,53 @@ function RelationshipGraph({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function CollapsibleSection({
+  title,
+  children,
+  defaultOpen = false,
+  icon = null,
+  badgeContent = null,
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+      <div
+        className="flex justify-between items-center cursor-pointer"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center">
+          {icon && <span className="mr-2">{icon}</span>}
+          <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+          {badgeContent && <span className="ml-3">{badgeContent}</span>}
+        </div>
+        <button
+          className="text-gray-500 hover:text-gray-700 transition-colors"
+          aria-label={isOpen ? "Collapse section" : "Expand section"}
+        >
+          <svg
+            className={`w-6 h-6 transform transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {isOpen && <div className="mt-4">{children}</div>}
     </div>
   );
 }
@@ -380,10 +503,14 @@ function ParsingResult() {
   // Add this near the top of your ParsingResult component
   useEffect(() => {
     if (parsingResult?.content_analysis?.relationship_analyses) {
-      console.log("Relationship analyses available:", 
-        Object.keys(parsingResult.content_analysis.relationship_analyses).length);
-      console.log("Sample analysis:", 
-        Object.values(parsingResult.content_analysis.relationship_analyses)[0]);
+      console.log(
+        "Relationship analyses available:",
+        Object.keys(parsingResult.content_analysis.relationship_analyses).length
+      );
+      console.log(
+        "Sample analysis:",
+        Object.values(parsingResult.content_analysis.relationship_analyses)[0]
+      );
     } else {
       console.log("No relationship analyses available in the parsing result");
     }
@@ -392,23 +519,28 @@ function ParsingResult() {
   // Add this to your useEffect
   useEffect(() => {
     console.log("Full parsing result:", parsingResult);
-    
+
     if (parsingResult?.content_analysis) {
-      console.log("Content analysis keys:", Object.keys(parsingResult.content_analysis));
-      
+      console.log(
+        "Content analysis keys:",
+        Object.keys(parsingResult.content_analysis)
+      );
+
       // Check if relationship_analyses exists directly in content_analysis
       if (parsingResult.content_analysis.relationship_analyses) {
         console.log("Relationship analyses found at expected location");
-      } 
+      }
       // Check if it might be nested deeper
-      else if (parsingResult.content_analysis.similarity_analysis?.relationship_analyses) {
+      else if (
+        parsingResult.content_analysis.similarity_analysis
+          ?.relationship_analyses
+      ) {
         console.log("Relationship analyses found in similarity_analysis");
       }
       // Check if it might be at the root level
       else if (parsingResult.relationship_analyses) {
         console.log("Relationship analyses found at root level");
-      }
-      else {
+      } else {
         console.log("Relationship analyses not found in any expected location");
       }
     }
@@ -418,19 +550,31 @@ function ParsingResult() {
   useEffect(() => {
     if (parsingResult?.content_analysis) {
       console.log("Content analysis:", parsingResult.content_analysis);
-      console.log("Relationship analyses:", parsingResult.content_analysis.relationship_analyses);
-      
+      console.log(
+        "Relationship analyses:",
+        parsingResult.content_analysis.relationship_analyses
+      );
+
       if (parsingResult.content_analysis.relationship_analyses) {
-        console.log("Number of relationship analyses:", 
-          Object.keys(parsingResult.content_analysis.relationship_analyses).length);
-        console.log("First relationship analysis:", 
-          Object.entries(parsingResult.content_analysis.relationship_analyses)[0]);
+        console.log(
+          "Number of relationship analyses:",
+          Object.keys(parsingResult.content_analysis.relationship_analyses)
+            .length
+        );
+        console.log(
+          "First relationship analysis:",
+          Object.entries(
+            parsingResult.content_analysis.relationship_analyses
+          )[0]
+        );
       }
     }
   }, [parsingResult]);
 
   if (!parsingResult || parsingResult.status === "error") {
-    console.log("Rendering error state due to missing or invalid parsingResult");
+    console.log(
+      "Rendering error state due to missing or invalid parsingResult"
+    );
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
         <h2 className="text-2xl font-bold text-red-600 mb-4">
@@ -466,10 +610,10 @@ function ParsingResult() {
           !!parsingResult?.srs_validation
         )}
         {parsingResult.srs_validation && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              SRS Structure Analysis
-            </h2>
+          <CollapsibleSection
+            title="SRS Structure Analysis"
+            defaultOpen={false}
+          >
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <StatCard
@@ -497,53 +641,67 @@ function ParsingResult() {
                   color="red"
                 />
               </div>
-              {(parsingResult.srs_validation.structure_validation.missing_sections.length > 0 ||
-                parsingResult.srs_validation.structure_validation.missing_subsections?.length > 0) && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold text-red-600">Missing Sections:</h3>
-                    <ul className="list-disc list-inside">
-                      {parsingResult.srs_validation.structure_validation.missing_sections.map(
-                        (section, index) => (
-                          <li key={`section-${index}`} className="text-gray-700">
-                            Section: {section}
-                          </li>
-                        )
-                      )}
-                      {parsingResult.srs_validation.structure_validation.missing_subsections?.map(
-                        (subsection, index) => (
-                          <li key={`subsection-${index}`} className="text-gray-700">
-                            Subsection: {subsection}
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
-              {(parsingResult.srs_validation.structure_validation.misplaced_sections.length > 0 ||
-                parsingResult.srs_validation.structure_validation.misplaced_subsections?.length > 0) && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold text-red-600">Order Issues:</h3>
-                    <ul className="list-disc list-inside">
-                      {parsingResult.srs_validation.structure_validation.misplaced_sections.map(
-                        (issue, index) => (
-                          <li key={`misplaced-section-${index}`} className="text-gray-700">
-                            Section: {issue}
-                          </li>
-                        )
-                      )}
-                      {parsingResult.srs_validation.structure_validation.misplaced_subsections?.map(
-                        (issue, index) => (
-                          <li key={`misplaced-subsection-${index}`} className="text-gray-700">
-                            Subsection: {issue}
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
-
+              {(parsingResult.srs_validation.structure_validation
+                .missing_sections.length > 0 ||
+                parsingResult.srs_validation.structure_validation
+                  .missing_subsections?.length > 0) && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-red-600">
+                    Missing Sections:
+                  </h3>
+                  <ul className="list-disc list-inside">
+                    {parsingResult.srs_validation.structure_validation.missing_sections.map(
+                      (section, index) => (
+                        <li key={`section-${index}`} className="text-gray-700">
+                          Section: {section}
+                        </li>
+                      )
+                    )}
+                    {parsingResult.srs_validation.structure_validation.missing_subsections?.map(
+                      (subsection, index) => (
+                        <li
+                          key={`subsection-${index}`}
+                          className="text-gray-700"
+                        >
+                          Subsection: {subsection}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+              {(parsingResult.srs_validation.structure_validation
+                .misplaced_sections.length > 0 ||
+                parsingResult.srs_validation.structure_validation
+                  .misplaced_subsections?.length > 0) && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-red-600">Order Issues:</h3>
+                  <ul className="list-disc list-inside">
+                    {parsingResult.srs_validation.structure_validation.misplaced_sections.map(
+                      (issue, index) => (
+                        <li
+                          key={`misplaced-section-${index}`}
+                          className="text-gray-700"
+                        >
+                          Section: {issue}
+                        </li>
+                      )
+                    )}
+                    {parsingResult.srs_validation.structure_validation.misplaced_subsections?.map(
+                      (issue, index) => (
+                        <li
+                          key={`misplaced-subsection-${index}`}
+                          className="text-gray-700"
+                        >
+                          Subsection: {issue}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* SDD Structure Validation */}
@@ -552,10 +710,10 @@ function ParsingResult() {
           !!parsingResult?.sdd_validation
         )}
         {parsingResult.sdd_validation && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              SDD Structure Analysis
-            </h2>
+          <CollapsibleSection
+            title="SDD Structure Analysis"
+            defaultOpen={false}
+          >
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <StatCard
@@ -584,52 +742,67 @@ function ParsingResult() {
                 />
               </div>
 
-              {(parsingResult.sdd_validation.structure_validation.missing_sections.length > 0 ||
-                parsingResult.sdd_validation.structure_validation.missing_subsections?.length > 0) && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold text-red-600">Missing Sections:</h3>
-                    <ul className="list-disc list-inside">
-                      {parsingResult.sdd_validation.structure_validation.missing_sections.map(
-                        (section, index) => (
-                          <li key={`section-${index}`} className="text-gray-700">
-                            Section: {section}
-                          </li>
-                        )
-                      )}
-                      {parsingResult.sdd_validation.structure_validation.missing_subsections?.map(
-                        (subsection, index) => (
-                          <li key={`subsection-${index}`} className="text-gray-700">
-                            Subsection: {subsection}
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
-              {(parsingResult.sdd_validation.structure_validation.misplaced_sections.length > 0 ||
-                parsingResult.sdd_validation.structure_validation.misplaced_subsections?.length > 0) && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold text-red-600">Order Issues:</h3>
-                    <ul className="list-disc list-inside">
-                      {parsingResult.sdd_validation.structure_validation.misplaced_sections.map(
-                        (issue, index) => (
-                          <li key={`misplaced-section-${index}`} className="text-gray-700">
-                            Section: {issue}
-                          </li>
-                        )
-                      )}
-                      {parsingResult.sdd_validation.structure_validation.misplaced_subsections?.map(
-                        (issue, index) => (
-                          <li key={`misplaced-subsection-${index}`} className="text-gray-700">
-                            Subsection: {issue}
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
+              {(parsingResult.sdd_validation.structure_validation
+                .missing_sections.length > 0 ||
+                parsingResult.sdd_validation.structure_validation
+                  .missing_subsections?.length > 0) && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-red-600">
+                    Missing Sections:
+                  </h3>
+                  <ul className="list-disc list-inside">
+                    {parsingResult.sdd_validation.structure_validation.missing_sections.map(
+                      (section, index) => (
+                        <li key={`section-${index}`} className="text-gray-700">
+                          Section: {section}
+                        </li>
+                      )
+                    )}
+                    {parsingResult.sdd_validation.structure_validation.missing_subsections?.map(
+                      (subsection, index) => (
+                        <li
+                          key={`subsection-${index}`}
+                          className="text-gray-700"
+                        >
+                          Subsection: {subsection}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+              {(parsingResult.sdd_validation.structure_validation
+                .misplaced_sections.length > 0 ||
+                parsingResult.sdd_validation.structure_validation
+                  .misplaced_subsections?.length > 0) && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-red-600">Order Issues:</h3>
+                  <ul className="list-disc list-inside">
+                    {parsingResult.sdd_validation.structure_validation.misplaced_sections.map(
+                      (issue, index) => (
+                        <li
+                          key={`misplaced-section-${index}`}
+                          className="text-gray-700"
+                        >
+                          Section: {issue}
+                        </li>
+                      )
+                    )}
+                    {parsingResult.sdd_validation.structure_validation.misplaced_subsections?.map(
+                      (issue, index) => (
+                        <li
+                          key={`misplaced-subsection-${index}`}
+                          className="text-gray-700"
+                        >
+                          Subsection: {issue}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* References Analysis */}
@@ -638,11 +811,7 @@ function ParsingResult() {
           !!parsingResult?.references_validation
         )}
         {parsingResult.references_validation && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              References Analysis
-            </h2>
-
+          <CollapsibleSection title="References Analysis" defaultOpen={false}>
             {process.env.NODE_ENV !== "production" && (
               <div className="p-2 bg-yellow-50 border border-yellow-200 rounded mb-4 text-xs">
                 <p>Available data:</p>
@@ -662,7 +831,7 @@ function ParsingResult() {
                     parsingResult.references_validation.reformatted_references
                   )
                     ? parsingResult.references_validation.reformatted_references
-                      .length
+                        .length
                     : 0)
                 }
                 color="blue"
@@ -677,10 +846,11 @@ function ParsingResult() {
                   (parsingResult.references_validation.reference_validation
                     ?.status === "valid"
                     ? Array.isArray(
-                      parsingResult.references_validation
-                        .reformatted_references
-                    )
-                      ? parsingResult.references_validation.reformatted_references.length
+                        parsingResult.references_validation
+                          .reformatted_references
+                      )
+                      ? parsingResult.references_validation
+                          .reformatted_references.length
                       : 0
                     : 0)
                 }
@@ -695,8 +865,8 @@ function ParsingResult() {
                     parsingResult.references_validation.reference_details
                   )
                     ? parsingResult.references_validation.reference_details.filter(
-                      (ref) => ref.is_cited
-                    ).length
+                        (ref) => ref.is_cited
+                      ).length
                     : 0)
                 }
                 color="green"
@@ -710,16 +880,16 @@ function ParsingResult() {
                     parsingResult.references_validation.reference_details
                   )
                     ? parsingResult.references_validation.reference_details.filter(
-                      (ref) => ref.online_verification?.verified
-                    ).length
+                        (ref) => ref.online_verification?.verified
+                      ).length
                     : Array.isArray(
-                      parsingResult.references_validation
-                        .reformatted_references
-                    )
-                      ? parsingResult.references_validation.reformatted_references.filter(
+                        parsingResult.references_validation
+                          .reformatted_references
+                      )
+                    ? parsingResult.references_validation.reformatted_references.filter(
                         (ref) => ref.verification?.verified
                       ).length
-                      : 0)
+                    : 0)
                 }
                 color="blue"
               />
@@ -727,10 +897,10 @@ function ParsingResult() {
 
             <div className="space-y-4">
               {parsingResult.references_validation.reference_details &&
-                Array.isArray(
-                  parsingResult.references_validation.reference_details
-                ) &&
-                parsingResult.references_validation.reference_details.length >
+              Array.isArray(
+                parsingResult.references_validation.reference_details
+              ) &&
+              parsingResult.references_validation.reference_details.length >
                 0 ? (
                 parsingResult.references_validation.reference_details.map(
                   (ref, index) => (
@@ -771,7 +941,7 @@ function ParsingResult() {
                   </div>
                 )
               ) : parsingResult.references_validation.reference_validation
-                ?.errors ? (
+                  ?.errors ? (
                 <div>
                   <p className="text-red-600 font-medium">Validation Errors:</p>
                   <ul className="list-disc list-inside">
@@ -823,7 +993,7 @@ function ParsingResult() {
                 </div>
               )}
             </div>
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* Content Analysis */}
@@ -832,17 +1002,17 @@ function ParsingResult() {
           !!parsingResult?.content_analysis
         )}
         {parsingResult.content_analysis && (
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h3 className="text-xl font-semibold mb-4">Content Analysis</h3>
-            
+          <CollapsibleSection title="Content Analysis" defaultOpen={false}>
             {parsingResult.content_analysis.relationship_analyses && (
-              <RelationshipGraph 
+              <RelationshipGraph
                 matrix={parsingResult.content_analysis.similarity_matrix}
                 scopeSources={parsingResult.content_analysis.scope_sources}
-                relationshipAnalyses={parsingResult.content_analysis.relationship_analyses}
+                relationshipAnalyses={
+                  parsingResult.content_analysis.relationship_analyses
+                }
               />
             )}
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* Image Analysis */}
@@ -851,10 +1021,7 @@ function ParsingResult() {
           !!parsingResult?.image_analysis
         )}
         {parsingResult.image_analysis && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Image Analysis
-            </h2>
+          <CollapsibleSection title="Image Analysis" defaultOpen={false}>
             <div className="space-y-4">
               {parsingResult.image_analysis.processed_images.map(
                 (image, index) => (
@@ -869,7 +1036,7 @@ function ParsingResult() {
                 )
               )}
             </div>
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* Spelling and Grammar Section */}
@@ -882,65 +1049,64 @@ function ParsingResult() {
         )}
         {(parsingResult.content_analysis?.spelling_grammar?.length > 0 ||
           parsingResult.spelling_check) && (
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Spelling Analysis</h2>
-              <div className="space-y-6">
-                {/* Quick Spell Check Summary */}
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
-                    <h4 className="font-medium text-blue-800 mb-2">
-                      Quick Spell Check Summary
-                    </h4>
-                    <p className="text-sm text-gray-700">
-                      {parsingResult.spelling_check.misspelled_count > 0 ? (
-                        <>
-                          Found{" "}
-                          <span className="font-semibold text-red-600">
-                            {parsingResult.spelling_check.misspelled_count}
-                          </span>{" "}
-                          potential misspelled words in document.
-                        </>
-                      ) : (
-                        <>No spelling issues detected in the document.</>
-                      )}
-                    </p>
-                  </div>
-
-                {/* Add the SpellingCheckSection component here */}
-                {parsingResult.spelling_check.per_section && (
-                  <SpellingCheckSection spellingData={parsingResult.spelling_check} />
-                )}
-
-                {/* Keep your existing misspelled words display */}
-                  {parsingResult.spelling_check.misspelled_count > 0 && (
-                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="p-4 bg-gray-50 border-b">
-                        <h4 className="font-medium">Potential Misspellings</h4>
-                      </div>
-                      <div className="p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {Object.entries(
-                            parsingResult.spelling_check.misspelled_words
-                          ).map(([word, correction], i) => (
-                            <div
-                              key={i}
-                              className="flex items-center p-2 rounded bg-gray-50"
-                            >
-                              <span className="text-red-600 font-mono">
-                                {word}
-                              </span>
-                              <span className="mx-2">→</span>
-                              <span className="text-green-600 font-mono">
-                                {correction}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+          <CollapsibleSection title="Spelling Analysis" defaultOpen={false}>
+            <div className="space-y-6">
+              {/* Quick Spell Check Summary */}
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+                <h4 className="font-medium text-blue-800 mb-2">
+                  Quick Spell Check Summary
+                </h4>
+                <p className="text-sm text-gray-700">
+                  {parsingResult.spelling_check.misspelled_count > 0 ? (
+                    <>
+                      Found{" "}
+                      <span className="font-semibold text-red-600">
+                        {parsingResult.spelling_check.misspelled_count}
+                      </span>{" "}
+                      potential misspelled words in document.
+                    </>
+                  ) : (
+                    <>No spelling issues detected in the document.</>
                   )}
+                </p>
+              </div>
+
+              {/* Add the SpellingCheckSection component here */}
+              {parsingResult.spelling_check.per_section && (
+                <SpellingCheckSection
+                  spellingData={parsingResult.spelling_check}
+                />
+              )}
+
+              {/* Keep your existing misspelled words display */}
+              {parsingResult.spelling_check.misspelled_count > 0 && (
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="p-4 bg-gray-50 border-b">
+                    <h4 className="font-medium">Potential Misspellings</h4>
+                  </div>
+                  <div className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {Object.entries(
+                        parsingResult.spelling_check.misspelled_words
+                      ).map(([word, correction], i) => (
+                        <div
+                          key={i}
+                          className="flex items-center p-2 rounded bg-gray-50"
+                        >
+                          <span className="text-red-600 font-mono">{word}</span>
+                          <span className="mx-2">→</span>
+                          <span className="text-green-600 font-mono">
+                            {correction}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
+              )}
             </div>
-          )}
+          </CollapsibleSection>
+        )}
 
         {/* Business Value Analysis */}
         {console.log(
@@ -948,16 +1114,16 @@ function ParsingResult() {
           !!parsingResult?.business_value_analysis
         )}
         {parsingResult?.business_value_analysis && (
-          <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">
-              Business Value Analysis
-            </h2>
+          <CollapsibleSection
+            title="Business Value Analysis"
+            defaultOpen={false}
+          >
             <div className="prose prose-lg text-gray-700 max-w-none">
               <ReactMarkdown>
                 {(() => {
                   const evaluation =
                     parsingResult.business_value_analysis[
-                    "Business Value Evaluation"
+                      "Business Value Evaluation"
                     ];
                   if (!evaluation)
                     return "No business value evaluation available";
@@ -976,85 +1142,62 @@ function ParsingResult() {
                 })()}
               </ReactMarkdown>
             </div>
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* Diagram Convention Analysis */}
-{console.log(
-  "Checking Diagram Convention Section - Present:",
-  !!parsingResult?.diagram_convention
-)}
-{parsingResult?.diagram_convention && (
-  <div className="bg-white rounded-lg shadow-lg p-6">
-    <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-      <svg
-        className="w-6 h-6 mr-2"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-        />
-      </svg>
-      Diagram Convention Analysis
-    </h2>
-    <div className="space-y-4">
-      {console.log(
-        "Diagram Convention - Validation Results Present:",
-        !!parsingResult.diagram_convention.validation_results
-      )}
-      {parsingResult.diagram_convention.validation_results ? (
-        Object.keys(parsingResult.diagram_convention.validation_results).length >
-        0 ? (
-          Object.entries(
-            parsingResult.diagram_convention.validation_results
-          ).map(([diagramKey, validationText], index) => {
-            console.log(`Rendering Diagram: ${diagramKey}`, validationText);
-            return (
-              <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-medium mb-2">
-                  Diagram: {diagramKey.replace(/_/g, " ")}
-                </h3>
-                <pre
-                  className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800"
-                >
-                  {validationText || "No validation text provided"}
-                </pre>
-              </div>
-            );
-          })
-        ) : (
-          <p className="text-gray-600">No validation results found.</p>
-        )
-      ) : (
-        <p className="text-gray-600">No diagram convention data available.</p>
-      )}
-
-      {console.log(
-        "Diagram Convention - Issues Present:",
-        !!(
-          parsingResult.diagram_convention.issues &&
-          parsingResult.diagram_convention.issues.length > 0
-        )
-      )}
-      {parsingResult.diagram_convention.issues &&
-        parsingResult.diagram_convention.issues.length > 0 && (
-          <div className="mt-4">
-            <h3 className="font-medium text-red-600 mb-2">Issues:</h3>
-            <ul className="list-disc list-inside text-red-600">
-              {parsingResult.diagram_convention.issues.map((issue, idx) => (
-                <li key={idx}>{issue}</li>
-              ))}
-            </ul>
-          </div>
+        {console.log(
+          "Checking Diagram Convention Section - Present:",
+          !!parsingResult?.diagram_convention
         )}
-    </div>
-  </div>
-)}
+        {parsingResult?.diagram_convention && (
+          <CollapsibleSection
+            title="Diagram Convention Analysis"
+            defaultOpen={false}
+          >
+            <div className="space-y-4">
+              {parsingResult.diagram_convention.validation_results ? (
+                Object.keys(parsingResult.diagram_convention.validation_results)
+                  .length > 0 ? (
+                  Object.entries(
+                    parsingResult.diagram_convention.validation_results
+                  ).map(([diagramKey, validationText], index) => {
+                    return (
+                      <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                        <h3 className="font-medium mb-2">
+                          Diagram: {diagramKey.replace(/_/g, " ")}
+                        </h3>
+                        <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
+                          {validationText || "No validation text provided"}
+                        </pre>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-gray-600">No validation results found.</p>
+                )
+              ) : (
+                <p className="text-gray-600">
+                  No diagram convention data available.
+                </p>
+              )}
+
+              {parsingResult.diagram_convention.issues &&
+                parsingResult.diagram_convention.issues.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="font-medium text-red-600 mb-2">Issues:</h3>
+                    <ul className="list-disc list-inside text-red-600">
+                      {parsingResult.diagram_convention.issues.map(
+                        (issue, idx) => (
+                          <li key={idx}>{issue}</li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
+            </div>
+          </CollapsibleSection>
+        )}
 
         {/* Plagiarism Check */}
         {console.log(
@@ -1062,41 +1205,52 @@ function ParsingResult() {
           !!parsingResult?.plagiarism_check
         )}
         {parsingResult.plagiarism_check && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-              <svg className="w-6 h-6 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              Plagiarism Analysis
-            </h2>
-            
+          <CollapsibleSection title="Plagiarism Analysis" defaultOpen={false}>
             <div className="space-y-6">
               {/* Summary Card */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-lg border border-blue-100 shadow-sm">
                 <div className="flex items-center mb-3">
                   <div className="bg-blue-100 p-2 rounded-full mr-3">
-                    <svg className="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-5 h-5 text-blue-700"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
-                  <h4 className="font-semibold text-blue-800 text-lg">Plagiarism Check Summary</h4>
+                  <h4 className="font-semibold text-blue-800 text-lg">
+                    Plagiarism Check Summary
+                  </h4>
                 </div>
-                
+
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                   <div className="mb-3 md:mb-0">
                     <p className="text-gray-700">
-                      <span className="font-medium">Analysis completed:</span> {parsingResult.plagiarism_check.total_phrases_checked} phrases analyzed
+                      <span className="font-medium">Analysis completed:</span>{" "}
+                      {parsingResult.plagiarism_check.total_phrases_checked}{" "}
+                      phrases analyzed
                     </p>
                     <p className="text-gray-700 mt-1">
-                      <span className="font-medium">Search method:</span> Web content comparison
+                      <span className="font-medium">Search method:</span> Web
+                      content comparison
                     </p>
                   </div>
-                  
+
                   <div className="bg-white px-4 py-3 rounded-lg shadow-sm border border-blue-100">
                     <p className="font-medium text-center">Result</p>
-                    {parsingResult.plagiarism_check.similar_matches_found > 0 ? (
+                    {parsingResult.plagiarism_check.similar_matches_found >
+                    0 ? (
                       <p className="text-red-600 font-bold text-center text-lg">
-                        {parsingResult.plagiarism_check.similar_matches_found} matches found
+                        {parsingResult.plagiarism_check.similar_matches_found}{" "}
+                        matches found
                       </p>
                     ) : (
                       <p className="text-green-600 font-bold text-center text-lg">
@@ -1110,163 +1264,307 @@ function ParsingResult() {
               {/* Phrases Checked */}
               <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                 <div className="p-4 bg-gray-50 border-b flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <svg
+                    className="w-5 h-5 mr-2 text-gray-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
                   </svg>
                   <h4 className="font-medium">Analyzed Content</h4>
                 </div>
                 <div className="p-4">
-                  <p className="text-sm text-gray-600 mb-3">The following phrases from your document were analyzed for potential plagiarism:</p>
+                  <p className="text-sm text-gray-600 mb-3">
+                    The following phrases from your document were analyzed for
+                    potential plagiarism:
+                  </p>
                   <div className="max-h-60 overflow-y-auto pr-2">
                     <ul className="space-y-2">
-                      {parsingResult.plagiarism_check.phrases_checked.map((phrase, i) => (
-                        <li key={i} className="p-3 bg-gray-50 rounded text-sm border-l-4 border-blue-400 hover:bg-gray-100 transition-colors">
-                          "{phrase}"
-                        </li>
-                      ))}
+                      {parsingResult.plagiarism_check.phrases_checked.map(
+                        (phrase, i) => (
+                          <li
+                            key={i}
+                            className="p-3 bg-gray-50 rounded text-sm border-l-4 border-blue-400 hover:bg-gray-100 transition-colors"
+                          >
+                            "{phrase}"
+                          </li>
+                        )
+                      )}
                     </ul>
                   </div>
                 </div>
               </div>
 
               {/* Search Results */}
-              {parsingResult.plagiarism_check.search_results && parsingResult.plagiarism_check.search_results.length > 0 && (
-                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                  <div className="p-4 bg-gray-50 border-b flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z" />
-                    </svg>
-                    <h4 className="font-medium">Search Results</h4>
-                  </div>
-                  <div className="p-4">
-                    <p className="text-sm text-gray-600 mb-3">All search results from the analysis (including below threshold matches):</p>
-                    <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
-                      {parsingResult.plagiarism_check.search_results.map((result, i) => (
-                        <div key={i} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <p className="font-medium text-gray-800">Query: "{result.query}"</p>
-                              <p className="text-sm text-gray-600 mt-1">
-                                Similarity: <span className={`font-semibold ${result.similarity > 0.3 ? 'text-red-600' : 'text-gray-700'}`}>
-                                  {Math.round(result.similarity * 100)}%
-                                </span>
-                              </p>
+              {parsingResult.plagiarism_check.search_results &&
+                parsingResult.plagiarism_check.search_results.length > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                    <div className="p-4 bg-gray-50 border-b flex items-center">
+                      <svg
+                        className="w-5 h-5 mr-2 text-gray-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"
+                        />
+                      </svg>
+                      <h4 className="font-medium">Search Results</h4>
+                    </div>
+                    <div className="p-4">
+                      <p className="text-sm text-gray-600 mb-3">
+                        All search results from the analysis (including below
+                        threshold matches):
+                      </p>
+                      <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
+                        {parsingResult.plagiarism_check.search_results.map(
+                          (result, i) => (
+                            <div
+                              key={i}
+                              className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <p className="font-medium text-gray-800">
+                                    Query: "{result.query}"
+                                  </p>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    Similarity:{" "}
+                                    <span
+                                      className={`font-semibold ${
+                                        result.similarity > 0.3
+                                          ? "text-red-600"
+                                          : "text-gray-700"
+                                      }`}
+                                    >
+                                      {Math.round(result.similarity * 100)}%
+                                    </span>
+                                  </p>
+                                </div>
+                                <div className="flex space-x-2">
+                                  <a
+                                    href={result.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                                  >
+                                    <svg
+                                      className="w-4 h-4 mr-1"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                      />
+                                    </svg>
+                                    View Source
+                                  </a>
+                                  <a
+                                    href={result.search_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-gray-500 hover:text-gray-700 text-sm flex items-center"
+                                  >
+                                    <svg
+                                      className="w-4 h-4 mr-1"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                      />
+                                    </svg>
+                                    Search
+                                  </a>
+                                </div>
+                              </div>
+                              <div className="mt-2">
+                                <p className="text-sm font-medium text-gray-700">
+                                  Source: {result.title}
+                                </p>
+                                <div className="mt-1 p-2 bg-white rounded border border-gray-200">
+                                  <p className="text-xs text-gray-600 italic line-clamp-3">
+                                    {result.matched_content}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex space-x-2">
-                              <a 
-                                href={result.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
-                              >
-                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                </svg>
-                                View Source
-                              </a>
-                              <a 
-                                href={result.search_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-gray-500 hover:text-gray-700 text-sm flex items-center"
-                              >
-                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                                Search
-                              </a>
-                            </div>
-                          </div>
-                          <div className="mt-2">
-                            <p className="text-sm font-medium text-gray-700">Source: {result.title}</p>
-                            <div className="mt-1 p-2 bg-white rounded border border-gray-200">
-                              <p className="text-xs text-gray-600 italic line-clamp-3">{result.matched_content}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                          )
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Matches Found */}
               {parsingResult.plagiarism_check.similar_matches_found > 0 ? (
                 <div className="bg-white border border-red-200 rounded-lg overflow-hidden shadow-sm">
                   <div className="p-4 bg-red-50 border-b flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    <svg
+                      className="w-5 h-5 mr-2 text-red-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
                     </svg>
-                    <h4 className="font-medium text-red-800">Potential Plagiarism Matches</h4>
+                    <h4 className="font-medium text-red-800">
+                      Potential Plagiarism Matches
+                    </h4>
                   </div>
                   <div className="p-4">
-                    <p className="text-sm text-red-600 mb-3 font-medium">The following content may be plagiarized (similarity above 30%):</p>
+                    <p className="text-sm text-red-600 mb-3 font-medium">
+                      The following content may be plagiarized (similarity above
+                      30%):
+                    </p>
                     <div className="space-y-4">
-                      {parsingResult.plagiarism_check.results.map((match, i) => (
-                        <div key={i} className="p-4 bg-red-50 rounded-lg border border-red-200">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <p className="font-medium text-gray-800">Original phrase:</p>
-                              <p className="text-sm bg-white p-2 rounded border border-red-100 mt-1">"{match.phrase}"</p>
+                      {parsingResult.plagiarism_check.results.map(
+                        (match, i) => (
+                          <div
+                            key={i}
+                            className="p-4 bg-red-50 rounded-lg border border-red-200"
+                          >
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <p className="font-medium text-gray-800">
+                                  Original phrase:
+                                </p>
+                                <p className="text-sm bg-white p-2 rounded border border-red-100 mt-1">
+                                  "{match.phrase}"
+                                </p>
+                              </div>
+                              <div className="bg-white px-3 py-2 rounded-full border border-red-200 text-red-700 font-bold">
+                                {Math.round(match.similarity * 100)}% Match
+                              </div>
                             </div>
-                            <div className="bg-white px-3 py-2 rounded-full border border-red-200 text-red-700 font-bold">
-                              {Math.round(match.similarity * 100)}% Match
+
+                            <div className="mt-3">
+                              <div className="flex justify-between items-center mb-2">
+                                <p className="font-medium text-gray-800">
+                                  Matched source:
+                                </p>
+                                <a
+                                  href={match.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                                >
+                                  <svg
+                                    className="w-4 h-4 mr-1"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                    />
+                                  </svg>
+                                  View Full Source
+                                </a>
+                              </div>
+                              <p className="text-sm font-medium mb-1">
+                                {match.title}
+                              </p>
+                              <div className="p-3 bg-white rounded border border-red-100">
+                                <p className="text-sm text-gray-700">
+                                  {match.matched_content}
+                                </p>
+                              </div>
                             </div>
                           </div>
-                          
-                          <div className="mt-3">
-                            <div className="flex justify-between items-center mb-2">
-                              <p className="font-medium text-gray-800">Matched source:</p>
-                              <a 
-                                href={match.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
-                              >
-                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                </svg>
-                                View Full Source
-                              </a>
-                            </div>
-                            <p className="text-sm font-medium mb-1">{match.title}</p>
-                            <div className="p-3 bg-white rounded border border-red-100">
-                              <p className="text-sm text-gray-700">{match.matched_content}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      )}
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="bg-white border border-green-200 rounded-lg overflow-hidden shadow-sm">
                   <div className="p-4 bg-green-50 border-b flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg
+                      className="w-5 h-5 mr-2 text-green-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
-                    <h4 className="font-medium text-green-800">No Plagiarism Detected</h4>
+                    <h4 className="font-medium text-green-800">
+                      No Plagiarism Detected
+                    </h4>
                   </div>
                   <div className="p-4">
                     <p className="text-green-600">
-                      No significant similarities were found between your document and existing online content. Your document appears to be original.
+                      No significant similarities were found between your
+                      document and existing online content. Your document
+                      appears to be original.
                     </p>
                   </div>
                 </div>
               )}
-              
+
               {/* Recommendations */}
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h4 className="font-medium text-gray-700 mb-2">Recommendations</h4>
+                <h4 className="font-medium text-gray-700 mb-2">
+                  Recommendations
+                </h4>
                 <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                  <li>Always cite your sources properly when using external content</li>
-                  <li>Use quotation marks for direct quotes from other works</li>
-                  <li>Paraphrase content in your own words while maintaining the original meaning</li>
-                  <li>Check your document with multiple plagiarism tools for comprehensive results</li>
+                  <li>
+                    Always cite your sources properly when using external
+                    content
+                  </li>
+                  <li>
+                    Use quotation marks for direct quotes from other works
+                  </li>
+                  <li>
+                    Paraphrase content in your own words while maintaining the
+                    original meaning
+                  </li>
+                  <li>
+                    Check your document with multiple plagiarism tools for
+                    comprehensive results
+                  </li>
                 </ul>
               </div>
             </div>
-          </div>
+          </CollapsibleSection>
         )}
       </div>
     </div>
@@ -1335,7 +1633,9 @@ function ReferenceCard({ reference, index }) {
           <Badge
             text={verification.verified ? "Verified Online" : "Unverified"}
             color={verification.verified ? "green" : "yellow"}
-            onClick={verification.verified ? handleVerificationClick : undefined}
+            onClick={
+              verification.verified ? handleVerificationClick : undefined
+            }
             className={
               verification.verified ? "cursor-pointer hover:opacity-80" : ""
             }
@@ -1411,24 +1711,23 @@ function ReferenceCard({ reference, index }) {
 
               {showCitations &&
                 citations.contexts.map((context, i) => (
-                    <div
-                      key={i}
-                      className="p-2 bg-gray-50 rounded border border-gray-200"
-                    >
-                      <p
-                        className="text-gray-600"
-                        dangerouslySetInnerHTML={{
-                          __html: context
-                            ? context.replace(
+                  <div
+                    key={i}
+                    className="p-2 bg-gray-50 rounded border border-gray-200"
+                  >
+                    <p
+                      className="text-gray-600"
+                      dangerouslySetInnerHTML={{
+                        __html: context
+                          ? context.replace(
                               /\*\*(.*?)\*\*/g,
                               '<span class="font-bold text-blue-600">$1</span>'
                             )
-                            : "Context not available",
-                        }}
-                      ></p>
-                    </div>
-                ))
-              }
+                          : "Context not available",
+                      }}
+                    ></p>
+                  </div>
+                ))}
             </div>
           )}
       </div>
@@ -1561,9 +1860,9 @@ function EnhancedReferenceCard({ reference, validationDetails }) {
                         dangerouslySetInnerHTML={{
                           __html: citation.context
                             ? citation.context.replace(
-                              /\*\*(.*?)\*\*/g,
-                              '<span class="font-bold text-blue-600">$1</span>'
-                            )
+                                /\*\*(.*?)\*\*/g,
+                                '<span class="font-bold text-blue-600">$1</span>'
+                              )
                             : "Context not available",
                         }}
                       ></p>
@@ -1620,41 +1919,60 @@ function SpellingCheckSection({ spellingData }) {
   return (
     <div className="mb-6">
       <h3 className="text-xl font-semibold mb-3">Spelling Check by Section</h3>
-      
-      {Object.entries(spellingData.sections).map(([sectionName, sectionData]) => (
-        <div key={sectionName} className="mb-4 p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-md font-medium mb-2 flex items-center justify-between">
-            <span>{sectionName}</span>
-            <Badge 
-              text={`${sectionData.count} issues`} 
-              color={sectionData.count > 10 ? "red" : sectionData.count > 5 ? "yellow" : "green"} 
-            />
-          </h4>
-          
-          {sectionData.count > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-4 py-2 text-left">Misspelled Word</th>
-                    <th className="px-4 py-2 text-left">Suggestion</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(sectionData.misspelled).map(([word, suggestion], index) => (
-                    <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                      <td className="px-4 py-2 text-red-600">{word}</td>
-                      <td className="px-4 py-2 text-green-600">{suggestion || "No suggestion"}</td>
+
+      {Object.entries(spellingData.sections).map(
+        ([sectionName, sectionData]) => (
+          <div key={sectionName} className="mb-4 p-4 bg-gray-50 rounded-lg">
+            <h4 className="text-md font-medium mb-2 flex items-center justify-between">
+              <span>{sectionName}</span>
+              <Badge
+                text={`${sectionData.count} issues`}
+                color={
+                  sectionData.count > 10
+                    ? "red"
+                    : sectionData.count > 5
+                    ? "yellow"
+                    : "green"
+                }
+              />
+            </h4>
+
+            {sectionData.count > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="px-4 py-2 text-left">Misspelled Word</th>
+                      <th className="px-4 py-2 text-left">Suggestion</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-green-600">No spelling issues found in this section.</p>
-          )}
-        </div>
-      ))}
+                  </thead>
+                  <tbody>
+                    {Object.entries(sectionData.misspelled).map(
+                      ([word, suggestion], index) => (
+                        <tr
+                          key={index}
+                          className={
+                            index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                          }
+                        >
+                          <td className="px-4 py-2 text-red-600">{word}</td>
+                          <td className="px-4 py-2 text-green-600">
+                            {suggestion || "No suggestion"}
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-green-600">
+                No spelling issues found in this section.
+              </p>
+            )}
+          </div>
+        )
+      )}
     </div>
   );
 }
