@@ -639,7 +639,7 @@ function ProfessorDashboard() {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
-          <h2 className="text-md font-semibold mb-10">Confirm Deletion</h2>
+          <h2 className="text-md font-semibold mb-6">Confirm Deletion</h2>
           <div className="mb-6">
             <p className="text-gray-600 mb-2">
               Are you sure you want to delete this {itemType}:
@@ -1008,7 +1008,7 @@ function ProfessorDashboard() {
           {/* Upload Document Card */}
           <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
             {" "}
-            <h2 className="text-md font-semibold mb-3">
+            <h2 className="text-md text-gray-800 font-semibold mb-3">
               Upload Document
             </h2>{" "}
             <UploadModal onUploadComplete={handleProfessorUpload} />
@@ -1017,7 +1017,7 @@ function ProfessorDashboard() {
           {/* Active Submissions Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-md font-semibold">Active Submissions</h2>
+              <h2 className="text-md text-gray-800 font-semibold">Active Submissions</h2>
               <button
                 onClick={() => setShowCreateSubmissionModal(true)}
                 className="text-xs p-1.5 text-gray-600 border border-gray-300 hover:border-[#ff6464] hover:text-[#ff6464] rounded-md transition-all duration-300 flex items-center gap-1"
@@ -1075,7 +1075,7 @@ function ProfessorDashboard() {
 
           {/* Quick Stats Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-md font-semibold mb-4">Overview</h2>
+            <h2 className="text-md text-gray-800 font-semibold mb-4">Overview</h2>
             <div className="space-y-4">
               {" "}
               <div>
@@ -1097,7 +1097,7 @@ function ProfessorDashboard() {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
           <div className="p-6 border-b border-gray-100">
-            <h2 className="text-md font-semibold">Student Submissions</h2>
+            <h2 className="text-md text-gray-800 font-semibold">Student Submissions</h2>
           </div>
 
           {/* Tables Section */}
@@ -1315,8 +1315,8 @@ function ProfessorDashboard() {
         </div>
 
         {/* Professor Documents Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
-          <h2 className="text-md font-semibold p-6 border-b border-gray-100 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-20">
+          <h2 className="text-md font-semibold text-gray-800 p-6 border-b border-gray-100 mb-8">
             My Uploaded Documents
           </h2>
           <div className="bg-white rounded-lg shadow">
