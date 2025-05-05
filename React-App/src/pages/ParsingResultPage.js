@@ -1224,74 +1224,110 @@ function ParsingResult() {
           </CollapsibleSection>
         )}
 
-        {/* Diagram Convention Analysis */}
-        {console.log(
-          "Checking Diagram Convention Section - Present:",
-          !!parsingResult?.diagram_convention
-        )}
-        {parsingResult?.diagram_convention && (
-
-          <CollapsibleSection
-            title="Diagram Convention Analysis"
-            defaultOpen={false}
-          >
-            <div className="space-y-4">
-
-              {parsingResult.diagram_convention.validation_results ? (
-                Object.keys(parsingResult.diagram_convention.validation_results)
-                  .length > 0 ? (
-                  Object.entries(
-                    parsingResult.diagram_convention.validation_results
-                  ).map(([diagramKey, validationText], index) => {
-
-
-                    return (
-                      <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                        <h3 className="font-medium mb-2">
-                          Diagram: {diagramKey.replace(/_/g, " ")}
-                        </h3>
-                        <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
-                          {validationText || "No validation text provided"}
-                        </pre>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-gray-600">No validation results found.</p>
-                )
-              ) : (
-                <p className="text-gray-600">
-                  No diagram convention data available.
-                </p>
-              )}
-
-
-              {console.log(
-                "Diagram Convention - Issues Present:",
-                !!(
-                  parsingResult.diagram_convention.issues &&
-                  parsingResult.diagram_convention.issues.length > 0
-                )
-              )}
-
-              {parsingResult.diagram_convention.issues &&
-                parsingResult.diagram_convention.issues.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="font-medium text-red-600 mb-2">Issues:</h3>
-                    <ul className="list-disc list-inside text-red-600">
-                      {parsingResult.diagram_convention.issues.map(
-                        (issue, idx) => (
-                          <li key={idx}>{issue}</li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
-            </div>
-
-          </CollapsibleSection>
-
-        )}
+{console.log(
+  "Checking Diagram Convention Section - Present:",
+  !!parsingResult?.diagram_convention
+)}
+{parsingResult?.diagram_convention && (
+  <CollapsibleSection title="Diagram Convention Analysis" defaultOpen={false}>
+    <div className="space-y-4">
+      {/* Render Images */}
+      {console.log(
+        "Diagram Convention - Processing Results Present:",
+        !!parsingResult?.diagram_convention?.processing_results
+      )}
+      {(parsingResult?.diagram_convention?.processing_results?.use_case_diagrams ||
+        parsingResult?.diagram_convention?.processing_results?.class_diagrams ||
+        parsingResult?.diagram_convention?.processing_results?.sequence_diagrams) && (
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-4 text-gray-700">Processed Diagrams</h3>
+          <div className="grid grid-cols-1 gap-4">
+            {/* Use Case Diagrams */}
+            {Object.entries(parsingResult?.diagram_convention?.processing_results?.use_case_diagrams || {}).map(([key, data]) => {
+              console.log(`Rendering Use Case Diagram: ${key} -> ${data.path}`);
+              return (
+                <div key={key} className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium mb-2">Use Case: {key.replace(/_/g, " ")}</h4>
+                  <img
+                    src={`http://localhost:5000/output_results/${data.path.replace(/\\/g, '/')}`}
+                    alt={key}
+                    className="w-1/2 h-auto rounded-lg shadow-md"
+                    onError={(e) => console.error(`Failed to load image: ${data.path}`)}
+                  />
+                  {parsingResult?.diagram_convention?.validation_results?.validation_results[`use_case_use_case_${key}`] && (
+                    <div className="mt-2">
+                      <h5 className="font-medium text-gray-700">Validation Results:</h5>
+                      <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
+                        {parsingResult?.diagram_convention?.validation_results?.validation_results[`use_case_use_case_${key}`]}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {/* Class Diagrams */}
+            {Object.entries(parsingResult?.diagram_convention?.processing_results?.class_diagrams || {}).map(([key, data]) => {
+              console.log(`Rendering Class Diagram: ${key} -> ${data.path}`);
+              return (
+                <div key={key} className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium mb-2">Class Diagram: {key.replace(/_/g, " ")}</h4>
+                  <img
+                    src={`http://localhost:5000/output_results/${data.path.replace(/\\/g, '/')}`}
+                    alt={key}
+                    className="w-1/2 h-auto rounded-lg shadow-md"
+                    onError={(e) => console.error(`Failed to load image: ${data.path}`)}
+                  />
+                  {parsingResult?.diagram_convention?.validation_results?.validation_results[`class_class_${key}`] && (
+                    <div className="mt-2">
+                      <h5 className="font-medium text-gray-700">Validation Results:</h5>
+                      <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
+                        {parsingResult?.diagram_convention?.validation_results?.validation_results[`class_class_${key}`]}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {/* Sequence Diagrams */}
+            {Object.entries(parsingResult?.diagram_convention?.processing_results?.sequence_diagrams || {}).map(([key, data]) => {
+              console.log(`Rendering Sequence Diagram: ${key} -> ${data.path}`);
+              return (
+                <div key={key} className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium mb-2">Sequence Diagram: {key.replace(/_/g, " ")}</h4>
+                  <img
+                    src={`http://localhost:5000/output_results/${data.path.replace(/\\/g, '/')}`}
+                    alt={key}
+                    className="w-1/2 h-auto rounded-lg shadow-md"
+                    onError={(e) => console.error(`Failed to load image: ${data.path}`)}
+                  />
+                  {parsingResult?.diagram_convention?.validation_results?.validation_results[`sequence_sequence_${key}`] && (
+                    <div className="mt-2">
+                      <h5 className="font-medium text-gray-700">Validation Results:</h5>
+                      <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
+                        {parsingResult?.diagram_convention?.validation_results?.validation_results[`sequence_sequence_${key}`]}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {/* Issues */}
+      {parsingResult?.diagram_convention?.processing_results?.issues?.length > 0 && (
+        <div className="mt-4">
+          <h3 className="font-medium text-red-600 mb-2">Issues:</h3>
+          <ul className="list-disc list-inside text-red-600">
+            {parsingResult?.diagram_convention?.processing_results?.issues.map((issue, idx) => (
+              <li key={idx}>{issue}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  </CollapsibleSection>
+)}
 
         {/* Plagiarism Check */}
         {console.log(

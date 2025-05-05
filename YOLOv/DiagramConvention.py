@@ -1,15 +1,15 @@
-# diagram_convention.py
 import os
+import json
 import time
 from UseCaseDiagramScript import process_use_case_diagram
 from classDiagramScript import process_class_diagram
 from seqDiagramScript import process_sequence_diagram
 
 def process_diagrams(upload_base="Uploads", 
-                    output_base="output_resultss", model_path="runs/detect/train/weights/best.pt", 
+                    output_base="output_results", 
+                    model_path="runs/detect/train/weights/best.pt", 
                     document_type="SRS"):
     """Process diagrams based on document type: use case and class for SRS, sequence and class for SDD."""
-    # Set folder paths based on document type
     if document_type == "SRS":
         use_case_folder = os.path.join(upload_base, "System Functions")
         class_folder = os.path.join(upload_base, "Preliminary Object-Oriented Domain Analysis")
@@ -24,9 +24,9 @@ def process_diagrams(upload_base="Uploads",
     
     results = {
         "status": "success",
-        "use_case_diagrams": {},  # For SRS use case diagrams
-        "class_diagrams": {},     # For SRS and SDD class diagrams
-        "sequence_diagrams": {},  # For SDD sequence diagrams
+        "use_case_diagrams": {},
+        "class_diagrams": {},
+        "sequence_diagrams": {},
         "issues": []
     }
     
@@ -37,11 +37,24 @@ def process_diagrams(upload_base="Uploads",
         if "error" in use_case_results:
             results["issues"].append(use_case_results["error"])
         else:
-            # Sanitize keys by replacing dots with underscores
             sanitized_use_case_results = {}
             for key, value in use_case_results.items():
+                print(f"Processing use case diagram: {key} -> {value}")
                 sanitized_key = key.replace('.', '_')
-                sanitized_use_case_results[sanitized_key] = value
+                if value.endswith('.json'):
+                    image_filename = os.path.basename(value).replace('use_case_', 'annotated_').replace('.json', '')
+                    image_path = os.path.join(os.path.dirname(value), image_filename)
+                else:
+                    image_path = value
+                
+                print(f"Derived image path: {image_path}")
+                if os.path.exists(image_path):
+                    sanitized_use_case_results[sanitized_key] = {
+                        "path": os.path.join("use_case", image_filename).replace('\\', '/'),
+                        "original_path": image_path.replace('\\', '/')
+                    }
+                else:
+                    results["issues"].append(f"Image file not found: {image_path}")
             results["use_case_diagrams"] = sanitized_use_case_results
     
     # Process class diagrams (for both SRS and SDD)
@@ -51,11 +64,24 @@ def process_diagrams(upload_base="Uploads",
         if "error" in class_results:
             results["issues"].append(class_results["error"])
         else:
-            # Sanitize keys by replacing dots with underscores
             sanitized_class_results = {}
             for key, value in class_results.items():
+                print(f"Processing class diagram: {key} -> {value}")
                 sanitized_key = key.replace('.', '_')
-                sanitized_class_results[sanitized_key] = value
+                if value.endswith('.json'):
+                    image_filename = os.path.basename(value).replace('class_', 'annotated_').replace('.json', '')
+                    image_path = os.path.join(os.path.dirname(value), image_filename)
+                else:
+                    image_path = value
+                
+                print(f"Derived image path: {image_path}")
+                if os.path.exists(image_path):
+                    sanitized_class_results[sanitized_key] = {
+                        "path": os.path.join("class", image_filename).replace('\\', '/'),
+                        "original_path": image_path.replace('\\', '/')
+                    }
+                else:
+                    results["issues"].append(f"Image file not found: {image_path}")
             results["class_diagrams"] = sanitized_class_results
     
     # Process sequence diagrams (only for SDD)
@@ -65,18 +91,31 @@ def process_diagrams(upload_base="Uploads",
         if "error" in sequence_results:
             results["issues"].append(sequence_results["error"])
         else:
-            # Sanitize keys by replacing dots with underscores
             sanitized_sequence_results = {}
             for key, value in sequence_results.items():
+                print(f"Processing sequence diagram: {key} -> {value}")
                 sanitized_key = key.replace('.', '_')
-                sanitized_sequence_results[sanitized_key] = value
+                if value.endswith('.json'):
+                    image_filename = os.path.basename(value).replace('sequence_', 'annotated_').replace('.json', '')
+                    image_path = os.path.join(os.path.dirname(value), image_filename)
+                else:
+                    image_path = value
+                
+                print(f"Derived image path: {image_path}")
+                if os.path.exists(image_path):
+                    sanitized_sequence_results[sanitized_key] = {
+                        "path": os.path.join("sequence", image_filename).replace('\\', '/'),
+                        "original_path": image_path.replace('\\', '/')
+                    }
+                else:
+                    results["issues"].append(f"Image file not found: {image_path}")
             results["sequence_diagrams"] = sanitized_sequence_results
     
     if not any([results["use_case_diagrams"], results["class_diagrams"], results["sequence_diagrams"]]):
         if results["issues"]:
             results["status"] = "error"
         else:
-            results["status"] = "no_diagrams_found"
-            results["message"] = "No diagram folders found"
+           results["status"] = "no_diagrams_found"
+           results["message"] = "No diagram folders found"
     
     return results
