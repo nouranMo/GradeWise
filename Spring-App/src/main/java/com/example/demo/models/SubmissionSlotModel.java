@@ -10,11 +10,10 @@ public class SubmissionSlotModel {
     private String id;
     private String name;
     private String course;
-    private String description;
-    private Date deadline;
     private String professorId;
     private String status;
-    private Integer submissionsCount;
+    private int submissionsCount;
+    private Date deadline;
     private Date createdAt;
 
     public SubmissionSlotModel() {
@@ -25,7 +24,6 @@ public class SubmissionSlotModel {
         this.id = String.valueOf(System.currentTimeMillis());
         this.name = name;
         this.course = course;
-        this.description = description;
         this.deadline = deadline;
         this.professorId = professorId;
         this.status = "Open";
@@ -58,22 +56,6 @@ public class SubmissionSlotModel {
         this.course = course;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Date getDeadline() {
-        return deadline;
-    }
-
-    public void setDeadline(Date deadline) {
-        this.deadline = deadline;
-    }
-
     public String getProfessorId() {
         return professorId;
     }
@@ -90,12 +72,24 @@ public class SubmissionSlotModel {
         this.status = status;
     }
 
-    public Integer getSubmissionsCount() {
+    public int getSubmissionsCount() {
         return submissionsCount;
     }
 
-    public void setSubmissionsCount(Integer submissionsCount) {
+    public void setSubmissionsCount(int submissionsCount) {
         this.submissionsCount = submissionsCount;
+    }
+
+    public void incrementSubmissionsCount() {
+        this.submissionsCount++;
+    }
+
+    public Date getDeadline() {
+        return deadline;
+    }
+
+    public void setDeadline(Date deadline) {
+        this.deadline = deadline;
     }
 
     public Date getCreatedAt() {
@@ -104,9 +98,5 @@ public class SubmissionSlotModel {
 
     public void setCreatedAt(Date createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public void incrementSubmissionsCount() {
-        this.submissionsCount++;
     }
 }

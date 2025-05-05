@@ -111,7 +111,7 @@ public class UserController {
             UserDetails userDetails = org.springframework.security.core.userdetails.User
                     .withUsername(authenticatedUser.getEmail())
                     .password(authenticatedUser.getPassword())
-                    .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
+                    .authorities(Collections.singletonList(new SimpleGrantedAuthority("USER")))
                     .build();
 
             // Generate JWT token
@@ -134,104 +134,59 @@ public class UserController {
         }
     }
 
-    @GetMapping("/profile")
-    public ResponseEntity<?> getProfile(Authentication authentication) {
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
         try {
             if (authentication == null) {
-                System.out.println("Authentication is null");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Not authenticated"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
-            String email = authentication.getName();
-            System.out.println("Attempting to fetch profile for email: " + email);
+            String userId = authentication.getName();
 
-            User user = userService.findByEmail(email);
+            // Try to find the user by both email and ID
+            User user = userService.findByEmail(userId);
+            if (user == null) {
+                user = userService.findById(userId);
+            }
 
             if (user == null) {
-                System.out.println("No user found for email: " + email);
+
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "User not found"));
             }
 
-            System.out.println("Found user: " + user.getFirstName() + " " + user.getLastName());
-
-            Map<String, Object> profile = new HashMap<>();
-            profile.put("firstName", user.getFirstName());
-            profile.put("lastName", user.getLastName());
-            profile.put("email", user.getEmail());
-            profile.put("role", user.getRole());
-
-            System.out.println("Returning profile: " + profile);
-            return ResponseEntity.ok(profile);
-
+            return ResponseEntity.ok(user);
         } catch (Exception e) {
-            System.out.println("Error in profile endpoint: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error fetching profile: " + e.getMessage()));
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
-    @PutMapping("/profile")
-    public ResponseEntity<?> updateProfile(
-            @RequestBody Map<String, String> updates,
-            Authentication authentication,
-            HttpServletRequest request) { // Add this parameter
+    @PutMapping("/me")
+    public ResponseEntity<?> updateCurrentUser(@RequestBody User user, Authentication authentication) {
         try {
-            // Add debug logging
-            System.out.println("==== Debug Profile Update ====");
-            System.out.println("Updates received: " + updates);
-            System.out.println("Authentication object: " + authentication);
-
-            // Get the Authorization header directly to check if it's being received
-            String authHeader = request.getHeader("Authorization");
-            System.out.println("Authorization header: " + authHeader);
-
-            if (authentication == null) {
-                System.out.println("Authentication is null - checking SecurityContext");
-                authentication = SecurityContextHolder.getContext().getAuthentication();
-                System.out.println("Authentication from SecurityContext: " + authentication);
+            String userId = authentication.getName();
+            User existingUser = userService.findById(userId);
+            if (existingUser == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
             }
 
-            if (authentication == null || !authentication.isAuthenticated()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Not authenticated"));
+            // Update only the allowed fields
+            if (user.getFirstName() != null) {
+                existingUser.setFirstName(user.getFirstName());
+            }
+            if (user.getLastName() != null) {
+                existingUser.setLastName(user.getLastName());
+            }
+            if (user.getPassword() != null) {
+                existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
             }
 
-            String email = authentication.getName();
-            System.out.println("User email: " + email);
-
-            User user = userService.findByEmail(email);
-            if (user == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "User not found"));
-            }
-
-            // Update allowed fields
-            if (updates.containsKey("firstName")) {
-                user.setFirstName(updates.get("firstName"));
-            }
-            if (updates.containsKey("lastName")) {
-                user.setLastName(updates.get("lastName"));
-            }
-
-            // Save updated user
-            User updatedUser = userService.save(user);
-
-            // Return updated profile
-            Map<String, Object> profile = new HashMap<>();
-            profile.put("firstName", updatedUser.getFirstName());
-            profile.put("lastName", updatedUser.getLastName());
-            profile.put("email", updatedUser.getEmail());
-            profile.put("role", updatedUser.getRole());
-
-            return ResponseEntity.ok(profile);
+            User updatedUser = userService.save(existingUser);
+            return ResponseEntity.ok(updatedUser);
         } catch (Exception e) {
-            System.out.println("Error in updateProfile: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error updating profile: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+
         }
     }
 }

@@ -30,28 +30,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        try {
-            String token = getTokenFromRequest(request);
-            System.out.println("Received token: " + (token != null ? "present" : "null"));
+        String token = getTokenFromRequest(request);
 
-            if (token != null && jwtTokenProvider.validateToken(token)) {
+        if (token != null && jwtTokenProvider.validateToken(token)) {
+            try {
                 String email = jwtTokenProvider.getEmailFromToken(token);
-                System.out.println("Email from token: " + email);
+                String userId = jwtTokenProvider.getUserIdFromToken(token);
+                String role = jwtTokenProvider.getRoleFromToken(token);
 
                 User user = userService.findByEmail(email);
-                System.out.println("Found user: " + (user != null ? user.getEmail() : "null"));
-
                 if (user != null) {
                     List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-                            new SimpleGrantedAuthority("ROLE_USER"));
+                            new SimpleGrantedAuthority("ROLE_" + role));
 
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(email,
-                            null, authorities);
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userId, null, authorities);
+
+                    authentication.setDetails(user);
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    System.out.println("Set authentication for user: " + email);
-                } else {
-                    System.out.println("User not found for email: " + email);
+
+                    logger.info("Authenticated user: " + email + " with role: " + role + ", ID: " + userId);
+
                 }
             } else {
                 System.out.println("Token is null or invalid");

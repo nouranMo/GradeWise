@@ -1,13 +1,17 @@
 package com.example.demo.controllers;
 
 import com.example.demo.models.DocumentModel;
-import com.example.demo.models.SubmissionModel;
+import com.example.demo.models.Submission;
 import com.example.demo.models.SubmissionSlotModel;
+import com.example.demo.models.User;
+import com.example.demo.models.CourseModel;
 import com.example.demo.security.JwtTokenProvider;
 import com.example.demo.services.SubmissionService;
 import com.example.demo.services.DocumentService;
 import com.example.demo.services.UserService;
+import com.example.demo.services.CourseService;
 import com.example.demo.repositories.SubmissionRepository;
+import com.example.demo.dto.SubmissionDetailsDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,12 +27,10 @@ import java.util.Map;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Date;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/submissions")
-@CrossOrigin(origins = "http://localhost:3000", allowedHeaders = "*", methods = { RequestMethod.GET, RequestMethod.POST,
-        RequestMethod.PUT,
-        RequestMethod.DELETE, RequestMethod.OPTIONS }, allowCredentials = "true")
+@RequestMapping("/api")
 public class SubmissionController {
 
     private static final Logger logger = LoggerFactory.getLogger(SubmissionController.class);
@@ -43,93 +45,379 @@ public class SubmissionController {
     private UserService userService;
 
     @Autowired
+    private CourseService courseService;
+
+    @Autowired
     private SubmissionRepository submissionRepository;
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
-    // Get all submissions (for professors)
-    @GetMapping("")
-    public ResponseEntity<List<SubmissionModel>> getAllSubmissions() {
-        logger.info("Fetching all submissions");
+    @PostMapping("/submissions")
+    public ResponseEntity<?> createSubmission(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("courseId") String courseId,
+            Authentication authentication) {
         try {
-            List<SubmissionModel> submissions = submissionService.getAllSubmissions();
+            String userId = authentication.getName(); // Get email from authentication
+            Submission submission = submissionService.createSubmission(file, courseId, userId);
+            return ResponseEntity.ok(submission);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 
-            // Log each submission for debugging
-            logger.info("Found {} submissions", submissions.size());
-            for (SubmissionModel sub : submissions) {
-                logger.info("Submission: id={}, documentId={}, slotId={}, userId={}, status={}",
-                        sub.getId(), sub.getDocumentId(), sub.getSubmissionSlotId(),
-                        sub.getUserId(), sub.getStatus());
+    @GetMapping("/submissions")
+    public ResponseEntity<?> getSubmissions(
+            @RequestParam(value = "professorId", required = false) String professorId,
+            Authentication authentication) {
+        logger.info("Fetching submissions with professorId filter: {}", professorId);
+        try {
+            if (authentication == null || authentication.getPrincipal().equals("anonymousUser")) {
+                logger.error("No authenticated user found");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.emptyList());
             }
 
-            return ResponseEntity.ok(submissions);
+            String userId = authentication.getName();
+            logger.info("Current user: {}", userId);
+
+            // Get user details to check role - try both by email and ID
+            User currentUser = userService.findByEmail(userId);
+            if (currentUser == null) {
+                currentUser = userService.findById(userId);
+            }
+
+            if (currentUser == null) {
+                logger.error("User not found: {}", userId);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.emptyList());
+            }
+
+            List<Submission> submissions;
+            String userRole = currentUser.getRole();
+            logger.info("User role: {}", userRole);
+
+            // Handle different roles
+            switch (userRole) {
+                case "PROFESSOR":
+                    // If professorId is specified, check if current user has permission
+                    if (professorId != null && !professorId.isEmpty() && !professorId.equals(currentUser.getId())) {
+                        logger.warn("Professor {} attempted to access submissions of professor {}", userId,
+                                professorId);
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Collections.emptyList());
+                    }
+                    // Get submissions for the professor (either specified or current user)
+                    String targetProfessorId = (professorId != null && !professorId.isEmpty()) ? professorId
+                            : currentUser.getId();
+                    submissions = submissionService.getSubmissionsForTeacher(targetProfessorId);
+                    break;
+
+                case "ADMIN":
+                    // Admin can see all submissions or filter by professor
+                    if (professorId != null && !professorId.isEmpty()) {
+                        submissions = submissionService.getSubmissionsForTeacher(professorId);
+                    } else {
+                        submissions = submissionService.getAllSubmissions();
+                    }
+                    break;
+
+                case "STUDENT":
+                    // Students can only see their own submissions
+                    if (professorId != null) {
+                        logger.warn("Student {} attempted to access professor's submissions", userId);
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Collections.emptyList());
+                    }
+                    submissions = submissionService.getSubmissionsByUserId(currentUser.getId());
+                    break;
+
+                default:
+                    logger.error("Unknown user role: {}", userRole);
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Collections.emptyList());
+            }
+
+            // Enrich submissions with details
+            List<SubmissionDetailsDTO> detailedSubmissions = submissions.stream().map(sub -> {
+                SubmissionDetailsDTO dto = new SubmissionDetailsDTO();
+                dto.setId(sub.getId());
+                User student = userService.findById(sub.getUserId());
+                if (student != null) {
+                    dto.setStudentName(student.getFirstName() + " " + student.getLastName());
+                    dto.setStudentEmail(student.getEmail());
+                } else {
+                    dto.setStudentName("Unknown");
+                    dto.setStudentEmail("");
+                }
+                DocumentModel doc = documentService.getDocumentById(sub.getDocumentId());
+                if (doc != null) {
+                    dto.setDocumentName(doc.getName());
+                    dto.setDocumentId(doc.getId());
+                } else {
+                    dto.setDocumentName("");
+                    dto.setDocumentId("");
+                }
+                CourseModel course = courseService.getCourseById(sub.getCourseId());
+                if (course != null) {
+                    dto.setCourseName(course.getName());
+                    dto.setCourseCode(course.getCode());
+                } else {
+                    dto.setCourseName("");
+                    dto.setCourseCode("");
+                }
+                dto.setSubmissionType(sub.getSubmissionType());
+                dto.setSubmissionDate(sub.getLastModified());
+                dto.setStatus(sub.getStatus());
+                dto.setGrade((int) sub.getGrade());
+                return dto;
+            }).collect(Collectors.toList());
+            return ResponseEntity.ok(detailedSubmissions);
         } catch (Exception e) {
             logger.error("Error fetching submissions: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.emptyList());
         }
     }
 
+    @GetMapping("/submissions/{id}")
+    public ResponseEntity<?> getSubmission(@PathVariable String id, Authentication authentication) {
+        logger.info("Fetching submission with ID: {}", id);
+        try {
+            if (authentication == null || authentication.getPrincipal().equals("anonymousUser")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            String userId = authentication.getName();
+            User currentUser = userService.findByEmail(userId);
+
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            // Get the submission
+            Submission submission = submissionService.getSubmission(id);
+            if (submission == null) {
+                logger.error("Submission not found with ID: {}", id);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Submission not found", "submission_id", id));
+            }
+
+            // If user is professor or admin, they can access any submission
+            if ("PROFESSOR".equals(currentUser.getRole()) || "ADMIN".equals(currentUser.getRole())) {
+                // If the submission has a document ID, try to get the document results
+                if (submission.getDocumentId() != null) {
+                    DocumentModel document = documentService.getDocumentById(submission.getDocumentId());
+                    if (document != null && document.getResults() != null) {
+                        logger.info("Found document with results: {}", document.getId());
+                        submission.setResults(document.getResults());
+                    }
+                }
+                return ResponseEntity.ok(submission);
+            }
+
+            // For students, they can only access their own submissions
+            if (!submission.getUserId().equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only access your own submissions"));
+            }
+
+            // If the submission has a document ID, try to get the document results
+            if (submission.getDocumentId() != null) {
+                DocumentModel document = documentService.getDocumentById(submission.getDocumentId());
+                if (document != null && document.getResults() != null) {
+                    logger.info("Found document with results: {}", document.getId());
+                    submission.setResults(document.getResults());
+                }
+            }
+
+            return ResponseEntity.ok(submission);
+        } catch (Exception e) {
+            logger.error("Error fetching submission with ID {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch submission: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/submissions/{id}")
+    public ResponseEntity<?> deleteSubmission(@PathVariable String id, Authentication authentication) {
+        try {
+            String userId = authentication.getName(); // Get email from authentication
+            submissionService.deleteSubmission(id, userId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     // Get available submission slots (for students)
-    @GetMapping("/available")
+    @GetMapping("/submissions/available")
     public ResponseEntity<List<SubmissionSlotModel>> getAvailableSubmissions() {
         try {
             // Get current user
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || authentication.getPrincipal().equals("anonymousUser")) {
+                logger.error("No authenticated user found");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
             String userId = authentication.getName();
+            logger.info("Fetching available submissions for student: {}", userId);
 
-            System.out.println("Fetching available submissions for student: " + userId);
+            // Get user details - try both by email and by ID
+            User user = userService.findByEmail(userId);
 
-            List<SubmissionSlotModel> availableSubmissions = submissionService.getAvailableSubmissionSlots();
-            return ResponseEntity.ok(availableSubmissions);
+            // If not found by email, try by ID
+            if (user == null) {
+                user = userService.findById(userId);
+            }
+
+            if (user == null) {
+                logger.error("User not found with ID/email: {}", userId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+            logger.info("Found user: {} {}, ID: {}", user.getFirstName(), user.getLastName(), user.getId());
+
+            // Get student's enrolled courses
+            List<CourseModel> studentCourses = courseService.getCoursesForStudent(user.getId());
+            logger.info("Student is enrolled in {} courses", studentCourses.size());
+
+            // Get all available submission slots
+            List<SubmissionSlotModel> allAvailableSlots = submissionService.getAvailableSubmissionSlots();
+
+            // Filter slots by the student's enrolled courses
+            List<SubmissionSlotModel> filteredSlots = allAvailableSlots.stream()
+                    .filter(slot -> {
+                        String slotCourse = slot.getCourse();
+                        // Check if any of the student's courses match this slot's course
+                        return studentCourses.stream()
+                                .anyMatch(course -> course.getCode().equals(slotCourse));
+                    })
+                    .collect(Collectors.toList());
+
+            logger.info("Found {} submission slots for student's courses", filteredSlots.size());
+            return ResponseEntity.ok(filteredSlots);
         } catch (Exception e) {
-            System.out.println("Error fetching available submissions: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error fetching available submissions: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     // Get submission slots (for professors)
-    @GetMapping("/slots")
-    public ResponseEntity<List<SubmissionSlotModel>> getSubmissionSlots() {
+    @GetMapping("/submissions/slots")
+    public ResponseEntity<List<SubmissionSlotModel>> getSubmissionSlots(
+            @RequestParam(value = "professorId", required = false) String professorId) {
         try {
             // Get current user
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || authentication.getPrincipal().equals("anonymousUser")) {
+                logger.error("No authenticated user found");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
             String userId = authentication.getName();
+            logger.info("Fetching submission slots. Current user: {}, requested professorId: {}", userId, professorId);
 
-            System.out.println("Fetching submission slots for professor: " + userId);
+            // Get user details
+            User currentUser = userService.findById(userId);
+            if (currentUser == null) {
+                logger.error("User not found: {}", userId);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
 
-            List<SubmissionSlotModel> submissionSlots = submissionService.getSubmissionSlots();
+            List<SubmissionSlotModel> submissionSlots;
+
+            // If professorId is specified and user is not that professor or admin
+            if (professorId != null && !professorId.isEmpty() &&
+                    !professorId.equals(currentUser.getId()) &&
+                    !"ADMIN".equals(currentUser.getRole())) {
+                logger.warn("User {} attempted to access submission slots for professor {}", userId, professorId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
+            // Filter by professor ID if requested
+            if (professorId != null && !professorId.isEmpty()) {
+                submissionSlots = submissionService.getSubmissionSlotsByProfessor(professorId);
+                logger.info("Filtered submission slots by professor ID: {}, found: {}",
+                        professorId, submissionSlots.size());
+            } else if ("PROFESSOR".equals(currentUser.getRole())) {
+                // If current user is a professor, return their slots
+                submissionSlots = submissionService.getSubmissionSlotsByProfessor(currentUser.getId());
+                logger.info("Returning submission slots for professor: {}, found: {}",
+                        currentUser.getId(), submissionSlots.size());
+            } else {
+                // Return all slots for admin
+                submissionSlots = submissionService.getSubmissionSlots();
+                logger.info("Returning all submission slots, found: {}", submissionSlots.size());
+            }
+
             return ResponseEntity.ok(submissionSlots);
         } catch (Exception e) {
-            System.out.println("Error fetching submission slots: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error fetching submission slots: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     // Create a new submission slot (for professors)
-    @PostMapping("/slots")
+    @PostMapping("/submissions/slots")
     public ResponseEntity<?> createSubmissionSlot(@RequestBody SubmissionSlotModel submissionSlot) {
         try {
             // Get current user
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || authentication.getPrincipal().equals("anonymousUser")) {
+                logger.error("No authenticated user found");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authentication required"));
+            }
+
             String userId = authentication.getName();
+            logger.info("Creating submission slot. Current user: {}", userId);
 
-            System.out.println("Creating submission slot by professor: " + userId);
+            // Get user details
+            User currentUser = userService.findById(userId);
+            if (currentUser == null) {
+                logger.error("User not found: {}", userId);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "User not found"));
+            }
 
-            SubmissionSlotModel newSlot = submissionService.createSubmissionSlot(submissionSlot, userId);
+            // Check if user is a professor
+            if (!"PROFESSOR".equals(currentUser.getRole()) && !"ADMIN".equals(currentUser.getRole())) {
+                logger.error("User {} with role {} attempted to create a submission slot",
+                        userId, currentUser.getRole());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only professors can create submission slots"));
+            }
+
+            // Validate that professor teaches the course
+            String courseCode = submissionSlot.getCourse();
+            if (courseCode == null || courseCode.isEmpty()) {
+                logger.error("Course code is required when creating a submission slot");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Course code is required"));
+            }
+
+            // Skip course check for admin
+            if (!"ADMIN".equals(currentUser.getRole())) {
+                // Check if professor teaches this course
+                List<CourseModel> professorCourses = courseService.getCoursesForTeacher(currentUser.getId());
+                boolean isCourseTeacher = professorCourses.stream()
+                        .anyMatch(course -> course.getCode().equals(courseCode));
+
+                if (!isCourseTeacher) {
+                    logger.error("Professor {} is not teaching course {}", currentUser.getId(), courseCode);
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("error", "You are not authorized to create submission slots for this course"));
+                }
+            }
+
+            SubmissionSlotModel newSlot = submissionService.createSubmissionSlot(submissionSlot, currentUser.getId());
             return ResponseEntity.ok(newSlot);
         } catch (Exception e) {
-            System.out.println("Error creating submission slot: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error creating submission slot: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to create submission slot: " + e.getMessage()));
         }
     }
 
     // Delete a submission slot (for professors)
-    @DeleteMapping("/slots/{slotId}")
+    @DeleteMapping("/submissions/slots/{slotId}")
     public ResponseEntity<?> deleteSubmissionSlot(@PathVariable String slotId) {
         try {
             // Get current user
@@ -149,76 +437,104 @@ public class SubmissionController {
     }
 
     // Submit a document to a submission slot (for students)
-    @PostMapping("/student/submit")
+    @PostMapping("/submissions/student/submit")
     public ResponseEntity<?> submitDocument(@RequestBody Map<String, Object> submissionData) {
         try {
             // Get current user
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String userId = authentication.getName();
+            if (authentication == null || authentication.getPrincipal().equals("anonymousUser")) {
+                logger.error("No authenticated user found");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authentication required"));
+            }
 
-            System.out.println("Submitting document by student: " + userId);
+            String userId = authentication.getName();
+            logger.info("Submitting document by student: {}", userId);
 
             String documentId = (String) submissionData.get("documentId");
             String submissionSlotId = (String) submissionData.get("submissionSlotId");
             String submissionType = (String) submissionData.get("submissionType");
             String course = (String) submissionData.get("course");
 
-            System.out.println("Document ID: " + documentId);
-            System.out.println("Submission Slot ID: " + submissionSlotId);
+            logger.info("Document ID: {}", documentId);
+            logger.info("Submission Slot ID: {}", submissionSlotId);
+            logger.info("Course: {}", course);
+
+            // Get user details
+            User user = userService.findByEmail(userId);
+            if (user == null) {
+                logger.error("User not found with ID: {}", userId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "User not found"));
+            }
+
+            // Verify student's role
+            if (!"STUDENT".equals(user.getRole()) && !"ADMIN".equals(user.getRole())) {
+                logger.error("User {} with role {} attempted to submit a document as a student", userId,
+                        user.getRole());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only students can submit documents"));
+            }
 
             // Verify document exists before submission
             DocumentModel document = documentService.getDocumentById(documentId);
             if (document == null) {
-                System.out.println("Document not found with ID: " + documentId);
+                logger.error("Document not found with ID: {}", documentId);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "Document not found with ID: " + documentId));
             }
 
-            System.out.println("Found document: " + document.getName() + " at path: " + document.getFilePath());
+            // Check document ownership
+            if (!document.getUserId().equals(user.getId()) && !"ADMIN".equals(user.getRole())) {
+                logger.error("Document ownership mismatch. Owner: {}, Requester: {}",
+                        document.getUserId(), user.getId());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only submit documents that you own"));
+            }
 
-            SubmissionModel submission = submissionService.submitDocument(
-                    documentId, submissionSlotId, submissionType, course, userId);
+            // Get the submission slot to check the professor and course
+            SubmissionSlotModel submissionSlot = submissionService.getSubmissionSlot(submissionSlotId);
+            if (submissionSlot == null) {
+                logger.error("Submission slot not found with ID: {}", submissionSlotId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Submission slot not found"));
+            }
+
+            // Get the course code from the submission slot
+            String courseCode = submissionSlot.getCourse();
+            logger.info("Submission slot course: {}", courseCode);
+
+            // Skip enrollment check for admin
+            if (!"ADMIN".equals(user.getRole())) {
+                // Check if the student is enrolled in the course
+                List<CourseModel> studentCourses = courseService.getCoursesForStudent(user.getId());
+                boolean isEnrolled = studentCourses.stream()
+                        .anyMatch(c -> c.getCode().equals(courseCode));
+
+                if (!isEnrolled) {
+                    logger.error("Student {} is not enrolled in course {}", user.getId(), courseCode);
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("error", "You are not enrolled in this course"));
+                }
+            }
+
+            logger.info("Found document: {} at path: {}", document.getName(), document.getFilePath());
+
+            Submission submission = submissionService.submitDocument(
+                    documentId, submissionSlotId, submissionType, course, user.getId());
 
             return ResponseEntity.ok(Map.of(
                     "message", "Document submitted successfully",
                     "submission", submission));
         } catch (Exception e) {
-            System.out.println("Error submitting document: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error submitting document: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to submit document: " + e.getMessage()));
         }
     }
 
-    // Delete a student submission
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteSubmission(@PathVariable String id) {
-        logger.info("Received request to delete submission with ID: {}", id);
-        try {
-            // Attempt to get the submission first to make sure it exists
-            SubmissionModel submission = submissionService.getSubmission(id);
-            if (submission == null) {
-                logger.error("Submission with ID {} not found for deletion", id);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "Submission not found"));
-            }
-
-            logger.info("Found submission to delete: {}", submission);
-
-            // Delete the submission
-            submissionService.deleteSubmission(id);
-            logger.info("Successfully deleted submission with ID: {}", id);
-
-            return ResponseEntity.ok(Map.of("message", "Submission deleted successfully"));
-        } catch (Exception e) {
-            logger.error("Error deleting submission with ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to delete submission: " + e.getMessage()));
-        }
-    }
-
     // Analyze a student submission
-    @PostMapping("/{submissionId}/analyze")
+    @PostMapping("/submissions/{submissionId}/analyze")
     public ResponseEntity<?> analyzeSubmission(
             @PathVariable String submissionId,
             @RequestBody(required = false) Map<String, Object> requestBody) {
@@ -227,7 +543,7 @@ public class SubmissionController {
 
         try {
             // Find the submission
-            SubmissionModel submission = submissionService.getSubmission(submissionId);
+            Submission submission = submissionService.getSubmission(submissionId);
             if (submission == null) {
                 logger.error("Submission not found with ID: {}", submissionId);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -291,12 +607,12 @@ public class SubmissionController {
 
             // Start analysis in background
             try {
-                documentService.startAnalysis(documentId, analyses,documentType);
+                documentService.startAnalysis(documentId, analyses, documentType);
                 logger.info("Analysis started for document: {}", documentId);
 
                 // Directly call the analyzeSubmission method with the submission ID and
                 // analyses
-                SubmissionModel analyzedSubmission = submissionService.analyzeSubmission(submissionId, analyses,
+                Submission analyzedSubmission = submissionService.analyzeSubmission(submissionId, analyses,
                         documentType);
 
                 logger.info("Analysis started for submission: {}", submissionId);
@@ -319,40 +635,9 @@ public class SubmissionController {
         }
     }
 
-    // Get a specific submission by ID
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getSubmissionById(@PathVariable String id) {
-        logger.info("Fetching submission with ID: {}", id);
-        try {
-            SubmissionModel submission = submissionService.getSubmission(id);
-            if (submission == null) {
-                logger.error("Submission not found with ID: {}", id);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "Submission not found", "submission_id", id));
-            }
-
-            logger.info("Found submission: {}", submission);
-
-            // If the submission has a document ID, try to get the document results
-            if (submission.getDocumentId() != null) {
-                DocumentModel document = documentService.getDocumentById(submission.getDocumentId());
-                if (document != null && document.getResults() != null) {
-                    logger.info("Found document with results: {}", document.getId());
-                    submission.setResults(document.getResults());
-                }
-            }
-
-            return ResponseEntity.ok(submission);
-        } catch (Exception e) {
-            logger.error("Error fetching submission with ID {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to fetch submission: " + e.getMessage()));
-        }
-    }
-
     // Get submissions for the current student
-    @GetMapping("/student")
-    public ResponseEntity<List<SubmissionModel>> getStudentSubmissions() {
+    @GetMapping("/submissions/student")
+    public ResponseEntity<List<Submission>> getStudentSubmissions() {
         logger.info("Fetching submissions for current student");
         try {
             // Get current user
@@ -362,12 +647,12 @@ public class SubmissionController {
             logger.info("Fetching submissions for student: {}", userId);
 
             // Get submissions for this student
-            List<SubmissionModel> studentSubmissions = submissionService.getSubmissionsForStudent(userId);
+            List<Submission> studentSubmissions = submissionService.getSubmissionsForStudent(userId);
 
             logger.info("Found {} raw submissions for student {}", studentSubmissions.size(), userId);
 
             // For each submission, try to fetch document results if available
-            for (SubmissionModel submission : studentSubmissions) {
+            for (Submission submission : studentSubmissions) {
                 logger.info("Processing student submission: id={}, documentId={}, status={}",
                         submission.getId(), submission.getDocumentId(), submission.getStatus());
 

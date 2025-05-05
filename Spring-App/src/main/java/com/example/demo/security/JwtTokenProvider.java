@@ -2,25 +2,23 @@ package com.example.demo.security;
 
 import com.example.demo.models.User;
 import com.example.demo.services.UserService;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletRequest;
+import java.security.Key;
+import java.util.Collections;
+import java.util.Date;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-import jakarta.servlet.http.HttpServletRequest;
-
-import java.security.Key;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
 
 @Component
 public class JwtTokenProvider {
@@ -30,20 +28,20 @@ public class JwtTokenProvider {
     private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS512);
     private final long validityInMilliseconds = 86400000; // 24 hours
 
+    @Autowired
+    private UserService userService;
+
     public String generateToken(User user) {
         Date now = new Date();
-        Date validity = new Date(now.getTime() + validityInMilliseconds);
-
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("id", user.getId());
-        claims.put("email", user.getEmail());
-        claims.put("role", user.getRole());
+        Date expiryDate = new Date(now.getTime() + validityInMilliseconds);
 
         return Jwts.builder()
-                .setClaims(claims)
                 .setSubject(user.getEmail())
+                .claim("id", user.getId())
+                .claim("role", user.getRole())
+                .claim("authorities", Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole())))
                 .setIssuedAt(now)
-                .setExpiration(validity)
+                .setExpiration(expiryDate)
                 .signWith(key)
                 .compact();
     }
@@ -160,5 +158,23 @@ public class JwtTokenProvider {
 
     private Boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
+    }
+
+    public String generateToken(String email) {
+        User user = userService.findByEmail(email);
+        if (user == null) {
+            throw new IllegalArgumentException("User not found with email: " + email);
+        }
+        return generateToken(user);
+    }
+
+    public String getUserIdFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return (String) claims.get("id");
     }
 }

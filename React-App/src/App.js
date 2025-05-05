@@ -5,7 +5,7 @@ import { AuthProvider } from "contexts/AuthContext";
 import { ProtectedRoute } from "components/ProtectedRoute";
 
 import LandingPage from "pages/LandingPage";
-import Dashboard from "pages/Dashboard";
+import StudentDashboard from "pages/StudentDashboard";
 import ProfessorDashboard from "pages/ProfessorDashboard";
 import Report from "pages/Report";
 import LoginPage from "pages/auth/LoginPage";
@@ -34,7 +34,7 @@ function App() {
               path="/dashboard"
               element={
                 <ProtectedRoute requiredRole="STUDENT">
-                  <Dashboard />
+                  <StudentDashboard />
                 </ProtectedRoute>
               }
             />
@@ -51,6 +51,7 @@ function App() {
 
             {/* Routes that need authentication but not specific role */}
             <Route
+
               path="/account/profile"
               element={
                 <ProtectedRoute>
@@ -59,6 +60,7 @@ function App() {
               }
             />
             <Route
+
               path="/report"
               element={
                 <ProtectedRoute>

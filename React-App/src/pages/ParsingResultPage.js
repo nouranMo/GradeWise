@@ -308,6 +308,7 @@ function RelationshipGraph({
                     <p className="text-sm bg-white p-3 rounded border border-gray-200">
                       {relationshipAnalyses[selectedRelationship].description}
                     </p>
+
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1074,7 +1075,9 @@ function ParsingResult() {
           !!parsingResult?.content_analysis
         )}
         {parsingResult.content_analysis && (
+
           <CollapsibleSection title="Content Analysis" defaultOpen={false}>
+
             {parsingResult.content_analysis.relationship_analyses && (
               <RelationshipGraph
                 matrix={parsingResult.content_analysis.similarity_matrix}
@@ -1121,7 +1124,9 @@ function ParsingResult() {
         )}
         {(parsingResult.content_analysis?.spelling_grammar?.length > 0 ||
           parsingResult.spelling_check) && (
+
           <CollapsibleSection title="Spelling Analysis" defaultOpen={false}>
+
             <div className="space-y-6">
               {/* Quick Spell Check Summary */}
               <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
@@ -1177,7 +1182,9 @@ function ParsingResult() {
                 </div>
               )}
             </div>
+
           </CollapsibleSection>
+
         )}
 
         {/* Business Value Analysis */}
@@ -1223,17 +1230,21 @@ function ParsingResult() {
           !!parsingResult?.diagram_convention
         )}
         {parsingResult?.diagram_convention && (
+
           <CollapsibleSection
             title="Diagram Convention Analysis"
             defaultOpen={false}
           >
             <div className="space-y-4">
+
               {parsingResult.diagram_convention.validation_results ? (
                 Object.keys(parsingResult.diagram_convention.validation_results)
                   .length > 0 ? (
                   Object.entries(
                     parsingResult.diagram_convention.validation_results
                   ).map(([diagramKey, validationText], index) => {
+
+
                     return (
                       <div key={index} className="p-4 bg-gray-50 rounded-lg">
                         <h3 className="font-medium mb-2">
@@ -1254,6 +1265,15 @@ function ParsingResult() {
                 </p>
               )}
 
+
+              {console.log(
+                "Diagram Convention - Issues Present:",
+                !!(
+                  parsingResult.diagram_convention.issues &&
+                  parsingResult.diagram_convention.issues.length > 0
+                )
+              )}
+
               {parsingResult.diagram_convention.issues &&
                 parsingResult.diagram_convention.issues.length > 0 && (
                   <div className="mt-4">
@@ -1268,7 +1288,9 @@ function ParsingResult() {
                   </div>
                 )}
             </div>
+
           </CollapsibleSection>
+
         )}
 
         {/* Plagiarism Check */}
@@ -1277,7 +1299,9 @@ function ParsingResult() {
           !!parsingResult?.plagiarism_check
         )}
         {parsingResult.plagiarism_check && (
+
           <CollapsibleSection title="Plagiarism Analysis" defaultOpen={false}>
+
             <div className="space-y-6">
               {/* Summary Card */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-lg border border-blue-100 shadow-sm">

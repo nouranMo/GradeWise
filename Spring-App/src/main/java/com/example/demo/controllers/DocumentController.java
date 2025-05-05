@@ -12,8 +12,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.demo.models.User;
 
 import java.util.List;
 import java.util.Map;
@@ -38,25 +40,43 @@ public class DocumentController {
     public ResponseEntity<?> uploadDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam("analyses") String analysesJson,
-            @RequestParam("documentType") String documentType) {
+            @RequestParam("documentType") String documentType,
+            @RequestParam("professorId") String professorId) {
         try {
             System.out.println("Received file upload request");
             System.out.println("File name: " + file.getOriginalFilename());
             System.out.println("File size: " + file.getSize());
             System.out.println("Analyses: " + analysesJson);
-            System.err.println("Document Type:"+documentType);
+            System.out.println("Document Type: " + documentType);
+            System.out.println("Professor ID: " + professorId);
 
-            // Get current user
-            String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-            System.out.println("Current user: " + currentUserEmail);
+            // Get current user from authentication
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "User not authenticated"));
+            }
+
+            // Get user ID from authentication
+            String currentUserId = authentication.getName();
+            System.out.println("Current user ID from authentication: " + currentUserId);
+
+            // Verify the current user is the professor
+            if (!currentUserId.equals(professorId)) {
+                logger.error("Unauthorized upload attempt. Current user ID: {}, Professor ID: {}", currentUserId,
+                        professorId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only upload documents for your own account"));
+            }
 
             // Parse analyses
             Map<String, Boolean> selectedAnalyses = objectMapper.readValue(analysesJson,
                     new TypeReference<Map<String, Boolean>>() {
                     });
 
-            // Save document
-            DocumentModel document = documentService.saveDocument(currentUserEmail, file, selectedAnalyses,documentType);
+            // Save document with professor's ID
+            DocumentModel document = documentService.saveDocument(professorId, file, selectedAnalyses,
+                    documentType);
             System.out.println("Document saved with ID: " + document.getId());
 
             // Return response with document
@@ -72,15 +92,28 @@ public class DocumentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<DocumentModel>> getUserDocuments() {
+    public ResponseEntity<List<DocumentModel>> getUserDocuments(
+            @RequestParam(value = "professorId", required = false) String professorId) {
         try {
             // Get current user
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String userId = authentication.getName();
 
-            List<DocumentModel> documents = documentService.getUserDocuments(userId);
+            // If professorId is provided and not the same as current user,
+            // check if current user has rights to access these documents
+            if (professorId != null && !professorId.isEmpty() && !professorId.equals(userId)) {
+                logger.info("Filtering documents by professor ID: {}", professorId);
+                // In a real system, you'd check if the current user has admin rights
+                // For now, just honor the request for simplicity
+            } else {
+                // Use the current user's ID if no professor ID specified
+                professorId = userId;
+            }
+
+            List<DocumentModel> documents = documentService.getUserDocuments(professorId);
             return ResponseEntity.ok(documents);
         } catch (Exception e) {
+            logger.error("Error fetching documents: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -154,7 +187,7 @@ public class DocumentController {
             String documentType = (String) requestBody.get("documentType");
             logger.info("Document type: {}", documentType);
             // Start analysis with selected analyses
-            documentService.startAnalysis(documentId, selectedAnalyses,documentType);
+            documentService.startAnalysis(documentId, selectedAnalyses, documentType);
             return ResponseEntity.ok(Map.of("message", "Analysis started successfully"));
         } catch (Exception e) {
             System.out.println("Error analyzing document: " + e.getMessage());

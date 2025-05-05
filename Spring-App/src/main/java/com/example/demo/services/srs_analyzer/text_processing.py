@@ -137,9 +137,9 @@ class TextProcessor:
         logger.info(f"Extracting text from PDF: {pdf_path}")
         try:
             with pdf_reader(pdf_path) as reader:
-                text = ""
-                for page in reader.pages:
-                    text += page.extract_text() + "\n"
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
             logger.debug(f"Extracted {len(text)} characters from PDF")
             return text
         except Exception as e:
@@ -190,8 +190,15 @@ class TextProcessor:
                 logger.warning("Document text is too short or empty")
                 return []
             
-            # Use SectionParser to get only the main sections for SRS documents
-            sections_dict = SectionParser.parse_sections_content_analysis(text)
+            # Use SectionParser to get the main sections based on document type
+            if document_type == "SRS":
+                sections_dict = SectionParser.parse_sections_content_analysis(text, document_type="SRS")
+            elif document_type == "SDD":
+                sections_dict = SectionParser.parse_sections_content_analysis(text, document_type="SDD")
+                else:
+                logger.warning(f"Unknown document type: {document_type}, defaulting to SRS")
+                sections_dict = SectionParser.parse_sections_content_analysis(text, document_type="SRS")
+
             
             # Log the sections found
             logger.info(f"Found {len(sections_dict)} sections in the document")
@@ -242,17 +249,17 @@ class TextProcessor:
         sections = []
         try:
             with pdf_reader(pdf_path) as reader:
-                last_valid_section = None
-                for page_num, page in enumerate(reader.pages, start=1):
-                    text = page.extract_text()
+            last_valid_section = None
+            for page_num, page in enumerate(reader.pages, start=1):
+                text = page.extract_text()
                     has_text = bool(text.strip())
 
-                    lines = text.splitlines() if text else []
-                    for line in lines:
+                lines = text.splitlines() if text else []
+                for line in lines:
                         if re.match(r'^\d+(\.\d+)* [A-Z]', line):
-                            section_title = self.strip_numbering(line.strip())
-                            last_valid_section = section_title if has_text else last_valid_section
-                            sections.append((section_title, page_num, has_text))
+                        section_title = self.strip_numbering(line.strip())
+                        last_valid_section = section_title if has_text else last_valid_section
+                        sections.append((section_title, page_num, has_text))
 
             logger.info(f"Identified {len(sections)} sections with page numbers")
             return sections
@@ -265,7 +272,7 @@ class TextProcessor:
         """Generate a concise scope for a section of text."""
         try:
             # Truncate text to avoid model sequence length issues
-            words = text.split()
+                words = text.split()
             if len(words) > 1000:
                 text = ' '.join(words[:1000])
                 logger.warning("Text truncated to 1000 words for scope generation")

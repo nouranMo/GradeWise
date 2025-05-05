@@ -25,7 +25,7 @@ public class User {
 
     private boolean enabled = true;
 
-    private String role; // "STUDENT" or "PROFESSOR"
+    private String role;
 
     // Getters and Setters
     public String getId() {
@@ -81,6 +81,7 @@ public class User {
     }
 
     public void setRole(String role) {
-        this.role = role;
+        // Remove ROLE_ prefix if present
+        this.role = role.startsWith("ROLE_") ? role.substring(5) : role;
     }
 }

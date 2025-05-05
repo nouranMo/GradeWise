@@ -157,6 +157,7 @@ const SignUpPage = () => {
           password,
           firstName,
           lastName,
+          role: "STUDENT", // Always set as student
         }),
       });
 
@@ -168,13 +169,7 @@ const SignUpPage = () => {
       const data = await response.json();
       login(data);
       toast.success("Registration successful!");
-      
-      // Redirect based on role
-      if (data.role === "PROFESSOR") {
-        navigate("/professor");
-      } else {
-        navigate("/dashboard");
-      }
+      navigate("/dashboard");
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Failed to register");
@@ -375,9 +370,9 @@ const SignUpPage = () => {
           </p>
 
           <p className="mt-4 text-sm text-gray-600">
-            Note: All accounts are registered as student accounts by default. 
-            If you are a professor, please contact the administrator after registration 
-            to have your account upgraded to professor status.
+            Note: All accounts are registered as student accounts by default. If
+            you are a professor, please contact the administrator after
+            registration to have your account upgraded to professor status.
           </p>
         </div>
 
