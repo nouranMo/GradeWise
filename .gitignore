@@ -3,6 +3,8 @@
 /React-App/.pnp
 /React-App/.pnp.js
 
+.node_modules/
+
 # Testing
 /React-App/coverage
 
@@ -70,3 +72,4 @@ app.log
 
 # Project specific
 uploads/
+/node_modules

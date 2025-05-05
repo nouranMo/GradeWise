@@ -4,6 +4,7 @@ import com.example.demo.models.DocumentModel;
 import com.example.demo.models.SubmissionModel;
 import com.example.demo.models.SubmissionSlotModel;
 import com.example.demo.models.User;
+import com.example.demo.models.CourseModel;
 import com.example.demo.repositories.SubmissionRepository;
 import com.example.demo.repositories.SubmissionSlotRepository;
 import org.slf4j.Logger;
@@ -30,6 +31,9 @@ public class SubmissionService {
 
     @Autowired
     private SubmissionSlotRepository submissionSlotRepository;
+
+    @Autowired
+    private CourseService courseService;
 
     // Get all submissions
     public List<SubmissionModel> getAllSubmissions() {
@@ -70,9 +74,9 @@ public class SubmissionService {
 
     // Submit a document to a submission slot
     public SubmissionModel submitDocument(String documentId, String submissionSlotId,
-            String submissionType, String course, String studentId) throws Exception {
+            String submissionType, String courseId, String userId) throws Exception {
         logger.info("Processing document submission - Document ID: {}, Slot ID: {}, Student: {}",
-                documentId, submissionSlotId, studentId);
+                documentId, submissionSlotId, userId);
 
         // Get the document
         DocumentModel document = documentService.getDocumentById(documentId);
@@ -84,9 +88,9 @@ public class SubmissionService {
         logger.info("Found document: {} with ID: {}", document.getName(), document.getId());
 
         // Skip document ownership check in development mode
-        if (!studentId.equals("anonymousUser") && !document.getUserId().equals(studentId)) {
+        if (!userId.equals("anonymousUser") && !document.getUserId().equals(userId)) {
             logger.warn("Document ownership mismatch - Owner: {}, Requester: {} - Allowing for development",
-                    document.getUserId(), studentId);
+                    document.getUserId(), userId);
             // Continue anyway for development
             // throw new Exception("You don't have permission to submit this document");
         }
@@ -103,10 +107,10 @@ public class SubmissionService {
         // Check if student has already submitted to this slot
         List<SubmissionModel> existingSubmissions = submissionRepository.findBySubmissionSlotId(submissionSlotId);
         boolean hasSubmitted = existingSubmissions.stream()
-                .anyMatch(s -> s.getUserId().equals(studentId));
+                .anyMatch(s -> s.getUserId().equals(userId));
 
         if (hasSubmitted) {
-            logger.warn("Student {} has already submitted to slot {}", studentId, submissionSlotId);
+            logger.warn("Student {} has already submitted to slot {}", userId, submissionSlotId);
             throw new Exception("You have already submitted to this assignment. Each student can only submit once.");
         }
 
@@ -125,20 +129,31 @@ public class SubmissionService {
         }
 
         // Get user details
-        User student = userService.findByEmail(studentId);
+        User student = userService.findByEmail(userId);
         String studentName = student != null ? student.getFirstName() + " " + student.getLastName()
                 : "Anonymous Student";
 
         logger.info("Creating submission for student: {}", studentName);
 
+        // Validate that the user is enrolled in the course
+        CourseModel course = courseService.getCourseById(courseId);
+        if (course == null) {
+            throw new IllegalArgumentException("Course not found");
+        }
+        
+        // Check if student is enrolled in the course
+        if (!course.getStudentIds().contains(userId)) {
+            throw new IllegalArgumentException("Student is not enrolled in this course");
+        }
+
         // Create the submission
         SubmissionModel submission = new SubmissionModel(
                 document.getId(), // Ensure we're using the correct document ID
                 submissionSlotId,
-                studentId,
+                userId,
                 document.getName(),
                 submissionType,
-                course);
+                courseId);
 
         submission.setStudentName(studentName);
         submission.setStatus("Submitted"); // Ensure status is explicitly set
@@ -160,7 +175,7 @@ public class SubmissionService {
                 "Saved submission details - ID: {}, DocumentID: {}, SlotID: {}, UserID: {}, DocumentName: {}, Type: {}, Course: {}, Status: {}, LastModified: {}",
                 savedSubmission.getId(), savedSubmission.getDocumentId(), savedSubmission.getSubmissionSlotId(),
                 savedSubmission.getUserId(), savedSubmission.getDocumentName(), savedSubmission.getSubmissionType(),
-                savedSubmission.getCourse(), savedSubmission.getStatus(), savedSubmission.getLastModified());
+                savedSubmission.getCourseId(), savedSubmission.getStatus(), savedSubmission.getLastModified());
 
         return savedSubmission;
     }
@@ -353,5 +368,33 @@ public class SubmissionService {
     // Get submissions for a specific student
     public List<SubmissionModel> getSubmissionsForStudent(String studentId) {
         return submissionRepository.findByUserId(studentId);
+    }
+
+    /**
+     * Get submissions for a specific course
+     */
+    public List<SubmissionModel> getSubmissionsForCourse(String courseId) {
+        return submissionRepository.findByCourseId(courseId);
+    }
+
+    /**
+     * Get submissions for a teacher (only from their courses)
+     */
+    public List<SubmissionModel> getSubmissionsForTeacher(String teacherId) {
+        // Get all courses where this teacher is assigned
+        List<CourseModel> teacherCourses = courseService.getCoursesForTeacher(teacherId);
+        
+        // If no courses, return empty list
+        if (teacherCourses.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        // Get all submissions from these courses
+        List<SubmissionModel> submissions = new ArrayList<>();
+        for (CourseModel course : teacherCourses) {
+            submissions.addAll(getSubmissionsForCourse(course.getId()));
+        }
+        
+        return submissions;
     }
 }

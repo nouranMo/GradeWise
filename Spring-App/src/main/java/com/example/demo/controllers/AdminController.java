@@ -13,6 +13,9 @@ import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.example.demo.models.CourseModel;
+import com.example.demo.services.CourseService;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/admin-api")
@@ -30,6 +33,9 @@ public class AdminController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private CourseService courseService;
 
     @GetMapping("/users")
     public ResponseEntity<?> getAllUsers() {
@@ -84,5 +90,155 @@ public class AdminController {
     @GetMapping("/test")
     public ResponseEntity<?> testEndpoint() {
         return ResponseEntity.ok(Map.of("message", "Admin API is working!"));
+    }
+
+    /**
+     * Get all courses
+     */
+    @GetMapping("/courses")
+    public ResponseEntity<?> getAllCourses() {
+        try {
+            List<CourseModel> courses = courseService.getAllCourses();
+            return ResponseEntity.ok(courses);
+        } catch (Exception e) {
+            logger.error("Error fetching courses", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch courses: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Create a new course
+     */
+    @PostMapping("/courses")
+    public ResponseEntity<?> createCourse(@RequestBody CourseModel course) {
+        try {
+            CourseModel newCourse = courseService.createCourse(course);
+            return ResponseEntity.ok(newCourse);
+        } catch (Exception e) {
+            logger.error("Error creating course", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to create course: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Assign teacher to course
+     */
+    @PostMapping("/courses/{courseId}/teachers")
+    public ResponseEntity<?> assignTeacherToCourse(
+            @PathVariable String courseId,
+            @RequestBody Map<String, String> request) {
+        try {
+            String teacherId = request.get("teacherId");
+            if (teacherId == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Teacher ID is required"));
+            }
+            
+            CourseModel updatedCourse = courseService.assignTeacherToCourse(courseId, teacherId);
+            return ResponseEntity.ok(updatedCourse);
+        } catch (Exception e) {
+            logger.error("Error assigning teacher to course", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to assign teacher to course: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Assign student to course
+     */
+    @PostMapping("/courses/{courseId}/students")
+    public ResponseEntity<?> assignStudentToCourse(
+            @PathVariable String courseId,
+            @RequestBody Map<String, String> request) {
+        try {
+            String studentId = request.get("studentId");
+            if (studentId == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Student ID is required"));
+            }
+            
+            CourseModel updatedCourse = courseService.assignStudentToCourse(courseId, studentId);
+            return ResponseEntity.ok(updatedCourse);
+        } catch (Exception e) {
+            logger.error("Error assigning student to course", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to assign student to course: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Remove student from course
+     */
+    @DeleteMapping("/courses/{courseId}/students/{studentId}")
+    public ResponseEntity<?> removeStudentFromCourse(
+            @PathVariable String courseId,
+            @PathVariable String studentId) {
+        try {
+            CourseModel updatedCourse = courseService.removeStudentFromCourse(courseId, studentId);
+            return ResponseEntity.ok(updatedCourse);
+        } catch (Exception e) {
+            logger.error("Error removing student from course", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to remove student from course: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Remove teacher from course
+     */
+    @DeleteMapping("/courses/{courseId}/teachers/{teacherId}")
+    public ResponseEntity<?> removeTeacherFromCourse(
+            @PathVariable String courseId,
+            @PathVariable String teacherId) {
+        try {
+            CourseModel updatedCourse = courseService.removeTeacherFromCourse(courseId, teacherId);
+            return ResponseEntity.ok(updatedCourse);
+        } catch (Exception e) {
+            logger.error("Error removing teacher from course", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to remove teacher from course: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Assign multiple students to course
+     */
+    @PostMapping("/courses/{courseId}/students/batch")
+    public ResponseEntity<?> assignMultipleStudentsToCourse(
+            @PathVariable String courseId,
+            @RequestBody Map<String, List<String>> request) {
+        try {
+            List<String> studentIds = request.get("studentIds");
+            if (studentIds == null || studentIds.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Student IDs are required"));
+            }
+            
+            List<CourseModel> updatedCourses = new ArrayList<>();
+            for (String studentId : studentIds) {
+                CourseModel updatedCourse = courseService.assignStudentToCourse(courseId, studentId);
+                updatedCourses.add(updatedCourse);
+            }
+            
+            return ResponseEntity.ok(updatedCourses.get(updatedCourses.size() - 1));
+        } catch (Exception e) {
+            logger.error("Error assigning students to course", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to assign students to course: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete a user
+     */
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable String userId) {
+        try {
+            userService.deleteUser(userId);
+            return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
+        } catch (Exception e) {
+            logger.error("Error deleting user", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to delete user: " + e.getMessage()));
+        }
     }
 } 

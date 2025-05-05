@@ -1,10 +1,9 @@
 package com.example.demo.repositories;
 
 import com.example.demo.models.SubmissionModel;
+import java.util.List;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Repository
 public interface SubmissionRepository extends MongoRepository<SubmissionModel, String> {
@@ -16,4 +15,6 @@ public interface SubmissionRepository extends MongoRepository<SubmissionModel, S
     List<SubmissionModel> findByStatus(String status);
 
     List<SubmissionModel> findByCourse(String course);
+
+    List<SubmissionModel> findByCourseId(String courseId);
 }

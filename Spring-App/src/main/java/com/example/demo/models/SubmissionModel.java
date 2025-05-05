@@ -1,9 +1,9 @@
 package com.example.demo.models;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.Date;
 import java.util.Map;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "submissions")
 public class SubmissionModel {
@@ -22,6 +22,7 @@ public class SubmissionModel {
     private Integer grade;
     private String feedback;
     private Map<String, Object> results;
+    private String courseId;
 
     public SubmissionModel() {
         // Default constructor
@@ -152,5 +153,13 @@ public class SubmissionModel {
 
     public void setResults(Map<String, Object> results) {
         this.results = results;
+    }
+
+    public String getCourseId() {
+        return courseId;
+    }
+
+    public void setCourseId(String courseId) {
+        this.courseId = courseId;
     }
 }

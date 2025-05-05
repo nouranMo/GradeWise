@@ -1,22 +1,18 @@
 package com.example.demo.controllers;
 
 import com.example.demo.models.User;
-import com.example.demo.services.UserService;
 import com.example.demo.security.JwtTokenProvider;
+import com.example.demo.services.UserService;
+import jakarta.validation.Valid;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Collections;
-import java.util.Base64;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -95,14 +91,11 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
         try {
-            // Default role is STUDENT for all miuegypt.edu.eg emails
-            String role = "STUDENT";
-            
-            // Only set as PROFESSOR for admin@gmail.com (for testing)
-            if (registerRequest.getEmail().equals("admin@gmail.com")) {
-                role = "PROFESSOR";
+            // Check if email already exists
+            if (userService.findByEmail(registerRequest.getEmail()) != null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Email already in use"));
             }
             
             User user = userService.registerUser(
@@ -110,16 +103,16 @@ public class AuthController {
                 registerRequest.getPassword(),
                 registerRequest.getFirstName(),
                 registerRequest.getLastName(),
-                role
+                "USER"
             );
-            
-            // Create response with user details including role
+
+            // Generate JWT token
+            String token = jwtTokenProvider.generateToken(user);
+
+            // Return user info and token
             Map<String, Object> response = new HashMap<>();
-            response.put("id", user.getId());
-            response.put("email", user.getEmail());
-            response.put("firstName", user.getFirstName());
-            response.put("lastName", user.getLastName());
-            response.put("role", user.getRole());
+            response.put("token", token);
+            response.put("user", user);
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {

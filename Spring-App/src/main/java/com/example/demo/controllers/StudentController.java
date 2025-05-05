@@ -2,8 +2,10 @@ package com.example.demo.controllers;
 
 import com.example.demo.models.DocumentModel;
 import com.example.demo.models.SubmissionModel;
+import com.example.demo.models.CourseModel;
 import com.example.demo.services.DocumentService;
 import com.example.demo.services.SubmissionService;
+import com.example.demo.services.CourseService;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,9 @@ public class StudentController {
 
     @Autowired
     private SubmissionService submissionService;
+
+    @Autowired
+    private CourseService courseService;
 
     // Get student documents
     @GetMapping("/documents")
@@ -170,25 +175,25 @@ public class StudentController {
         }
     }
 
-    // Submit a document to a submission slot
+    /**
+     * Submit a document to a course
+     */
     @PostMapping("/submit")
     public ResponseEntity<?> submitDocument(@RequestBody Map<String, Object> submissionData) {
         try {
-            // For development: use hardcoded user ID if authentication is null
+            // Get current user
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String userId = (authentication != null && !authentication.getName().equals("anonymousUser"))
-                    ? authentication.getName()
-                    : "anonymousUser";
-
-            logger.info("Submitting document by student: {}", userId);
+            String userId = authentication.getName();
+            logger.info("Processing submission for student: {}", userId);
 
             String documentId = (String) submissionData.get("documentId");
             String submissionSlotId = (String) submissionData.get("submissionSlotId");
             String submissionType = (String) submissionData.get("submissionType");
-            String course = (String) submissionData.get("course");
+            String courseId = (String) submissionData.get("courseId");
 
             logger.info("Document ID: {}", documentId);
             logger.info("Submission Slot ID: {}", submissionSlotId);
+            logger.info("Course ID: {}", courseId);
 
             // Verify document exists before submission
             DocumentModel document = documentService.getDocumentById(documentId);
@@ -200,9 +205,21 @@ public class StudentController {
 
             logger.info("Found document: {} at path: {}", document.getName(), document.getFilePath());
 
-            // For development, don't check document ownership
+            // Verify student is enrolled in the course
+            CourseModel course = courseService.getCourseById(courseId);
+            if (course == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Course not found"));
+            }
+            
+            if (!course.getStudentIds().contains(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You are not enrolled in this course"));
+            }
+
+            // Submit the document
             SubmissionModel submission = submissionService.submitDocument(
-                    documentId, submissionSlotId, submissionType, course, userId);
+                    documentId, submissionSlotId, submissionType, courseId, userId);
 
             return ResponseEntity.ok(Map.of(
                     "message", "Document submitted successfully",
@@ -214,7 +231,9 @@ public class StudentController {
         }
     }
 
-    // Get student submissions
+    /**
+     * Get submissions for the current student (filtered by their courses)
+     */
     @GetMapping("/submissions")
     public ResponseEntity<List<SubmissionModel>> getStudentSubmissions() {
         try {
@@ -228,6 +247,26 @@ public class StudentController {
         } catch (Exception e) {
             logger.error("Error fetching student submissions", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get courses for the current student
+     */
+    @GetMapping("/courses")
+    public ResponseEntity<?> getStudentCourses() {
+        try {
+            // Get current user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userId = authentication.getName();
+            logger.info("Fetching courses for student: {}", userId);
+
+            List<CourseModel> courses = courseService.getCoursesForStudent(userId);
+            return ResponseEntity.ok(courses);
+        } catch (Exception e) {
+            logger.error("Error fetching student courses", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch courses: " + e.getMessage()));
         }
     }
 }
