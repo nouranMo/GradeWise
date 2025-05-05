@@ -713,7 +713,6 @@ function ProfessorDashboard() {
     console.log("Selected analyses:", selectedAnalyses);
 
     try {
-      // Update status to "Analyzing" in the UI
       if (isSubmission) {
         // Also set the analyzing submission ID for UI feedback
         setAnalyzingSubmission(selectedDocument.id);
@@ -793,7 +792,7 @@ function ProfessorDashboard() {
           if (doc.id === selectedDocument.id) {
             return {
               ...doc,
-              status: "Graded",
+              status: "Completed",
               analyzed: true,
               results: updatedItem.results,
             };
