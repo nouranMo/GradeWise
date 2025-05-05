@@ -16,6 +16,7 @@ public class DocumentModel {
     private long fileSize;
     private Date uploadDate;
     private String status;
+    private boolean analysisInProgress;
     private boolean analyzed;
     private int analysisProgress;
     private Map<String, Object> results;
@@ -33,8 +34,10 @@ public class DocumentModel {
         this.filePath = filePath;
         this.fileSize = fileSize;
         this.uploadDate = new Date();
-        this.status = "Pending Analysis";
+        this.status = "Uploaded";
+        this.analysisInProgress = false;
         this.analyzed = false;
+        this.results = null;
         this.analysisProgress = 0;
         this.selectedAnalyses = selectedAnalyses;
     }
@@ -134,5 +137,13 @@ public class DocumentModel {
 
     public void setSelectedAnalyses(Map<String, Boolean> selectedAnalyses) {
         this.selectedAnalyses = selectedAnalyses;
+    }
+
+    public boolean isAnalysisInProgress() {
+        return analysisInProgress;
+    }
+
+    public void setAnalysisInProgress(boolean analysisInProgress) {
+        this.analysisInProgress = analysisInProgress;
     }
 }

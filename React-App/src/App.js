@@ -15,6 +15,7 @@ import SectionExtraction from "components/uml/sectionExtraction";
 import ParsingResultPage from "pages/ParsingResultPage";
 import UMLReport from "components/uml/UMLReport";
 import AdminPanel from "pages/AdminPanel";
+import Profile from "pages/account/Profile";
 
 function App() {
   console.log("App rendering with routes including /admin");
@@ -50,6 +51,16 @@ function App() {
 
             {/* Routes that need authentication but not specific role */}
             <Route
+
+              path="/account/profile"
+              element={
+                <ProtectedRoute>
+                  {({ userData }) => <Profile userData={userData} />}
+                </ProtectedRoute>
+              }
+            />
+            <Route
+
               path="/report"
               element={
                 <ProtectedRoute>

@@ -406,7 +406,7 @@ function Dashboard() {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
-          <h2 className="text-xl font-semibold mb-4">Submit Document</h2>
+          <h2 className="text-md font-semibold mb-4">Submit Document</h2>
           <p className="mb-4 text-gray-600">
             Select a submission slot for "{document?.name}"
           </p>
@@ -563,13 +563,13 @@ function Dashboard() {
         <div className="grid grid-cols-3 gap-6 mb-8">
           {/* Upload Card */}
           <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4">Upload Document</h2>
+            <h2 className="text-md font-semibold mb-4">Upload Document</h2>
             <UploadModal onUploadComplete={handleStudentUpload} />
           </div>
 
           {/* Upcoming Deadlines Card */}
           <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4">Upcoming Deadlines</h2>
+            <h2 className="text-md font-semibold mb-4">Upcoming Deadlines</h2>
             <div className="space-y-3">
               {getUpcomingDeadlines().map((submission) => (
                 <div key={submission.id} className="border-b pb-2">
@@ -584,7 +584,7 @@ function Dashboard() {
 
           {/* Quick Stats Card */}
           <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4">Overview</h2>
+            <h2 className="text-md font-semibold mb-4">Overview</h2>
             <div className="space-y-3">
               <div>
                 <p className="text-sm text-gray-500">Uploaded Documents</p>
@@ -613,7 +613,7 @@ function Dashboard() {
           <div className="grid grid-cols-7 gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
             <div>DOCUMENT NAME</div>
             <div>SUBMISSION TYPE</div>
-            <div>SUBMITTED DATE</div>
+            <div>SUBMISSION DATE</div>
             <div>SIZE</div>
             <div>STATUS</div>
             <div>GRADE</div>
@@ -628,7 +628,7 @@ function Dashboard() {
             documents.map((doc) => (
               <div
                 key={doc.id}
-                className="grid grid-cols-7 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-100 hover:cursor-pointer transition-colors duration-300"
+                className="grid grid-cols-7 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-100 transition-colors duration-300"
                 onClick={
                   doc.status === "Graded"
                     ? () => handleViewReport(doc)
@@ -732,7 +732,7 @@ function Dashboard() {
         {showDeleteModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
-              <h2 className="text-xl font-semibold mb-4">Confirm Deletion</h2>
+              <h2 className="text-md font-semibold mb-6">Confirm Deletion</h2>
               <p className="mb-6 text-gray-600 break-words">
                 Are you sure you want to delete "{documentToDelete?.name}"? This
                 action cannot be undone.
@@ -746,7 +746,7 @@ function Dashboard() {
                 </button>
                 <button
                   onClick={handleDeleteDocument}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className="px-4 py-2 bg-[#ff6464] text-white rounded-md hover:bg-[#ff4444] transition-colors duration-300"
                 >
                   Delete
                 </button>

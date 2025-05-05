@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -308,6 +308,7 @@ function RelationshipGraph({
                     <p className="text-sm bg-white p-3 rounded border border-gray-200">
                       {relationshipAnalyses[selectedRelationship].description}
                     </p>
+
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -392,6 +393,89 @@ function RelationshipGraph({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function CollapsibleSection({
+  title,
+  children,
+  defaultOpen = false,
+  icon = null,
+  badgeContent = null,
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isRecent, setIsRecent] = useState(false);
+  const sectionRef = useRef(null);
+
+  const handleClick = () => {
+    // Store current scroll position
+    const currentScroll = window.scrollY;
+
+    setIsOpen(!isOpen);
+    setIsRecent(true);
+
+    // Restore scroll position after state update
+    setTimeout(() => {
+      window.scrollTo(0, currentScroll);
+    }, 0);
+
+    setTimeout(() => setIsRecent(false), 2000);
+  };
+
+  return (
+    <div
+      ref={sectionRef}
+      className={`bg-white rounded-lg shadow-lg mb-4 transition-all duration-700 ease-in-out ${
+        isRecent ? "ring-2 ring-blue-200" : "ring-0 ring-transparent"
+      }`}
+    >
+      <div
+        className={`p-4 cursor-pointer w-full transition-all duration-700 ease-in-out ${
+          isRecent ? "bg-blue-50" : "bg-white"
+        }`}
+        onClick={handleClick}
+      >
+        <div className="flex justify-between items-center">
+          <div className="flex items-center">
+            {icon && <span className="mr-2">{icon}</span>}
+            <h2 className="text-xl font-bold text-gray-800">{title}</h2>
+            {badgeContent && <span className="ml-3">{badgeContent}</span>}
+          </div>
+          <button
+            className="text-gray-500 hover:text-gray-700 transition-colors duration-300"
+            aria-label={isOpen ? "Collapse section" : "Expand section"}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClick();
+            }}
+          >
+            <svg
+              className={`w-5 h-5 transform transition-transform duration-300 ease-in-out ${
+                isOpen ? "rotate-180" : ""
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div
+        className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${
+          isOpen ? "max-h-[2000px]" : "max-h-0"
+        }`}
+      >
+        <div className="px-4 pb-4">{children}</div>
+      </div>
     </div>
   );
 }
@@ -557,16 +641,52 @@ function ParsingResult() {
           </button>
         </div>
 
+        {/* Document Summary */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+          {" "}
+          {/* Reduced padding and margin */}
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">
+                Document Details
+              </h2>{" "}
+              {/* Changed from text-2xl */}
+              <p className="text-sm text-gray-600">
+                {" "}
+                {/* Changed to text-sm */}
+                Document Type:{" "}
+                {parsingResult.srs_validation
+                  ? "SRS"
+                  : parsingResult.sdd_validation
+                  ? "SDD"
+                  : "Not specified"}
+              </p>
+              <p className="text-sm text-gray-600">
+                {" "}
+                {/* Changed to text-sm */}
+                Document Name: {parsingResult.document_name || "Untitled"}
+              </p>
+            </div>
+            <div className="bg-blue-50 px-3 py-1 rounded-lg">
+              {" "}
+              {/* Reduced padding */}
+              <p className="text-sm text-blue-800">
+                Analysis Date: {new Date().toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* SRS Structure Validation */}
         {console.log(
           "Checking SRS Validation Section - Present:",
           !!parsingResult?.srs_validation
         )}
         {parsingResult.srs_validation && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              SRS Structure Analysis
-            </h2>
+          <CollapsibleSection
+            title="SRS Structure Analysis"
+            defaultOpen={false}
+          >
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <StatCard
@@ -654,7 +774,7 @@ function ParsingResult() {
                 </div>
               )}
             </div>
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* SDD Structure Validation */}
@@ -663,10 +783,10 @@ function ParsingResult() {
           !!parsingResult?.sdd_validation
         )}
         {parsingResult.sdd_validation && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              SDD Structure Analysis
-            </h2>
+          <CollapsibleSection
+            title="SDD Structure Analysis"
+            defaultOpen={false}
+          >
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <StatCard
@@ -755,7 +875,7 @@ function ParsingResult() {
                 </div>
               )}
             </div>
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* References Analysis */}
@@ -764,11 +884,7 @@ function ParsingResult() {
           !!parsingResult?.references_validation
         )}
         {parsingResult.references_validation && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              References Analysis
-            </h2>
-
+          <CollapsibleSection title="References Analysis" defaultOpen={false}>
             {process.env.NODE_ENV !== "production" && (
               <div className="p-2 bg-yellow-50 border border-yellow-200 rounded mb-4 text-xs">
                 <p>Available data:</p>
@@ -950,7 +1066,7 @@ function ParsingResult() {
                 </div>
               )}
             </div>
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* Content Analysis */}
@@ -959,8 +1075,8 @@ function ParsingResult() {
           !!parsingResult?.content_analysis
         )}
         {parsingResult.content_analysis && (
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h3 className="text-xl font-semibold mb-4">Content Analysis</h3>
+
+          <CollapsibleSection title="Content Analysis" defaultOpen={false}>
 
             {parsingResult.content_analysis.relationship_analyses && (
               <RelationshipGraph
@@ -971,7 +1087,7 @@ function ParsingResult() {
                 }
               />
             )}
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* Image Analysis */}
@@ -980,10 +1096,7 @@ function ParsingResult() {
           !!parsingResult?.image_analysis
         )}
         {parsingResult.image_analysis && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Image Analysis
-            </h2>
+          <CollapsibleSection title="Image Analysis" defaultOpen={false}>
             <div className="space-y-4">
               {parsingResult.image_analysis.processed_images.map(
                 (image, index) => (
@@ -998,7 +1111,7 @@ function ParsingResult() {
                 )
               )}
             </div>
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* Spelling and Grammar Section */}
@@ -1011,10 +1124,9 @@ function ParsingResult() {
         )}
         {(parsingResult.content_analysis?.spelling_grammar?.length > 0 ||
           parsingResult.spelling_check) && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Spelling Analysis
-            </h2>
+
+          <CollapsibleSection title="Spelling Analysis" defaultOpen={false}>
+
             <div className="space-y-6">
               {/* Quick Spell Check Summary */}
               <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
@@ -1070,7 +1182,9 @@ function ParsingResult() {
                 </div>
               )}
             </div>
-          </div>
+
+          </CollapsibleSection>
+
         )}
 
         {/* Business Value Analysis */}
@@ -1079,10 +1193,10 @@ function ParsingResult() {
           !!parsingResult?.business_value_analysis
         )}
         {parsingResult?.business_value_analysis && (
-          <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">
-              Business Value Analysis
-            </h2>
+          <CollapsibleSection
+            title="Business Value Analysis"
+            defaultOpen={false}
+          >
             <div className="prose prose-lg text-gray-700 max-w-none">
               <ReactMarkdown>
                 {(() => {
@@ -1107,7 +1221,7 @@ function ParsingResult() {
                 })()}
               </ReactMarkdown>
             </div>
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* Diagram Convention Analysis */}
@@ -1116,38 +1230,21 @@ function ParsingResult() {
           !!parsingResult?.diagram_convention
         )}
         {parsingResult?.diagram_convention && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-              <svg
-                className="w-6 h-6 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-              Diagram Convention Analysis
-            </h2>
+
+          <CollapsibleSection
+            title="Diagram Convention Analysis"
+            defaultOpen={false}
+          >
             <div className="space-y-4">
-              {console.log(
-                "Diagram Convention - Validation Results Present:",
-                !!parsingResult.diagram_convention.validation_results
-              )}
+
               {parsingResult.diagram_convention.validation_results ? (
                 Object.keys(parsingResult.diagram_convention.validation_results)
                   .length > 0 ? (
                   Object.entries(
                     parsingResult.diagram_convention.validation_results
                   ).map(([diagramKey, validationText], index) => {
-                    console.log(
-                      `Rendering Diagram: ${diagramKey}`,
-                      validationText
-                    );
+
+
                     return (
                       <div key={index} className="p-4 bg-gray-50 rounded-lg">
                         <h3 className="font-medium mb-2">
@@ -1168,6 +1265,7 @@ function ParsingResult() {
                 </p>
               )}
 
+
               {console.log(
                 "Diagram Convention - Issues Present:",
                 !!(
@@ -1175,6 +1273,7 @@ function ParsingResult() {
                   parsingResult.diagram_convention.issues.length > 0
                 )
               )}
+
               {parsingResult.diagram_convention.issues &&
                 parsingResult.diagram_convention.issues.length > 0 && (
                   <div className="mt-4">
@@ -1189,7 +1288,9 @@ function ParsingResult() {
                   </div>
                 )}
             </div>
-          </div>
+
+          </CollapsibleSection>
+
         )}
 
         {/* Plagiarism Check */}
@@ -1198,24 +1299,8 @@ function ParsingResult() {
           !!parsingResult?.plagiarism_check
         )}
         {parsingResult.plagiarism_check && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-              <svg
-                className="w-6 h-6 mr-2 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              Plagiarism Analysis
-            </h2>
+
+          <CollapsibleSection title="Plagiarism Analysis" defaultOpen={false}>
 
             <div className="space-y-6">
               {/* Summary Card */}
@@ -1575,7 +1660,7 @@ function ParsingResult() {
                 </ul>
               </div>
             </div>
-          </div>
+          </CollapsibleSection>
         )}
       </div>
     </div>

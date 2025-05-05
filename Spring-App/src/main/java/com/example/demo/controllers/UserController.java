@@ -2,6 +2,9 @@ package com.example.demo.controllers;
 
 import com.example.demo.models.User;
 import com.example.demo.services.UserService;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import com.example.demo.security.JwtTokenProvider;
 import com.example.demo.dto.LoginRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -147,6 +150,7 @@ public class UserController {
             }
 
             if (user == null) {
+
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "User not found"));
             }
@@ -182,6 +186,7 @@ public class UserController {
             return ResponseEntity.ok(updatedUser);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+
         }
     }
 }

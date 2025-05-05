@@ -51,10 +51,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
                     logger.info("Authenticated user: " + email + " with role: " + role + ", ID: " + userId);
+
                 }
-            } catch (Exception e) {
-                logger.error("Authentication error: " + e.getMessage());
+            } else {
+                System.out.println("Token is null or invalid");
             }
+        } catch (Exception e) {
+            System.out.println("Error in authentication filter: " + e.getMessage());
+            e.printStackTrace();
         }
 
         filterChain.doFilter(request, response);

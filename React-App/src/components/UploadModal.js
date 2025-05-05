@@ -55,11 +55,11 @@ const UploadModal = ({ onUploadComplete }) => {
         {...getRootProps()}
         className={`
           border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
-          transition-colors duration-300 ease-in-out
+    transition-colors duration-300 ease-in-out group
           ${
             isDragActive
               ? "border-[#ff6464] bg-red-50"
-              : "border-gray-300 hover:border-[#ff6464] hover:bg-red-50"
+              : "border-gray-300 hover:border-[#ff6464]"
           }
         `}
       >
@@ -67,8 +67,10 @@ const UploadModal = ({ onUploadComplete }) => {
         <div className="mb-3">
           <svg
             className={`mx-auto h-8 w-8 ${
-              isDragActive ? "text-red-400" : "text-gray-400"
-            }`}
+              isDragActive
+                ? "text-red-400"
+                : "text-gray-400 group-hover:text-[#ff6464]"
+            } transition-colors duration-300`}
             stroke="currentColor"
             fill="none"
             viewBox="0 0 24 24"

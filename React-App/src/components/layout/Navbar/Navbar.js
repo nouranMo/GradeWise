@@ -19,7 +19,7 @@ import {
 const userMenuItems = [
   {
     name: "Profile",
-    href: "/dashboard/profile",
+    href: "/account/profile",
     description: "Your personal information",
   },
   {

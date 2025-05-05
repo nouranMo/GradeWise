@@ -14,6 +14,7 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -45,16 +46,6 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String getEmailFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-
-        return claims.getSubject();
-    }
-
     public String getRoleFromToken(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(key)
@@ -67,10 +58,35 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            String email = claims.getSubject();
+            logger.debug("Token validated for user: {}", email);
             return true;
         } catch (Exception e) {
+            logger.error("Token validation failed: {}", e.getMessage());
             return false;
+        }
+    }
+
+    public String getEmailFromToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            String email = claims.getSubject();
+            logger.debug("Email extracted from token: {}", email);
+            return email;
+        } catch (Exception e) {
+            logger.error("Error extracting email from token: {}", e.getMessage());
+            throw e;
         }
     }
 
@@ -79,11 +95,26 @@ public class JwtTokenProvider {
         return generateTokenFromUserDetails(userDetails);
     }
 
+    @Autowired
+    private UserService userService;
+
     public String generateTokenFromUserDetails(UserDetails userDetails) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + validityInMilliseconds);
 
+        Map<String, Object> claims = new HashMap<>();
+        // Since UserDetails doesn't have all the information, we need to get it from
+        // the User entity
+        User user = userService.findByEmail(userDetails.getUsername());
+
+        if (user != null) {
+            claims.put("id", user.getId());
+            claims.put("email", user.getEmail());
+            claims.put("role", user.getRole());
+        }
+
         return Jwts.builder()
+                .setClaims(claims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
