@@ -2,6 +2,9 @@ package com.example.demo.controllers;
 
 import com.example.demo.models.User;
 import com.example.demo.services.UserService;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import com.example.demo.security.JwtTokenProvider;
 import com.example.demo.dto.LoginRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -128,6 +131,107 @@ public class UserController {
             Map<String, String> response = new HashMap<>();
             response.put("message", "Invalid email or password");
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(Authentication authentication) {
+        try {
+            if (authentication == null) {
+                System.out.println("Authentication is null");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Not authenticated"));
+            }
+
+            String email = authentication.getName();
+            System.out.println("Attempting to fetch profile for email: " + email);
+
+            User user = userService.findByEmail(email);
+
+            if (user == null) {
+                System.out.println("No user found for email: " + email);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "User not found"));
+            }
+
+            System.out.println("Found user: " + user.getFirstName() + " " + user.getLastName());
+
+            Map<String, Object> profile = new HashMap<>();
+            profile.put("firstName", user.getFirstName());
+            profile.put("lastName", user.getLastName());
+            profile.put("email", user.getEmail());
+            profile.put("role", user.getRole());
+
+            System.out.println("Returning profile: " + profile);
+            return ResponseEntity.ok(profile);
+
+        } catch (Exception e) {
+            System.out.println("Error in profile endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error fetching profile: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(
+            @RequestBody Map<String, String> updates,
+            Authentication authentication,
+            HttpServletRequest request) { // Add this parameter
+        try {
+            // Add debug logging
+            System.out.println("==== Debug Profile Update ====");
+            System.out.println("Updates received: " + updates);
+            System.out.println("Authentication object: " + authentication);
+
+            // Get the Authorization header directly to check if it's being received
+            String authHeader = request.getHeader("Authorization");
+            System.out.println("Authorization header: " + authHeader);
+
+            if (authentication == null) {
+                System.out.println("Authentication is null - checking SecurityContext");
+                authentication = SecurityContextHolder.getContext().getAuthentication();
+                System.out.println("Authentication from SecurityContext: " + authentication);
+            }
+
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Not authenticated"));
+            }
+
+            String email = authentication.getName();
+            System.out.println("User email: " + email);
+
+            User user = userService.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "User not found"));
+            }
+
+            // Update allowed fields
+            if (updates.containsKey("firstName")) {
+                user.setFirstName(updates.get("firstName"));
+            }
+            if (updates.containsKey("lastName")) {
+                user.setLastName(updates.get("lastName"));
+            }
+
+            // Save updated user
+            User updatedUser = userService.save(user);
+
+            // Return updated profile
+            Map<String, Object> profile = new HashMap<>();
+            profile.put("firstName", updatedUser.getFirstName());
+            profile.put("lastName", updatedUser.getLastName());
+            profile.put("email", updatedUser.getEmail());
+            profile.put("role", updatedUser.getRole());
+
+            return ResponseEntity.ok(profile);
+        } catch (Exception e) {
+            System.out.println("Error in updateProfile: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error updating profile: " + e.getMessage()));
         }
     }
 }

@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user is logged in on initial load
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem("user"));
     if (user) {
       setCurrentUser(user);
     }
@@ -17,29 +17,35 @@ export const AuthProvider = ({ children }) => {
 
   // Login function
   const login = (userData) => {
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem("user", JSON.stringify(userData));
     setCurrentUser(userData);
   };
 
   // Logout function
   const logout = () => {
-    localStorage.removeItem('user');
+    localStorage.removeItem("user");
     setCurrentUser(null);
+  };
+
+  const updateUser = (updatedUserData) => {
+    const newUserData = { ...currentUser, ...updatedUserData };
+    localStorage.setItem("user", JSON.stringify(newUserData));
+    setCurrentUser(newUserData);
   };
 
   // Check if user is a professor
   const isProfessor = () => {
-    return currentUser?.role === 'PROFESSOR';
+    return currentUser?.role === "PROFESSOR";
   };
 
   // Check if user is a student
   const isStudent = () => {
-    return currentUser?.role === 'STUDENT';
+    return currentUser?.role === "STUDENT";
   };
 
   // Check if user is admin
   const isAdmin = () => {
-    return currentUser?.email === 'admin@gmail.com';
+    return currentUser?.email === "admin@gmail.com";
   };
 
   const value = {
@@ -48,7 +54,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     isProfessor,
     isStudent,
-    isAdmin
+    isAdmin,
+    updateUser,
   };
 
   return (

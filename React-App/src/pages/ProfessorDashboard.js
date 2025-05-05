@@ -1017,7 +1017,9 @@ function ProfessorDashboard() {
           {/* Active Submissions Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-md text-gray-800 font-semibold">Active Submissions</h2>
+              <h2 className="text-md text-gray-800 font-semibold">
+                Active Submissions
+              </h2>
               <button
                 onClick={() => setShowCreateSubmissionModal(true)}
                 className="text-xs p-1.5 text-gray-600 border border-gray-300 hover:border-[#ff6464] hover:text-[#ff6464] rounded-md transition-all duration-300 flex items-center gap-1"
@@ -1075,7 +1077,9 @@ function ProfessorDashboard() {
 
           {/* Quick Stats Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-md text-gray-800 font-semibold mb-4">Overview</h2>
+            <h2 className="text-md text-gray-800 font-semibold mb-4">
+              Overview
+            </h2>
             <div className="space-y-4">
               {" "}
               <div>
@@ -1097,7 +1101,9 @@ function ProfessorDashboard() {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
           <div className="p-6 border-b border-gray-100">
-            <h2 className="text-md text-gray-800 font-semibold">Student Submissions</h2>
+            <h2 className="text-md text-gray-800 font-semibold">
+              Student Submissions
+            </h2>
           </div>
 
           {/* Tables Section */}
@@ -1152,14 +1158,14 @@ function ProfessorDashboard() {
                 </button>
               </div>
               <div className="grid grid-cols-8 gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-                <div>STUDENT</div>
-                <div>DOCUMENT</div>
-                <div>SUBMISSION TYPE</div>
-                <div>COURSE</div>
-                <div>SUBMISSION DATE</div>
-                <div>STATUS</div>
-                <div>GRADE</div>
-                <div>ACTIONS</div>
+                <div className="flex items-center">STUDENT</div>
+                <div className="flex items-center">DOCUMENT</div>
+                <div className="flex items-center">SUBMISSION TYPE</div>
+                <div className="flex items-center">COURSE</div>
+                <div className="flex items-center">SUBMISSION DATE</div>
+                <div className="flex items-center justify-center">STATUS</div>
+                <div className="flex items-center justify-center">GRADE</div>
+                <div className="flex items-center justify-end">ACTIONS</div>
               </div>
 
               {submissions.length === 0 ? (
@@ -1172,8 +1178,15 @@ function ProfessorDashboard() {
                     key={submission.id}
                     className="grid grid-cols-8 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-300"
                   >
-                    <div>{submission.studentName || "Unknown"}</div>
-                    <div className="overflow-hidden">
+                    <div
+                      className="flex items-center col-span-1"
+                      title={submission.studentName}
+                    >
+                      <span className="whitespace-normal break-words overflow-hidden max-h-16 hyphens-auto">
+                        {submission.studentName?.split(" ").join(" ")}
+                      </span>
+                    </div>
+                    <div className="flex flex-col justify-center overflow-hidden">
                       <span
                         title={`Document ID: ${submission.documentId}`}
                         className="truncate block"
@@ -1184,16 +1197,18 @@ function ProfessorDashboard() {
                         ID: {submission.documentId}
                       </span>
                     </div>
-                    <div>{submission.submissionType}</div>
-                    <div>{submission.course}</div>
-                    <div>
+                    <div className="flex items-center">
+                      {submission.submissionType}
+                    </div>
+                    <div className="flex items-center">{submission.course}</div>
+                    <div className="flex items-center">
                       {submission.submissionDate
                         ? new Date(
                             submission.submissionDate
                           ).toLocaleDateString()
                         : "-"}
                     </div>
-                    <div className="col-span-1 flex items-center">
+                    <div className="col-span-1 flex items-center justify-center">
                       {document.status === "Analyzing" ||
                       document.analysisInProgress ? (
                         <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
@@ -1240,8 +1255,10 @@ function ProfessorDashboard() {
                         </span>
                       )}
                     </div>
-                    <div>{submission.grade ? `${submission.grade}%` : "-"}</div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-center">
+                      {submission.grade ? `${submission.grade}%` : "-"}
+                    </div>
+                    <div className="flex items-center justify-end space-x-2">
                       {submission.status === "Submitted" && (
                         <button
                           onClick={() => handleAnalyzeSubmission(submission)}

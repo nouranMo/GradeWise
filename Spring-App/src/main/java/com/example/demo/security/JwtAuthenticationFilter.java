@@ -22,42 +22,48 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private UserService userService;
-    
+
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        
-        String token = getTokenFromRequest(request);
-        
-        if (token != null && jwtTokenProvider.validateToken(token)) {
-            try {
+
+        try {
+            String token = getTokenFromRequest(request);
+            System.out.println("Received token: " + (token != null ? "present" : "null"));
+
+            if (token != null && jwtTokenProvider.validateToken(token)) {
                 String email = jwtTokenProvider.getEmailFromToken(token);
+                System.out.println("Email from token: " + email);
+
                 User user = userService.findByEmail(email);
-                
+                System.out.println("Found user: " + (user != null ? user.getEmail() : "null"));
+
                 if (user != null) {
-                    String role = jwtTokenProvider.getRoleFromToken(token);
                     List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-                        new SimpleGrantedAuthority("ROLE_" + role)
-                    );
-                    
-                    UsernamePasswordAuthenticationToken authentication = 
-                        new UsernamePasswordAuthenticationToken(user, null, authorities);
-                    
+                            new SimpleGrantedAuthority("ROLE_USER"));
+
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(email,
+                            null, authorities);
+
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    
-                    logger.info("Authenticated user: " + email + " with role: " + role);
+                    System.out.println("Set authentication for user: " + email);
+                } else {
+                    System.out.println("User not found for email: " + email);
                 }
-            } catch (Exception e) {
-                logger.error("Authentication error: " + e.getMessage());
+            } else {
+                System.out.println("Token is null or invalid");
             }
+        } catch (Exception e) {
+            System.out.println("Error in authentication filter: " + e.getMessage());
+            e.printStackTrace();
         }
-        
+
         filterChain.doFilter(request, response);
     }
-    
+
     private String getTokenFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
