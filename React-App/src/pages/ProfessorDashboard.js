@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "components/layout/Navbar/Navbar";
 import UploadModal from "components/UploadModal";
+import { useAuth } from "../contexts/AuthContext";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -21,6 +22,40 @@ const CreateSubmissionModal = ({ isOpen, onClose, onSubmit }) => {
 
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
+  const [courses, setCourses] = useState([]);
+  const { currentUser } = useAuth();
+
+  useEffect(() => {
+    const fetchProfessorCourses = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No authentication token found");
+          return;
+        }
+
+        const response = await fetch(`${API_URL}/api/teacher/courses`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch courses");
+        }
+
+        const data = await response.json();
+        setCourses(data);
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+        toast.error("Failed to load courses");
+      }
+    };
+
+    if (isOpen) {
+      fetchProfessorCourses();
+    }
+  }, [isOpen]);
 
   const resetForm = () => {
     setFormData(initialFormData);
@@ -137,105 +172,96 @@ const CreateSubmissionModal = ({ isOpen, onClose, onSubmit }) => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Deadline Date*
-              </label>
-              <input
-                type="date"
-                value={formData.deadline}
-                min={getMinDate()}
-                onChange={(e) => {
-                  setFormData({ ...formData, deadline: e.target.value });
-                  if (errors.deadline) {
-                    setErrors({ ...errors, deadline: "" });
-                  }
-                }}
-                className={`w-full border rounded-lg px-3 py-2 ${
-                  errors.deadline ? "border-red-500" : "border-gray-300"
-                } text-gray-500 [&::-webkit-datetime-edit-text]:text-gray-500 [&::-webkit-datetime-edit]:text-gray-500`}
-              />
-              {errors.deadline && (
-                <p className="mt-1 text-sm text-red-500">{errors.deadline}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Deadline Time*
-              </label>
-              <input
-                type="time"
-                value={formData.deadlineTime}
-                onChange={(e) => {
-                  setFormData({ ...formData, deadlineTime: e.target.value });
-                  if (errors.deadlineTime) {
-                    setErrors({ ...errors, deadlineTime: "" });
-                  }
-                }}
-                className={`w-full border rounded-lg px-3 py-2 ${
-                  errors.deadlineTime ? "border-red-500" : "border-gray-300"
-                } text-gray-500 [&::-webkit-datetime-edit-text]:text-gray-500 [&::-webkit-datetime-edit]:text-gray-500`}
-              />
-              {errors.deadlineTime && (
-                <p className="mt-1 text-sm text-red-500">
-                  {errors.deadlineTime}
-                </p>
-              )}
-            </div>
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Course*
             </label>
             <select
               value={formData.course}
-              onChange={(e) =>
-                setFormData({ ...formData, course: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, course: e.target.value });
+                if (errors.course) {
+                  setErrors({ ...errors, course: "" });
+                }
+              }}
               className={`w-full border rounded-lg px-3 py-2 ${
                 errors.course ? "border-red-500" : "border-gray-300"
-              } ${!formData.course ? "text-gray-500" : "text-gray-900"}`}
-              required
+              }`}
             >
-              <option value="" hidden className="text-gray-500">
+              <option value="" disabled>
                 Select a course
               </option>
-              <option value="SWE301" className="text-black">
-                SWE 301
-              </option>
-              <option value="SWE302" className="text-black">
-                SWE 302
-              </option>
-              <option value="SWE401" className="text-black">
-                SWE 401
-              </option>
-              <option value="SWE402" className="text-black">
-                SWE 402
-              </option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.code}>
+                  {course.name} ({course.code})
+                </option>
+              ))}
             </select>
             {errors.course && (
               <p className="mt-1 text-sm text-red-500">{errors.course}</p>
             )}
           </div>
-        </div>
 
-        <div className="flex justify-end space-x-4 mt-6">
-          <button
-            onClick={handleClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-300"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!isFormValid()}
-            className="px-4 py-2 bg-[#ff6464] text-white rounded-md hover:bg-[#ff4444] disabled:hover:bg-[#ff6464] disabled:opacity-50 transition-colors duration-300"
-          >
-            Create Submission
-          </button>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Deadline Date*
+            </label>
+            <input
+              type="date"
+              value={formData.deadline}
+              onChange={(e) => {
+                setFormData({ ...formData, deadline: e.target.value });
+                if (errors.deadline) {
+                  setErrors({ ...errors, deadline: "" });
+                }
+              }}
+              min={getMinDate()}
+              className={`w-full border rounded-lg px-3 py-2 ${
+                errors.deadline ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.deadline && (
+              <p className="mt-1 text-sm text-red-500">{errors.deadline}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Deadline Time*
+            </label>
+            <input
+              type="time"
+              value={formData.deadlineTime}
+              onChange={(e) => {
+                setFormData({ ...formData, deadlineTime: e.target.value });
+                if (errors.deadlineTime) {
+                  setErrors({ ...errors, deadlineTime: "" });
+                }
+              }}
+              className={`w-full border rounded-lg px-3 py-2 ${
+                errors.deadlineTime ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.deadlineTime && (
+              <p className="mt-1 text-sm text-red-500">{errors.deadlineTime}</p>
+            )}
+          </div>
+
+          <div className="flex justify-end space-x-4">
+            <button
+              onClick={handleClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-300"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!isFormValid()}
+              className="px-4 py-2 bg-[#ff6464] text-white rounded-md hover:bg-[#ff4444] transition-colors duration-300 disabled:hover:bg-[#ff6464] disabled:opacity-50"
+            >
+              Create
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -272,6 +298,7 @@ function ProfessorDashboard() {
   const [analyzingSubmission, setAnalyzingSubmission] = useState(null);
 
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
 
   // Define fetchSubmissions function to reload submissions
   const fetchSubmissions = useCallback(async () => {
@@ -280,8 +307,24 @@ function ProfessorDashboard() {
       setSubmissions([]); // Clear existing submissions while loading
       toast.info("Refreshing submissions...", { autoClose: 2000 });
 
-      // Fetch student submissions directly from API
-      const submissionsResponse = await fetch(`${API_URL}/api/submissions`);
+      // Get JWT token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        toast.error("Authentication required");
+        return;
+      }
+
+      // Fetch student submissions directly from API with professor ID filter
+      const submissionsResponse = await fetch(
+        `${API_URL}/api/submissions?professorId=${currentUser.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (submissionsResponse.ok) {
         const submissionData = await submissionsResponse.json();
@@ -306,29 +349,35 @@ function ProfessorDashboard() {
         toast.error(
           `Error fetching submissions: ${submissionsResponse.status} ${submissionsResponse.statusText}`
         );
-
-        // Try to get student submissions from localStorage as fallback
-        const studentSubmissions = JSON.parse(
-          localStorage.getItem("submittedDocuments") || "[]"
-        );
-
-        if (studentSubmissions.length > 0) {
-          console.log("Using fallback student submissions from localStorage");
-          setSubmissions(studentSubmissions);
-        }
       }
     } catch (error) {
       console.error("Error fetching submissions:", error);
       toast.error(`Failed to fetch submissions: ${error.message}`);
     }
-  }, [API_URL]);
+  }, [API_URL, currentUser?.id]);
 
   useEffect(() => {
     // Fetch documents from the backend API
     const fetchDocuments = async () => {
       try {
-        // Fetch professor documents
-        const response = await fetch(`${API_URL}/api/documents`);
+        // Get JWT token
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No authentication token found");
+          toast.error("Authentication required");
+          return;
+        }
+
+        // Fetch professor documents with professor ID filter
+        const response = await fetch(
+          `${API_URL}/api/documents?professorId=${currentUser.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (response.ok) {
           const documents = await response.json();
@@ -338,8 +387,16 @@ function ProfessorDashboard() {
           console.error("Failed to fetch documents:", await response.text());
         }
 
-        // Fetch submission slots
-        const slotsResponse = await fetch(`${API_URL}/api/submissions/slots`);
+        // Fetch submission slots with professor ID filter
+        const slotsResponse = await fetch(
+          `${API_URL}/api/submissions/slots?professorId=${currentUser.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (slotsResponse.ok) {
           const slots = await slotsResponse.json();
@@ -350,12 +407,6 @@ function ProfessorDashboard() {
             "Failed to fetch submission slots:",
             await slotsResponse.text()
           );
-
-          // Get submission slots from localStorage as fallback
-          const savedSlots = JSON.parse(
-            localStorage.getItem("submissionSlots") || "[]"
-          );
-          setSubmissionSlots(savedSlots);
         }
       } catch (error) {
         console.error("Error fetching documents:", error);
@@ -363,10 +414,12 @@ function ProfessorDashboard() {
       }
     };
 
-    fetchDocuments();
-    // Also fetch submissions when component loads
-    fetchSubmissions();
-  }, [fetchSubmissions]); // Add fetchSubmissions to dependencies
+    if (currentUser && currentUser.id) {
+      fetchDocuments();
+      // Also fetch submissions when component loads
+      fetchSubmissions();
+    }
+  }, [fetchSubmissions, currentUser]); // Add currentUser to dependencies
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return "0 MB";
@@ -376,15 +429,29 @@ function ProfessorDashboard() {
 
   const handleProfessorUpload = async (uploadData) => {
     try {
+      // Get JWT token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        toast.error("Authentication required");
+        return;
+      }
+
       // Create FormData
       const formData = new FormData();
       formData.append("file", uploadData.file);
       formData.append("analyses", JSON.stringify(selectedAnalyses));
       formData.append("documentType", documentType || "SRS");
+      formData.append("professorId", currentUser.id);
       console.log("Uploading document with type:", documentType);
-      // Upload file to backend without auth token for now
+      console.log("Professor ID:", currentUser.id);
+
+      // Upload file to backend with auth token
       const response = await fetch(`${API_URL}/api/documents`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
 
@@ -412,18 +479,43 @@ function ProfessorDashboard() {
 
   const handleCreateSubmissionSlot = async (formData) => {
     try {
-      // Create submission slot on the backend
+      // Get JWT token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        toast.error("Authentication required");
+        return;
+      }
+
+      // Create submission slot on the backend with professor ID
+      const submissionData = {
+        ...formData,
+        professorId: currentUser.id,
+      };
+
       const response = await fetch(`${API_URL}/api/submissions/slots`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create submission slot");
+
+        // Handle specific error cases
+        if (response.status === 403) {
+          toast.error(
+            "You are not authorized to create submission slots for this course. You must be teaching the course."
+          );
+          return;
+        } else {
+          throw new Error(
+            errorData.error || "Failed to create submission slot"
+          );
+        }
       }
 
       const newSlot = await response.json();
@@ -507,6 +599,14 @@ function ProfessorDashboard() {
 
   const handleDelete = async () => {
     try {
+      // Get JWT token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        toast.error("Authentication required");
+        return;
+      }
+
       if (deleteType === "professor_document") {
         const response = await fetch(
           `${API_URL}/api/documents/${itemToDelete.id}`,
@@ -514,6 +614,7 @@ function ProfessorDashboard() {
             method: "DELETE",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
           }
         );
@@ -534,6 +635,7 @@ function ProfessorDashboard() {
             method: "DELETE",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
           }
         );
@@ -554,6 +656,7 @@ function ProfessorDashboard() {
             method: "DELETE",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
           }
         );
@@ -656,6 +759,15 @@ function ProfessorDashboard() {
     setIsAnalyzing(true);
     setShowAnalysisModal(false);
 
+    // Get JWT token
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No authentication token found");
+      toast.error("Authentication required");
+      setIsAnalyzing(false);
+      return;
+    }
+
     // Determine if we're analyzing a professor document or a student submission
     const isSubmission =
       !!selectedDocument.submissionSlotId || selectedDocument.submissionType;
@@ -694,6 +806,7 @@ function ProfessorDashboard() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           analyses: selectedAnalyses,
@@ -713,7 +826,12 @@ function ProfessorDashboard() {
       const resultResponse = await fetch(
         isSubmission
           ? `${API_URL}/api/submissions/${selectedDocument.id}`
-          : `${API_URL}/api/documents/${selectedDocument.id}`
+          : `${API_URL}/api/documents/${selectedDocument.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       if (!resultResponse.ok) {
@@ -816,6 +934,14 @@ function ProfessorDashboard() {
       return;
     }
 
+    // Get JWT token
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No authentication token found");
+      toast.error("Authentication required");
+      return;
+    }
+
     // Determine if this is a submission or a document
     const isSubmission = !!item.submissionSlotId || !!item.documentId;
     const endpoint = isSubmission
@@ -829,7 +955,11 @@ function ProfessorDashboard() {
     );
 
     // Fetch the item with the latest results
-    fetch(endpoint)
+    fetch(endpoint, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then((response) => {
         if (!response.ok) {
           throw new Error(
@@ -849,7 +979,11 @@ function ProfessorDashboard() {
         // For submissions, we might need to fetch the document
         if (isSubmission && !data.results && data.documentId) {
           // If submission has no results directly, try to fetch the document
-          return fetch(`${API_URL}/api/documents/${data.documentId}`)
+          return fetch(`${API_URL}/api/documents/${data.documentId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
             .then((docResponse) => {
               if (!docResponse.ok) {
                 throw new Error(
@@ -982,7 +1116,12 @@ function ProfessorDashboard() {
         <div className="grid grid-cols-3 gap-6 mb-8">
           {/* Upload Document Card */}
           <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4">Upload Document</h2>
+            <h2 className="text-lg font-semibold mb-4">Upload Test Document</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Upload documents for testing and analysis. These documents will be
+              saved under your account and displayed in the "Uploaded Documents"
+              section.
+            </p>
             <UploadModal onUploadComplete={handleProfessorUpload} />
           </div>
 
@@ -1147,7 +1286,7 @@ function ProfessorDashboard() {
                       </span>
                     </div>
                     <div>{submission.submissionType}</div>
-                    <div>{submission.course}</div>
+                    <div>{submission.courseName || submission.courseCode}</div>
                     <div>
                       {submission.submissionDate
                         ? new Date(
@@ -1276,7 +1415,10 @@ function ProfessorDashboard() {
 
           {/* Professor Documents Table */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">Uploaded Documents</h2>
+            <h2 className="text-xl font-semibold mb-4">My Test Documents</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Documents uploaded for testing and analysis purposes.
+            </p>
             <div className="bg-white rounded-lg shadow mb-8">
               <div className="grid grid-cols-[1.5fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
                 <div>DOCUMENT NAME</div>

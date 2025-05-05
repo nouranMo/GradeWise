@@ -74,7 +74,7 @@ public class UserService implements UserDetailsService {
         userModel.setFirstName(user.getFirstName());
         userModel.setLastName(user.getLastName());
         userModel.setPassword(user.getPassword());
-        userModel.setRoles(Collections.singletonList("ROLE_" + user.getRole()));
+        userModel.setRoles(Collections.singletonList(user.getRole())); // Store role without ROLE_ prefix
         userModel.setEnabled(user.isEnabled());
         return userModel;
     }
@@ -93,7 +93,28 @@ public class UserService implements UserDetailsService {
         user.setLastName(lastName);
         user.setRole(role);
         user.setEnabled(true);
-        
+
+        // Save user
+        UserModel userModel = convertToUserModel(user);
+        UserModel savedModel = userRepository.save(userModel);
+        return convertToUser(savedModel);
+    }
+
+    public User createProfessor(String email, String password, String firstName, String lastName) {
+        // Check if user already exists
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email already in use");
+        }
+
+        // Create a new User object
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setRole("PROFESSOR"); // Set as professor without ROLE_ prefix
+        user.setEnabled(true);
+
         // Save user
         UserModel userModel = convertToUserModel(user);
         UserModel savedModel = userRepository.save(userModel);
@@ -105,7 +126,7 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
         User user = convertToUser(userModel);
-        
+
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new IllegalArgumentException("Invalid email or password");
         }
@@ -126,7 +147,12 @@ public class UserService implements UserDetailsService {
 
     public List<User> findAllUsers() {
         List<User> users = new ArrayList<>();
-        userRepository.findAll().forEach(userModel -> users.add(convertToUser(userModel)));
+        userRepository.findAll().forEach(userModel -> {
+            User user = convertToUser(userModel);
+            if (!user.getRole().equals("ADMIN")) { // Exclude admin users
+                users.add(user);
+            }
+        });
         return users;
     }
 
@@ -145,7 +171,7 @@ public class UserService implements UserDetailsService {
         if (user == null) {
             throw new IllegalArgumentException("User not found with ID: " + userId);
         }
-        
+
         // Remove user from any courses they're assigned to
         if (user.getRole() != null) {
             String role = user.getRole().toUpperCase();
@@ -161,7 +187,7 @@ public class UserService implements UserDetailsService {
                 }
             }
         }
-        
+
         // Delete the user
         userRepository.deleteById(userId);
     }

@@ -53,28 +53,28 @@ public class CourseService {
         if (course == null) {
             throw new IllegalArgumentException("Course not found with ID: " + courseId);
         }
-        
+
         // Get the teacher
         User teacher = userService.findById(teacherId);
         if (teacher == null) {
             throw new IllegalArgumentException("User not found with ID: " + teacherId);
         }
-        
+
         // Check if the user is a teacher/professor
-        if (!teacher.getRole().equals("ROLE_TEACHER") && !teacher.getRole().equals("PROFESSOR")) {
+        if (!teacher.getRole().equals("TEACHER") && !teacher.getRole().equals("PROFESSOR")) {
             throw new IllegalArgumentException("Invalid teacher ID or user is not a teacher");
         }
-        
+
         // Add the teacher to the course if not already added
         if (course.getTeacherIds() == null) {
             course.setTeacherIds(new ArrayList<>());
         }
-        
+
         if (!course.getTeacherIds().contains(teacherId)) {
             course.getTeacherIds().add(teacherId);
             return courseRepository.save(course);
         }
-        
+
         return course;
     }
 
@@ -84,32 +84,33 @@ public class CourseService {
         if (course == null) {
             throw new IllegalArgumentException("Course not found with ID: " + courseId);
         }
-        
+
         // Get the student
         User student = userService.findById(studentId);
         if (student == null) {
             throw new IllegalArgumentException("User not found with ID: " + studentId);
         }
-        
+
         // Debug log the student role and ID
         System.out.println("Assigning student: " + studentId + " with role: " + student.getRole());
-        
-        // More flexible role check - accept any role containing "STUDENT" (case insensitive)
+
+        // More flexible role check - accept any role containing "STUDENT" (case
+        // insensitive)
         String role = student.getRole() != null ? student.getRole().toUpperCase() : "";
         if (!role.contains("STUDENT")) {
             throw new IllegalArgumentException("User is not a student. Role: " + student.getRole());
         }
-        
+
         // Add the student to the course if not already added
         if (course.getStudentIds() == null) {
             course.setStudentIds(new ArrayList<>());
         }
-        
+
         if (!course.getStudentIds().contains(studentId)) {
             course.getStudentIds().add(studentId);
             return courseRepository.save(course);
         }
-        
+
         return course;
     }
 
@@ -140,4 +141,4 @@ public class CourseService {
     public List<CourseModel> getCoursesForStudent(String studentId) {
         return courseRepository.findByStudentIdsContaining(studentId);
     }
-} 
+}

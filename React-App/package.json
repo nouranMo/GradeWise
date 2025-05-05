@@ -8,6 +8,7 @@
     "@fontsource/fira-code": "^5.2.5",
     "@fontsource/poppins": "^5.2.5",
     "@fullpage/react-fullpage": "^0.1.45",
+    "@headlessui/react": "^2.2.2",
     "@heroicons/react": "^2.2.0",
     "@mui/icons-material": "^7.0.2",
     "@mui/material": "^7.0.2",

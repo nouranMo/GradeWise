@@ -22,42 +22,44 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private UserService userService;
-    
+
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        
+
         String token = getTokenFromRequest(request);
-        
+
         if (token != null && jwtTokenProvider.validateToken(token)) {
             try {
                 String email = jwtTokenProvider.getEmailFromToken(token);
+                String userId = jwtTokenProvider.getUserIdFromToken(token);
+                String role = jwtTokenProvider.getRoleFromToken(token);
+
                 User user = userService.findByEmail(email);
-                
                 if (user != null) {
-                    String role = jwtTokenProvider.getRoleFromToken(token);
                     List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-                        new SimpleGrantedAuthority("ROLE_" + role)
-                    );
-                    
-                    UsernamePasswordAuthenticationToken authentication = 
-                        new UsernamePasswordAuthenticationToken(user, null, authorities);
-                    
+                            new SimpleGrantedAuthority("ROLE_" + role));
+
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userId, null, authorities);
+
+                    authentication.setDetails(user);
+
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    
-                    logger.info("Authenticated user: " + email + " with role: " + role);
+
+                    logger.info("Authenticated user: " + email + " with role: " + role + ", ID: " + userId);
                 }
             } catch (Exception e) {
                 logger.error("Authentication error: " + e.getMessage());
             }
         }
-        
+
         filterChain.doFilter(request, response);
     }
-    
+
     private String getTokenFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {

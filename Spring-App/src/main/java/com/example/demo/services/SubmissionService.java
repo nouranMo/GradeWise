@@ -1,7 +1,7 @@
 package com.example.demo.services;
 
 import com.example.demo.models.DocumentModel;
-import com.example.demo.models.SubmissionModel;
+import com.example.demo.models.Submission;
 import com.example.demo.models.SubmissionSlotModel;
 import com.example.demo.models.User;
 import com.example.demo.models.CourseModel;
@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.io.File;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class SubmissionService {
@@ -36,7 +37,7 @@ public class SubmissionService {
     private CourseService courseService;
 
     // Get all submissions
-    public List<SubmissionModel> getAllSubmissions() {
+    public List<Submission> getAllSubmissions() {
         return submissionRepository.findAll();
     }
 
@@ -73,7 +74,7 @@ public class SubmissionService {
     }
 
     // Submit a document to a submission slot
-    public SubmissionModel submitDocument(String documentId, String submissionSlotId,
+    public Submission submitDocument(String documentId, String submissionSlotId,
             String submissionType, String courseId, String userId) throws Exception {
         logger.info("Processing document submission - Document ID: {}, Slot ID: {}, Student: {}",
                 documentId, submissionSlotId, userId);
@@ -105,9 +106,9 @@ public class SubmissionService {
         logger.info("Found submission slot: {}", slot.getName());
 
         // Check if student has already submitted to this slot
-        List<SubmissionModel> existingSubmissions = submissionRepository.findBySubmissionSlotId(submissionSlotId);
+        List<Submission> existingSubmissions = submissionRepository.findByUserId(userId);
         boolean hasSubmitted = existingSubmissions.stream()
-                .anyMatch(s -> s.getUserId().equals(userId));
+                .anyMatch(s -> s.getCourseId().equals(courseId));
 
         if (hasSubmitted) {
             logger.warn("Student {} has already submitted to slot {}", userId, submissionSlotId);
@@ -140,24 +141,19 @@ public class SubmissionService {
         if (course == null) {
             throw new IllegalArgumentException("Course not found");
         }
-        
+
         // Check if student is enrolled in the course
         if (!course.getStudentIds().contains(userId)) {
             throw new IllegalArgumentException("Student is not enrolled in this course");
         }
 
         // Create the submission
-        SubmissionModel submission = new SubmissionModel(
-                document.getId(), // Ensure we're using the correct document ID
-                submissionSlotId,
-                userId,
-                document.getName(),
-                submissionType,
-                courseId);
-
-        submission.setStudentName(studentName);
-        submission.setStatus("Submitted"); // Ensure status is explicitly set
-        submission.setLastModified(new Date()); // Set submission time
+        Submission submission = new Submission();
+        submission.setCourseId(courseId);
+        submission.setUserId(userId);
+        submission.setStatus("Submitted");
+        submission.setLastModified(new Date());
+        submission.setSubmissionType(submissionType);
 
         logger.info("Created submission with document ID: {}", submission.getDocumentId());
 
@@ -167,14 +163,13 @@ public class SubmissionService {
         logger.info("Updated submission slot count to: {}", slot.getSubmissionsCount());
 
         // Save the submission
-        SubmissionModel savedSubmission = submissionRepository.save(submission);
+        Submission savedSubmission = submissionRepository.save(submission);
         logger.info("Saved submission with ID: {}", savedSubmission.getId());
 
         // Log all saved fields to debug
         logger.info(
-                "Saved submission details - ID: {}, DocumentID: {}, SlotID: {}, UserID: {}, DocumentName: {}, Type: {}, Course: {}, Status: {}, LastModified: {}",
-                savedSubmission.getId(), savedSubmission.getDocumentId(), savedSubmission.getSubmissionSlotId(),
-                savedSubmission.getUserId(), savedSubmission.getDocumentName(), savedSubmission.getSubmissionType(),
+                "Saved submission details - ID: {}, DocumentID: {}, UserID: {}, Course: {}, Status: {}, LastModified: {}",
+                savedSubmission.getId(), savedSubmission.getDocumentId(), savedSubmission.getUserId(),
                 savedSubmission.getCourseId(), savedSubmission.getStatus(), savedSubmission.getLastModified());
 
         return savedSubmission;
@@ -186,11 +181,12 @@ public class SubmissionService {
     }
 
     // Analyze a submission
-    public SubmissionModel analyzeSubmission(String submissionId, Map<String, Boolean> analysisOptions, String documentType)
+    public Submission analyzeSubmission(String submissionId, Map<String, Boolean> analysisOptions,
+            String documentType)
             throws Exception {
         logger.info("Starting analysis for submission ID: {} with options: {}", submissionId, analysisOptions);
 
-        SubmissionModel submission = submissionRepository.findById(submissionId).orElse(null);
+        Submission submission = submissionRepository.findById(submissionId).orElse(null);
         if (submission == null) {
             logger.error("Submission not found with ID: {}", submissionId);
             throw new Exception("Submission not found");
@@ -208,7 +204,7 @@ public class SubmissionService {
         // Update status to Analyzing
         submission.setStatus("Analyzing");
         submission.setLastModified(new Date());
-        SubmissionModel savedSubmission = submissionRepository.save(submission);
+        Submission savedSubmission = submissionRepository.save(submission);
         logger.info("Updated submission status to Analyzing");
 
         // Start analysis in a background thread
@@ -254,11 +250,11 @@ public class SubmissionService {
                     analyses.put("SrsValidation", true);
                 }
 
-                logger.info("Starting document analysis with analyses: {}", analyses,documentType);
+                logger.info("Starting document analysis with analyses: {}", analyses, documentType);
 
                 // Analyze the document
                 try {
-                    documentService.startAnalysis(document.getId(), analyses,documentType);
+                    documentService.startAnalysis(document.getId(), analyses, documentType);
                     logger.info("Analysis started successfully for document: {}", document.getId());
                 } catch (Exception e) {
                     logger.error("Error starting analysis: {}", e.getMessage(), e);
@@ -356,45 +352,112 @@ public class SubmissionService {
     }
 
     // Get a specific submission
-    public SubmissionModel getSubmission(String submissionId) {
+    public Submission getSubmission(String submissionId) {
         return submissionRepository.findById(submissionId).orElse(null);
     }
 
     // Get submissions for a specific slot
-    public List<SubmissionModel> getSubmissionsForSlot(String slotId) {
-        return submissionRepository.findBySubmissionSlotId(slotId);
+    public List<Submission> getSubmissionsForSlot(String slotId) {
+        // Get the slot to find its course ID
+        SubmissionSlotModel slot = submissionSlotRepository.findById(slotId).orElse(null);
+        if (slot == null) {
+            return Collections.emptyList();
+        }
+
+        // Get all submissions for the course
+        return submissionRepository.findByCourseId(slot.getCourse());
     }
 
     // Get submissions for a specific student
-    public List<SubmissionModel> getSubmissionsForStudent(String studentId) {
+    public List<Submission> getSubmissionsForStudent(String studentId) {
         return submissionRepository.findByUserId(studentId);
     }
 
     /**
      * Get submissions for a specific course
      */
-    public List<SubmissionModel> getSubmissionsForCourse(String courseId) {
+    public List<Submission> getSubmissionsForCourse(String courseId) {
         return submissionRepository.findByCourseId(courseId);
     }
 
     /**
      * Get submissions for a teacher (only from their courses)
      */
-    public List<SubmissionModel> getSubmissionsForTeacher(String teacherId) {
+    public List<Submission> getSubmissionsForTeacher(String teacherId) {
+        logger.info("Fetching submissions for teacher: {}", teacherId);
+
         // Get all courses where this teacher is assigned
         List<CourseModel> teacherCourses = courseService.getCoursesForTeacher(teacherId);
-        
+        logger.info("Found {} courses for teacher", teacherCourses.size());
+
         // If no courses, return empty list
         if (teacherCourses.isEmpty()) {
+            logger.warn("No courses found for teacher: {}", teacherId);
             return new ArrayList<>();
         }
-        
+
         // Get all submissions from these courses
-        List<SubmissionModel> submissions = new ArrayList<>();
+        List<Submission> submissions = new ArrayList<>();
         for (CourseModel course : teacherCourses) {
-            submissions.addAll(getSubmissionsForCourse(course.getId()));
+            logger.info("Fetching submissions for course: {} ({})", course.getName(), course.getCode());
+            List<Submission> courseSubmissions = getSubmissionsForCourse(course.getCode());
+            logger.info("Found {} submissions for course {}", courseSubmissions.size(), course.getCode());
+            submissions.addAll(courseSubmissions);
         }
-        
+
+        logger.info("Total submissions found for teacher: {}", submissions.size());
         return submissions;
+    }
+
+    /**
+     * Get a submission slot by ID
+     */
+    public SubmissionSlotModel getSubmissionSlot(String slotId) {
+        return submissionSlotRepository.findById(slotId).orElse(null);
+    }
+
+    /**
+     * Get submission slots created by a specific professor
+     */
+    public List<SubmissionSlotModel> getSubmissionSlotsByProfessor(String professorId) {
+        return submissionSlotRepository.findByProfessorId(professorId);
+    }
+
+    public Submission createSubmission(MultipartFile file, String courseId, String userId) {
+        Submission submission = new Submission();
+        submission.setCourseId(courseId);
+        submission.setUserId(userId);
+        submission.setFileName(file.getOriginalFilename());
+        submission.setFileType(file.getContentType());
+        // Add any additional processing here
+        return submissionRepository.save(submission);
+    }
+
+    public List<Submission> getSubmissionsByUserId(String userId) {
+        return submissionRepository.findByUserId(userId);
+    }
+
+    public Submission getSubmissionById(String id, String userId) {
+        Optional<Submission> submission = submissionRepository.findById(id);
+        if (submission.isPresent() && submission.get().getUserId().equals(userId)) {
+            return submission.get();
+        }
+        throw new RuntimeException("Submission not found or unauthorized");
+    }
+
+    public void deleteSubmission(String id, String userId) {
+        Optional<Submission> submission = submissionRepository.findById(id);
+        if (submission.isPresent() && submission.get().getUserId().equals(userId)) {
+            submissionRepository.deleteById(id);
+        } else {
+            throw new RuntimeException("Submission not found or unauthorized");
+        }
+    }
+
+    // Check if student has already submitted to this slot
+    public boolean hasStudentSubmittedToSlot(String userId, String courseId) {
+        List<Submission> studentSubmissions = submissionRepository.findByUserId(userId);
+        return studentSubmissions.stream()
+                .anyMatch(s -> s.getCourseId().equals(courseId));
     }
 }

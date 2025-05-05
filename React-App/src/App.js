@@ -2,10 +2,10 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "contexts/AuthContext";
-import { ProtectedRoute } from 'components/ProtectedRoute';
+import { ProtectedRoute } from "components/ProtectedRoute";
 
 import LandingPage from "pages/LandingPage";
-import Dashboard from "pages/Dashboard";
+import StudentDashboard from "pages/StudentDashboard";
 import ProfessorDashboard from "pages/ProfessorDashboard";
 import Report from "pages/Report";
 import LoginPage from "pages/auth/LoginPage";
@@ -27,53 +27,77 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<Signup />} />
-            
+
             {/* Protected Student Routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute requiredRole="STUDENT">
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute requiredRole="STUDENT">
+                  <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Protected Professor Routes */}
-            <Route path="/professor" element={
-              <ProtectedRoute requiredRole="PROFESSOR">
-                <ProfessorDashboard />
-              </ProtectedRoute>
-            } />
-            
+            <Route
+              path="/professor"
+              element={
+                <ProtectedRoute requiredRole="PROFESSOR">
+                  <ProfessorDashboard />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Routes that need authentication but not specific role */}
-            <Route path="/report" element={
-              <ProtectedRoute>
-                <Report />
-              </ProtectedRoute>
-            } />
-            <Route path="/umlparsing" element={
-              <ProtectedRoute>
-                <UMLparsing />
-              </ProtectedRoute>
-            } />
-            <Route path="/sectionextraction" element={
-              <ProtectedRoute>
-                <SectionExtraction />
-              </ProtectedRoute>
-            } />
-            <Route path="/umlreport" element={
-              <ProtectedRoute>
-                <UMLReport />
-              </ProtectedRoute>
-            } />
-            <Route path="/parsing-result" element={
-              <ProtectedRoute>
-                <ParsingResultPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <ProtectedRoute requiredRole="ADMIN">
-                {console.log("Admin route accessed")}
-                <AdminPanel />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/report"
+              element={
+                <ProtectedRoute>
+                  <Report />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/umlparsing"
+              element={
+                <ProtectedRoute>
+                  <UMLparsing />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sectionextraction"
+              element={
+                <ProtectedRoute>
+                  <SectionExtraction />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/umlreport"
+              element={
+                <ProtectedRoute>
+                  <UMLReport />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/parsing-result"
+              element={
+                <ProtectedRoute>
+                  <ParsingResultPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="ADMIN">
+                  {console.log("Admin route accessed")}
+                  <AdminPanel />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </Router>
       </AuthProvider>

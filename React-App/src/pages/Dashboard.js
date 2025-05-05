@@ -14,6 +14,12 @@ function Dashboard() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [availableSubmissions, setAvailableSubmissions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userData, setUserData] = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedAssignment, setSelectedAssignment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
 
@@ -21,6 +27,8 @@ function Dashboard() {
     // Fetch student documents and available submissions from backend
     fetchStudentDocuments();
     fetchAvailableSubmissions();
+    fetchUserData();
+    fetchCourses();
   }, []);
 
   const fetchStudentDocuments = async () => {
@@ -35,7 +43,6 @@ function Dashboard() {
       const response = await fetch(
         "http://localhost:8080/api/student/documents",
         {
-          credentials: "include",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -64,13 +71,14 @@ function Dashboard() {
       const token = localStorage.getItem("token");
       if (!token) {
         console.error("No authentication token found");
+        toast.error("Authentication required. Please log in again.");
+        navigate("/login");
         return;
       }
 
       const response = await fetch(
         "http://localhost:8080/api/submissions/available",
         {
-          credentials: "include",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -81,42 +89,81 @@ function Dashboard() {
       if (response.ok) {
         const submissions = await response.json();
         console.log("Fetched available submissions:", submissions);
+
+        if (submissions.length === 0) {
+          toast.info("No available submission slots found for your courses");
+        } else {
+          toast.success(
+            `Found ${submissions.length} available submission slots`
+          );
+        }
+
         setAvailableSubmissions(submissions);
+      } else if (response.status === 403) {
+        console.error("Permission denied when fetching available submissions");
+        toast.error(
+          "You don't have permission to access available submissions"
+        );
+      } else if (response.status === 401) {
+        console.error("Authentication error");
+        toast.error("Authentication required. Please log in again.");
+        navigate("/login");
       } else {
         console.error(
           "Failed to fetch available submissions:",
           await response.text()
         );
-        // Use fallback data
-        setAvailableSubmissions([
-          {
-            id: "1",
-            name: "SRS Document - SWE301",
-            course: "SWE301",
-            deadline: "2024-02-01",
-            description: "Software Requirements Specification Document",
-          },
-          {
-            id: "2",
-            name: "SDD Document - SWE301",
-            course: "SWE301",
-            deadline: "2024-02-15",
-            description: "Software Design Document",
-          },
-        ]);
+        toast.error("Failed to load available submissions");
       }
     } catch (error) {
       console.error("Error fetching available submissions:", error);
-      // Fallback to default submissions
-      setAvailableSubmissions([
-        {
-          id: "1",
-          name: "SRS Document - SWE301",
-          course: "SWE301",
-          deadline: "2024-02-01",
-          description: "Software Requirements Specification Document",
+      toast.error("Error connecting to server");
+    }
+  };
+
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:8080/api/users/me", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      ]);
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch user data");
+      }
+
+      const data = await response.json();
+      setUserData(data);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      toast.error("Failed to load user data");
+    }
+  };
+
+  const fetchCourses = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:8080/api/courses", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch courses");
+      }
+
+      const data = await response.json();
+      setCourses(data);
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+      toast.error("Failed to load courses");
     }
   };
 
@@ -160,7 +207,6 @@ function Dashboard() {
       // Submit document to backend
       const response = await fetch("http://localhost:8080/api/student/submit", {
         method: "POST",
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -170,7 +216,20 @@ function Dashboard() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Submission failed");
+
+        // Handle specific error cases
+        if (response.status === 403) {
+          if (errorData.error && errorData.error.includes("not enrolled")) {
+            toast.error(
+              "You are not enrolled in the course for this submission slot"
+            );
+          } else {
+            toast.error("You don't have permission to submit to this slot");
+          }
+        } else {
+          throw new Error(errorData.error || "Submission failed");
+        }
+        return;
       }
 
       const responseData = await response.json();
@@ -249,7 +308,6 @@ function Dashboard() {
         `http://localhost:8080/api/student/documents/${documentToDelete.id}`,
         {
           method: "DELETE",
-          credentials: "include",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -304,7 +362,6 @@ function Dashboard() {
       const response = await fetch(
         `http://localhost:8080/api/student/documents/${document.id}/results`,
         {
-          credentials: "include",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -392,6 +449,100 @@ function Dashboard() {
         </div>
       </div>
     );
+  };
+
+  const handleSubmitAssignment = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("courseId", selectedCourse);
+      formData.append("assignmentId", selectedAssignment);
+
+      const response = await fetch("http://localhost:8080/api/submissions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit assignment");
+      }
+
+      toast.success("Assignment submitted successfully!");
+      setSelectedFile(null);
+      setSelectedCourse("");
+      setSelectedAssignment("");
+      fetchCourses();
+    } catch (error) {
+      console.error("Error submitting assignment:", error);
+      toast.error(error.message || "Failed to submit assignment");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteSubmission = async (submissionId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:8080/api/submissions/${submissionId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete submission");
+      }
+
+      toast.success("Submission deleted successfully!");
+      fetchCourses();
+    } catch (error) {
+      console.error("Error deleting submission:", error);
+      toast.error(error.message || "Failed to delete submission");
+    }
+  };
+
+  const handleDownloadSubmission = async (submissionId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:8080/api/submissions/${submissionId}/download`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to download submission");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `submission-${submissionId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Error downloading submission:", error);
+      toast.error(error.message || "Failed to download submission");
+    }
   };
 
   return (

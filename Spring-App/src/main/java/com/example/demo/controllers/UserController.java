@@ -108,7 +108,7 @@ public class UserController {
             UserDetails userDetails = org.springframework.security.core.userdetails.User
                     .withUsername(authenticatedUser.getEmail())
                     .password(authenticatedUser.getPassword())
-                    .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
+                    .authorities(Collections.singletonList(new SimpleGrantedAuthority("USER")))
                     .build();
 
             // Generate JWT token
@@ -128,6 +128,60 @@ public class UserController {
             Map<String, String> response = new HashMap<>();
             response.put("message", "Invalid email or password");
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            String userId = authentication.getName();
+
+            // Try to find the user by both email and ID
+            User user = userService.findByEmail(userId);
+            if (user == null) {
+                user = userService.findById(userId);
+            }
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "User not found"));
+            }
+
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<?> updateCurrentUser(@RequestBody User user, Authentication authentication) {
+        try {
+            String userId = authentication.getName();
+            User existingUser = userService.findById(userId);
+            if (existingUser == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+            }
+
+            // Update only the allowed fields
+            if (user.getFirstName() != null) {
+                existingUser.setFirstName(user.getFirstName());
+            }
+            if (user.getLastName() != null) {
+                existingUser.setLastName(user.getLastName());
+            }
+            if (user.getPassword() != null) {
+                existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
+            }
+
+            User updatedUser = userService.save(existingUser);
+            return ResponseEntity.ok(updatedUser);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 }

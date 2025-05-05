@@ -30,11 +30,14 @@ const LoginPage = () => {
   useEffect(() => {
     const fetchCsrfToken = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/auth/csrf-token", {
-          method: "GET",
-          credentials: "include",
-        });
-        
+        const response = await fetch(
+          "http://localhost:8080/api/auth/csrf-token",
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
+
         if (response.ok) {
           const data = await response.json();
           setCsrfToken(data.token);
@@ -43,7 +46,7 @@ const LoginPage = () => {
         console.error("Failed to fetch CSRF token:", error);
       }
     };
-    
+
     fetchCsrfToken();
   }, []);
 
@@ -89,22 +92,16 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isFormValidated) return;
-
     setIsLoading(true);
+    setErrors({ email: "", password: "" });
+
     try {
-      console.log("Attempting login with email:", email);
-      
       const response = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-        credentials: "include",
+        body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
@@ -113,23 +110,18 @@ const LoginPage = () => {
       }
 
       const data = await response.json();
-      console.log("Login successful, user data:", data);
-      
-      // Store the token if it exists
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        console.log("Token stored in localStorage");
-      }
-      
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      toast.success("Login successful!");
+
       // Extract the user object from the response
       const userData = data.user || data;
-      
+
       // Log the actual user data we're storing
       console.log("Storing user data:", userData);
-      
+
       login(userData);
-      toast.success("Login successful!");
-      
+
       // Redirect based on email (not role)
       if (userData.email === "admin@gmail.com") {
         console.log("Admin detected, redirecting to admin panel");
@@ -141,9 +133,9 @@ const LoginPage = () => {
         console.log("Student detected, redirecting to student dashboard");
         navigate("/dashboard");
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error(error.message || "Failed to login");
+    } catch (err) {
+      console.error("Login error:", err);
+      toast.error(err.message || "Failed to login");
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +158,9 @@ const LoginPage = () => {
           </button>
 
           <div className="flex items-center justify-center mb-6">
-            <h2 className="absolute top-32 text-xl sm:text-2xl text-center">Login</h2>
+            <h2 className="absolute top-32 text-xl sm:text-2xl text-center">
+              Login
+            </h2>
           </div>
 
           <form onSubmit={handleSubmit} noValidate>

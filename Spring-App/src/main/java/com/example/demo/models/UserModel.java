@@ -63,22 +63,37 @@ public class UserModel {
     }
 
     public void setRoles(List<String> roles) {
+        if (roles != null) {
+            for (String role : roles) {
+                if (!isValidRole(role)) {
+                    throw new IllegalArgumentException("Invalid role: " + role);
+                }
+            }
+        }
         this.roles = roles;
     }
-    
+
+    private boolean isValidRole(String role) {
+        // Remove ROLE_ prefix if present for comparison
+        String normalizedRole = role.startsWith("ROLE_") ? role.substring(5) : role;
+        return normalizedRole.equals("STUDENT") ||
+                normalizedRole.equals("PROFESSOR") ||
+                normalizedRole.equals("ADMIN");
+    }
+
     public String getPassword() {
         return password;
     }
-    
+
     public void setPassword(String password) {
         this.password = password;
     }
-    
+
     public boolean isEnabled() {
         return enabled;
     }
-    
+
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
-} 
+}
