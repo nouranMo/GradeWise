@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 import requests
 import random
 import re
-
+from flask import send_from_directory
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -216,6 +216,17 @@ def check_session():
             'status': 'error',
             'message': str(e)
         }), 400
+@app.route('/output_results/<path:filename>')
+def serve_output_image(filename):
+    try:
+        # Replace backslashes with forward slashes for cross-platform compatibility
+        filename = filename.replace('\\', '/')
+        print(f"Serving image: output_results/{filename}")
+        return send_from_directory('output_results', filename)
+    except Exception as e:
+        print(f"Error serving image: {str(e)}")
+        return jsonify({'error': f'Image not found: {str(e)}'}), 404
+
 
 def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
     """Analyze a single document."""
@@ -656,16 +667,23 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     model_path=os.path.join(YOLO_PATH, "runs/detect/train/weights/best.pt"),
                     document_type=document_type
                 )
+                print("\nDebug: process_diagrams results:", json.dumps(diagram_results, indent=2) if isinstance(diagram_results, dict) else str(diagram_results))
                 # Validate diagram conventions using Gemini
                 validation_results = validate_diagram(output_base="output_results",document_type=document_type)
                 
-                logger.debug("Diagram Convention Results: %s", {
+                logger.debug("Diagram Convention Resultssssssssssss: %s", {
                 'processing_results': diagram_results,
                 'validation_results': validation_results
               })
-
+           
+               
             # Include only validation_results in response
-                response['diagram_convention']= validation_results
+                
+                response['diagram_convention'] = {
+                    'processing_results': diagram_results,
+                    'validation_results': validation_results
+                }
+
 
                 print("\nDiagram Convention Data in analyze_document:")
                 print(json.dumps(validation_results, indent=2))
