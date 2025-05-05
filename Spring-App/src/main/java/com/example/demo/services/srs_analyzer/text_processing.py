@@ -1,4 +1,3 @@
-
 import re
 # import language_tool_python  # Commented out for performance
 from spellchecker import SpellChecker  # Re-enabled for quick spell checking
@@ -137,11 +136,11 @@ class TextProcessor:
         logger.info(f"Extracting text from PDF: {pdf_path}")
         try:
             with pdf_reader(pdf_path) as reader:
-            text = ""
-            for page in reader.pages:
-                text += page.extract_text() + "\n"
-            logger.debug(f"Extracted {len(text)} characters from PDF")
-            return text
+                text = ""
+                for page in reader.pages:
+                    text += page.extract_text() + "\n"
+                logger.debug(f"Extracted {len(text)} characters from PDF")
+                return text
         except Exception as e:
             logger.error(f"Error extracting text from PDF: {str(e)}")
             raise
@@ -177,41 +176,34 @@ class TextProcessor:
 
         return sections, figures
 
-    def parse_document_sections(self, text):
+    def parse_document_sections(self, text, document_type):
         """Parse document into logical segments based on predefined sections."""
         logger.info("Parsing document sections")
-        
         try:
             # Add more debug logging
             logger.info(f"Document length: {len(text)} characters")
-            
             # Check if text is empty or too short
             if not text or len(text) < 100:
                 logger.warning("Document text is too short or empty")
                 return []
-            
             # Use SectionParser to get the main sections based on document type
             if document_type == "SRS":
                 sections_dict = SectionParser.parse_sections_content_analysis(text, document_type="SRS")
             elif document_type == "SDD":
                 sections_dict = SectionParser.parse_sections_content_analysis(text, document_type="SDD")
-                else:
+            else:
                 logger.warning(f"Unknown document type: {document_type}, defaulting to SRS")
                 sections_dict = SectionParser.parse_sections_content_analysis(text, document_type="SRS")
-
-            
             # Log the sections found
             logger.info(f"Found {len(sections_dict)} sections in the document")
             for section_title in sections_dict.keys():
                 logger.info(f"Found section: {section_title}")
-            
             # Convert dictionary to list format for compatibility
             segments = []
             for section_title, content in sections_dict.items():
                 segment = f"{section_title}\n{content}"
                 segments.append(segment)
                 logger.debug(f"Added section: {section_title} with length: {len(segment)}")
-            
             return segments
         except Exception as e:
             logger.error(f"Error parsing document sections: {e}", exc_info=True)
@@ -221,17 +213,14 @@ class TextProcessor:
         """Process text in chunks for better memory management."""
         all_sections = []
         all_figures = []
-        
         # Process text in chunks
         chunks = [text[i:i+CHUNK_SIZE] for i in range(0, len(text), CHUNK_SIZE)]
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             chunk_results = list(executor.map(self.process_text_chunk, chunks))
-        
         # Combine results
         for sections, figures in chunk_results:
             all_sections.extend(sections)
             all_figures.extend(figures)
-
         logger.info(f"Extracted {len(all_sections)} sections with {len(all_figures)} figures")
         return all_sections, all_figures
 
@@ -243,24 +232,21 @@ class TextProcessor:
                 return section.splitlines()[0]
         return None
 
-    
     def parse_document_sections_with_pages(self, pdf_path: str):
         logger.info("Parsing document sections with page numbers")
         sections = []
         try:
             with pdf_reader(pdf_path) as reader:
-            last_valid_section = None
-            for page_num, page in enumerate(reader.pages, start=1):
-                text = page.extract_text()
-                    has_text = bool(text.strip())
-
-                lines = text.splitlines() if text else []
-                for line in lines:
+                last_valid_section = None
+                for page_num, page in enumerate(reader.pages, start=1):
+                    text = page.extract_text()
+                    has_text = bool(text.strip()) if text else False
+                    lines = text.splitlines() if text else []
+                    for line in lines:
                         if re.match(r'^\d+(\.\d+)* [A-Z]', line):
-                        section_title = self.strip_numbering(line.strip())
-                        last_valid_section = section_title if has_text else last_valid_section
-                        sections.append((section_title, page_num, has_text))
-
+                            section_title = self.strip_numbering(line.strip())
+                            last_valid_section = section_title if has_text else last_valid_section
+                            sections.append((section_title, page_num, has_text))
             logger.info(f"Identified {len(sections)} sections with page numbers")
             return sections
         except Exception as e:
@@ -272,20 +258,17 @@ class TextProcessor:
         """Generate a concise scope for a section of text."""
         try:
             # Truncate text to avoid model sequence length issues
-                words = text.split()
+            words = text.split()
             if len(words) > 1000:
                 text = ' '.join(words[:1000])
                 logger.warning("Text truncated to 1000 words for scope generation")
-            
             # Calculate min and max length for summary
             text_length = len(text.split())
             max_length = min(text_length, 150)  # Cap at 150 words
             min_length = min(max_length - 50, max_length - 1)  # Ensure min < max
-            
             if text_length < min_length:
                 logger.debug("Text too short for summarization, returning original")
                 return text
-
             # Generate summary using updated OpenAI API
             client = openai.OpenAI()
             response = client.chat.completions.create(
@@ -299,7 +282,6 @@ class TextProcessor:
                 max_tokens=max_length * 4,
                 temperature=0.3
             )
-            
             return response.choices[0].message.content
         except Exception as e:
             logger.error(f"Error generating section scope: {e}")
@@ -315,16 +297,13 @@ class TextProcessor:
                 'misspelled': {},
                 'grammar_suggestions': []
             }
-        
         logger.info("Performing quick spell check")
         try:
             # Initialize spell checker only once
             if not hasattr(self, 'spell_checker') or self.spell_checker is None:
                 self.spell_checker = get_spell_checker()
-            
             # Split text into words and check spelling
             words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
-            
             # Limit to unique words for faster processing
             unique_words = set(words)
             
