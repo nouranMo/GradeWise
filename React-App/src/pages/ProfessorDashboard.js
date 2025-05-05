@@ -97,7 +97,7 @@ const CreateSubmissionModal = ({ isOpen, onClose, onSubmit }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
-        <h2 className="text-xl font-semibold mb-4">Create New Submission</h2>
+        <h2 className="text-md font-semibold mb-4">Create New Submission</h2>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -277,6 +277,15 @@ function ProfessorDashboard() {
     return [...documents].sort((a, b) => {
       // Sort by date in descending order (newest first)
       return new Date(b.date) - new Date(a.date);
+    });
+  };
+
+  const formatDate = (date) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
     });
   };
 
@@ -630,7 +639,7 @@ function ProfessorDashboard() {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
-          <h2 className="text-xl font-semibold mb-4">Confirm Deletion</h2>
+          <h2 className="text-md font-semibold mb-10">Confirm Deletion</h2>
           <div className="mb-6">
             <p className="text-gray-600 mb-2">
               Are you sure you want to delete this {itemType}:
@@ -993,13 +1002,13 @@ function ProfessorDashboard() {
       <Navbar />
       <ToastContainer position="top-right" autoClose={5000} />
 
-      <div className="max-w-6xl mx-auto mt-8 px-4">
+      <div className="max-w-6xl mx-auto mt-6 px-4">
         {/* Header and Statistics Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Upload Document Card */}
           <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
             {" "}
-            <h2 className="text-base font-semibold mb-3">
+            <h2 className="text-md font-semibold mb-3">
               Upload Document
             </h2>{" "}
             <UploadModal onUploadComplete={handleProfessorUpload} />
@@ -1008,7 +1017,7 @@ function ProfessorDashboard() {
           {/* Active Submissions Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Active Submissions</h2>
+              <h2 className="text-md font-semibold">Active Submissions</h2>
               <button
                 onClick={() => setShowCreateSubmissionModal(true)}
                 className="text-xs p-1.5 text-gray-600 border border-gray-300 hover:border-[#ff6464] hover:text-[#ff6464] rounded-md transition-all duration-300 flex items-center gap-1"
@@ -1066,7 +1075,7 @@ function ProfessorDashboard() {
 
           {/* Quick Stats Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold mb-4">Overview</h2>
+            <h2 className="text-md font-semibold mb-4">Overview</h2>
             <div className="space-y-4">
               {" "}
               <div>
@@ -1088,7 +1097,7 @@ function ProfessorDashboard() {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
           <div className="p-6 border-b border-gray-100">
-            <h2 className="text-xl font-semibold">Student Submissions</h2>
+            <h2 className="text-md font-semibold">Student Submissions</h2>
           </div>
 
           {/* Tables Section */}
@@ -1306,9 +1315,11 @@ function ProfessorDashboard() {
         </div>
 
         {/* Professor Documents Table */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4">My Uploaded Documents</h2>
-          <div className="bg-white rounded-lg shadow mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
+          <h2 className="text-md font-semibold p-6 border-b border-gray-100 mb-8">
+            My Uploaded Documents
+          </h2>
+          <div className="bg-white rounded-lg shadow">
             {/* Header row */}
             <div className="grid grid-cols-[minmax(300px,2fr)_200px_100px_120px_250px] gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
               <div>DOCUMENT NAME</div>
@@ -1344,7 +1355,7 @@ function ProfessorDashboard() {
                       {(isViewable || doc.status === "Completed") && (
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 ml-2 flex-shrink-0 text-green-500" // Add flex-shrink-0
+                          className="h-5 w-5 ml-2 flex-shrink-0 text-green-500"
                           viewBox="0 0 20 20"
                           fill="currentColor"
                         >
@@ -1356,16 +1367,13 @@ function ProfessorDashboard() {
                         </svg>
                       )}
                     </div>
-                    <div className="truncate">
-                      {doc.uploadDate
-                        ? new Date(doc.uploadDate).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "2-digit",
-                            day: "2-digit",
-                          })
-                        : "-"}
+                    <div className="truncate">{formatDate(doc.uploadDate)}</div>
+                    <div
+                      className="truncate"
+                      title={formatFileSize(doc.fileSize)}
+                    >
+                      {doc.fileSize ? formatFileSize(doc.fileSize) : "N/A"}
                     </div>
-                    <div className="truncate">{doc.size}</div>
                     <div>
                       <span
                         className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
@@ -1471,7 +1479,7 @@ function ProfessorDashboard() {
         {showDocTypeModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
-              <h2 className="text-xl font-semibold mb-4">
+              <h2 className="text-md font-semibold mb-4">
                 Select Document Type
               </h2>
               <div className="space-y-4">
@@ -1504,7 +1512,7 @@ function ProfessorDashboard() {
         {showAnalysisModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg max-w-2xl w-full m-4">
-              <h2 className="text-xl font-semibold mb-4">
+              <h2 className="text-md font-semibold mb-4">
                 {selectedDocument && selectedDocument.submissionSlotId
                   ? `Analyze ${documentType} Document: ${
                       selectedDocument.documentName || selectedDocument.name
