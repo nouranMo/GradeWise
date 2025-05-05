@@ -32,8 +32,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = getTokenFromRequest(request);
 
-        if (token != null && jwtTokenProvider.validateToken(token)) {
-            try {
+        try {
+            if (token != null && jwtTokenProvider.validateToken(token)) {
                 String email = jwtTokenProvider.getEmailFromToken(token);
                 String userId = jwtTokenProvider.getUserIdFromToken(token);
                 String role = jwtTokenProvider.getRoleFromToken(token);
@@ -51,10 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
                     logger.info("Authenticated user: " + email + " with role: " + role + ", ID: " + userId);
-
                 }
-            } else {
-                System.out.println("Token is null or invalid");
             }
         } catch (Exception e) {
             System.out.println("Error in authentication filter: " + e.getMessage());

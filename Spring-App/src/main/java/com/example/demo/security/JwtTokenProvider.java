@@ -19,6 +19,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import java.util.Map;
+import java.util.HashMap;
 
 @Component
 public class JwtTokenProvider {
@@ -94,9 +96,6 @@ public class JwtTokenProvider {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         return generateTokenFromUserDetails(userDetails);
     }
-
-    @Autowired
-    private UserService userService;
 
     public String generateTokenFromUserDetails(UserDetails userDetails) {
         Date now = new Date();
