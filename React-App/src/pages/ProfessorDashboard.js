@@ -1007,7 +1007,26 @@ function ProfessorDashboard() {
 
           {/* Active Submissions Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-lg font-semibold mb-4">Active Submissions</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Active Submissions</h2>
+              <button
+                onClick={() => setShowCreateSubmissionModal(true)}
+                className="text-xs p-1.5 text-gray-600 border border-gray-300 hover:border-[#ff6464] hover:text-[#ff6464] rounded-md transition-all duration-300 flex items-center gap-1"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
             <div className="space-y-3">
               {submissionSlots
                 .filter((slot) => slot.status === "Open")
@@ -1069,27 +1088,7 @@ function ProfessorDashboard() {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
           <div className="p-6 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Student Submissions</h2>
-              <button
-                onClick={() => setShowCreateSubmissionModal(true)}
-                className="flex items-center px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-5 h-5 mr-2"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Create New Submission
-              </button>
-            </div>
+            <h2 className="text-xl font-semibold">Student Submissions</h2>
           </div>
 
           {/* Tables Section */}
@@ -1124,7 +1123,7 @@ function ProfessorDashboard() {
 
                 <button
                   onClick={fetchSubmissions}
-                  className="px-3 py-2 text-sm text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors duration-300 flex items-center"
+                  className="px-3 py-2 text-sm text-white bg-blue-500 rounded-md hover:bg-blue-700 transition-colors duration-300 flex items-center"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -1409,13 +1408,13 @@ function ProfessorDashboard() {
                         <>
                           <button
                             onClick={() => handleViewReport(doc)}
-                            className="px-3 py-1 text-xs text-white bg-green-600 rounded-md hover:bg-green-700 whitespace-nowrap"
+                            className="px-3 py-1 text-xs text-white bg-green-600 rounded-md hover:bg-green-700 whitespace-nowrap transition-colors duration-300"
                           >
                             View Report
                           </button>
                           <button
                             onClick={() => handleAnalyzeClick(doc)}
-                            className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] whitespace-nowrap"
+                            className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] whitespace-nowrap transition-colors duration-300"
                           >
                             Re-analyze
                           </button>
