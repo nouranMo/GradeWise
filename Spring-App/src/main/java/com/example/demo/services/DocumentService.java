@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import jakarta.annotation.PostConstruct;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -61,8 +63,8 @@ public class DocumentService {
         }
     }
 
-    public DocumentModel saveDocument(String userId, MultipartFile file, Map<String, Boolean> selectedAnalyses,String documentType)
-            throws IOException {
+    public DocumentModel saveDocument(String userId, MultipartFile file, Map<String, Boolean> selectedAnalyses,
+            String documentType) throws IOException {
         try {
             System.out.println("Saving document for user: " + userId);
             if (documentType == null || (!documentType.equals("SRS") && !documentType.equals("SDD"))) {
@@ -90,23 +92,15 @@ public class DocumentService {
             document.setName(originalFilename);
             document.setFilePath(filePath.toString());
             document.setFileSize(file.getSize());
-            document.setStatus("Pending");
+            document.setStatus("Uploaded");
+            document.setAnalyzed(false);
+            document.setResults(null);
             document.setSelectedAnalyses(selectedAnalyses);
+            document.setUploadDate(new Date());
 
             // Save to database
             DocumentModel savedDocument = documentRepository.save(document);
             System.out.println("Document saved with ID: " + savedDocument.getId());
-
-            // Start analysis in background
-            System.out.println("Starting analysis for document: " + savedDocument.getId());
-            new Thread(() -> {
-                try {
-                    startAnalysis(savedDocument.getId(), selectedAnalyses,documentType);
-                } catch (Exception e) {
-                    System.err.println("Error in analysis thread: " + e.getMessage());
-                    e.printStackTrace();
-                }
-            }).start();
 
             return savedDocument;
         } catch (Exception e) {
@@ -116,7 +110,10 @@ public class DocumentService {
         }
     }
 
-    public void startAnalysis(String documentId, Map<String, Boolean> selectedAnalyses,String documentType) {
+    @Autowired
+    private AsyncTaskExecutor taskExecutor;
+
+    public void startAnalysis(String documentId, Map<String, Boolean> selectedAnalyses, String documentType) {
         try {
             DocumentModel document = getDocumentById(documentId);
             if (document == null) {
@@ -124,25 +121,36 @@ public class DocumentService {
                 return;
             }
 
-            // Check if any analysis is selected
-            if (selectedAnalyses == null || selectedAnalyses.isEmpty()) {
-                logger.error("No analysis types selected for document: {}", documentId);
-                document.setStatus("Failed");
-                document.setAnalyzed(false);
-                documentRepository.save(document);
-                return;
-            }
-
-            // Set initial status
+            // Initial status update
             document.setStatus("Analyzing");
+            document.setAnalysisInProgress(true);
             document.setAnalyzed(false);
+            document.setResults(null);
             document.setSelectedAnalyses(selectedAnalyses);
             documentRepository.save(document);
 
+            // Run analysis in background thread
+            taskExecutor.execute(() -> {
+                try {
+                    performAnalysis(document, selectedAnalyses, documentType);
+                } catch (Exception e) {
+                    logger.error("Error during analysis: {}", e.getMessage(), e);
+                    handleAnalysisError(document, e);
+                }
+            });
+
+        } catch (Exception e) {
+            logger.error("Error starting analysis: {}", e.getMessage(), e);
+            handleAnalysisError(getDocumentById(documentId), e);
+        }
+    }
+
+    private void performAnalysis(DocumentModel document, Map<String, Boolean> selectedAnalyses, String documentType) {
+        try {
             // Create RestTemplate with timeout
             SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-            factory.setConnectTimeout(300000); // 5 minutes
-            factory.setReadTimeout(300000); // 5 minutes
+            factory.setConnectTimeout(300000);
+            factory.setReadTimeout(300000);
             RestTemplate restTemplate = new RestTemplate(factory);
 
             // Create request to Python API
@@ -153,72 +161,74 @@ public class DocumentService {
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             Path filePath = Paths.get(document.getFilePath());
             File file = filePath.toFile();
+
             if (!file.exists()) {
-                logger.error("File not found at path: {}", filePath);
-                document.setStatus("Failed");
-                document.setAnalyzed(false);
-                documentRepository.save(document);
-                return;
+                throw new FileNotFoundException("File not found at path: " + filePath);
             }
+
             body.add("pdfFile", new FileSystemResource(file));
             body.add("analyses", objectMapper.writeValueAsString(selectedAnalyses));
             body.add("documentType", documentType);
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-            logger.info("Sending request to Python API: {}", pythonApiUrl);
-            logger.info("Request body: {}", body);
-
-            // Send request to Python API
+            logger.info("Sending request to Python API for document: {}", document.getId());
             ResponseEntity<String> response = restTemplate.exchange(
                     pythonApiUrl,
                     HttpMethod.POST,
                     requestEntity,
                     String.class);
 
-            logger.info("Received response from Python API: {}", response.getStatusCode());
-            logger.info("Response body: {}", response.getBody());
-
             if (response.getStatusCode() == HttpStatus.OK) {
-                // Parse the response
                 Map<String, Object> results = objectMapper.readValue(
                         response.getBody(),
                         new TypeReference<Map<String, Object>>() {
                         });
 
-                logger.info("Analysis completed successfully for document: {}", documentId);
-                logger.info("Results: {}", results);
+                // Update document with results
+                DocumentModel updatedDoc = getDocumentById(document.getId());
+                updatedDoc.setStatus("Completed");
+                updatedDoc.setResults(results);
+                updatedDoc.setAnalysisInProgress(false);
+                updatedDoc.setAnalyzed(true);
+                updatedDoc.setAnalysisProgress(100);
+                documentRepository.save(updatedDoc);
 
-                // Update document status
-                document.setStatus("Completed");
-                document.setResults(results);
-                document.setAnalyzed(true);
-                document.setAnalysisProgress(100);
-                documentRepository.save(document);
-                logger.info("Document updated with analysis results: {}", documentId);
+                logger.info("Analysis completed successfully for document: {}", document.getId());
             } else {
-                logger.error("Python API returned error status: {}", response.getStatusCode());
-                logger.error("Error response: {}", response.getBody());
-                // Update document status with error
-                document.setStatus("Failed");
-                document.setResults(Map.of("error", "Analysis failed: " + response.getStatusCode()));
-                document.setAnalyzed(false);
-                documentRepository.save(document);
+                throw new RuntimeException("Analysis failed with status: " + response.getStatusCode());
             }
         } catch (Exception e) {
-            logger.error("Error during analysis: {}", e.getMessage(), e);
-            // Update document status with error
-            DocumentModel document = documentRepository.findById(documentId).orElse(null);
-            if (document != null) {
-                document.setStatus("Failed");
-                document.setResults(Map.of("error", "Analysis failed: " + e.getMessage()));
-                document.setAnalyzed(false);
-                documentRepository.save(document);
+            handleAnalysisError(document, e);
+            throw new RuntimeException("Analysis failed", e);
+        }
+    }
+
+    private void handleAnalysisError(DocumentModel document, Exception e) {
+        if (document != null) {
+            try {
+                DocumentModel updatedDoc = getDocumentById(document.getId());
+                updatedDoc.setStatus("Failed");
+                updatedDoc.setAnalysisInProgress(false);
+                updatedDoc.setResults(Map.of("error", "Analysis failed: " + e.getMessage()));
+                updatedDoc.setAnalyzed(false);
+                documentRepository.save(updatedDoc);
+                logger.error("Analysis failed for document: {}", document.getId(), e);
+            } catch (Exception ex) {
+                logger.error("Error updating document status after failure: {}", ex.getMessage(), ex);
             }
         }
     }
 
     public List<DocumentModel> getUserDocuments(String userId) {
-        return documentRepository.findByUserId(userId);
+        List<DocumentModel> documents = documentRepository.findByUserId(userId);
+        for (DocumentModel doc : documents) {
+            logger.info("Document {} - Status: {}, AnalysisInProgress: {}, Analyzed: {}",
+                    doc.getId(),
+                    doc.getStatus(),
+                    doc.isAnalysisInProgress(),
+                    doc.isAnalyzed());
+        }
+        return documents;
     }
 
     public DocumentModel getDocument(String documentId) {
@@ -325,7 +335,7 @@ public class DocumentService {
         if (document.getId() == null) {
             throw new IllegalArgumentException("Document ID cannot be null for update operation");
         }
-        
+
         // Save to repository
         return documentRepository.save(document);
     }

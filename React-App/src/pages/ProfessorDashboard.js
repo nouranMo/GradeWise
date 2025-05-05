@@ -273,6 +273,13 @@ function ProfessorDashboard() {
 
   const navigate = useNavigate();
 
+  const sortDocuments = (documents) => {
+    return [...documents].sort((a, b) => {
+      // Sort by date in descending order (newest first)
+      return new Date(b.date) - new Date(a.date);
+    });
+  };
+
   // Define fetchSubmissions function to reload submissions
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -324,23 +331,44 @@ function ProfessorDashboard() {
   }, [API_URL]);
 
   useEffect(() => {
-    // Fetch documents from the backend API
     const fetchDocuments = async () => {
       try {
-        // Fetch professor documents
         const response = await fetch(`${API_URL}/api/documents`);
 
         if (response.ok) {
           const documents = await response.json();
-          console.log("Fetched documents:", documents);
-          setProfessorDocuments(documents);
+          console.log("Raw documents from API:", documents);
+
+          const processedDocuments = documents.map((doc) => {
+            let status = doc.status;
+            if (doc.analysisInProgress) {
+              status = "Analyzing";
+            } else if (!status) {
+              status = doc.analyzed && doc.results ? "Completed" : "Uploaded";
+            }
+
+            return {
+              ...doc,
+              status: status,
+              results: doc.results || null,
+            };
+          });
+
+          // Sort documents by date
+          const sortedDocuments = processedDocuments.sort((a, b) => {
+            const dateA = new Date(a.date || a.uploadDate);
+            const dateB = new Date(b.date || b.uploadDate);
+            return dateB - dateA;
+          });
+
+          console.log("Final processed documents:", sortedDocuments);
+          setProfessorDocuments(sortedDocuments);
         } else {
           console.error("Failed to fetch documents:", await response.text());
         }
 
-        // Fetch submission slots
+        // Fetch submission slots code remains the same...
         const slotsResponse = await fetch(`${API_URL}/api/submissions/slots`);
-
         if (slotsResponse.ok) {
           const slots = await slotsResponse.json();
           console.log("Fetched submission slots:", slots);
@@ -396,13 +424,23 @@ function ProfessorDashboard() {
       const data = await response.json();
       console.log("Upload response:", data);
 
-      // Update documents list with the uploaded document and set status to "Uploaded"
       const newDocument = {
         ...data.document,
-        status: "Uploaded", // Set status to "Uploaded" after successful upload
+        status: "Uploaded",
+        analyzed: false,
+        results: null,
+        uploadDate: new Date().toISOString(),
       };
 
-      setProfessorDocuments((prev) => [...prev, newDocument]);
+      console.log("New document being added:", newDocument);
+      setProfessorDocuments((prevDocs) => {
+        const updatedDocs = [newDocument, ...prevDocs];
+        return updatedDocs.sort((a, b) => {
+          const dateA = new Date(a.date || a.uploadDate);
+          const dateB = new Date(b.date || b.uploadDate);
+          return dateB - dateA;
+        });
+      });
       toast.success("Document uploaded successfully");
     } catch (error) {
       console.error("Upload error:", error);
@@ -582,7 +620,6 @@ function ProfessorDashboard() {
     if (!showDeleteModal) return null;
 
     const itemName = itemToDelete?.name;
-
     const itemType =
       deleteType === "submission"
         ? "submission"
@@ -594,10 +631,15 @@ function ProfessorDashboard() {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white p-6 rounded-lg max-w-md w-full m-4">
           <h2 className="text-xl font-semibold mb-4">Confirm Deletion</h2>
-          <p className="mb-6 text-gray-600">
-            Are you sure you want to delete this {itemType}: "{itemName}"? This
-            action cannot be undone.
-          </p>
+          <div className="mb-6">
+            <p className="text-gray-600 mb-2">
+              Are you sure you want to delete this {itemType}:
+            </p>
+            <p className="text-gray-800 font-medium break-words">
+              "{itemName}"
+            </p>
+            <p className="text-gray-600 mt-2">This action cannot be undone.</p>
+          </div>
           <div className="flex justify-end space-x-4">
             <button
               onClick={() => {
@@ -611,7 +653,7 @@ function ProfessorDashboard() {
             </button>
             <button
               onClick={handleDelete}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              className="px-4 py-2 bg-[#ff6464] text-white rounded-md hover:bg-[#ff4444] transition-colors duration-300"
             >
               Delete
             </button>
@@ -761,20 +803,6 @@ function ProfessorDashboard() {
         setProfessorDocuments(updatedDocs);
       }
 
-      // Navigate to results page with the complete data
-      navigate("/parsing-result", {
-        state: {
-          parsingResult: {
-            ...updatedItem.results,
-            status: "success",
-            document_name:
-              selectedDocument.name || selectedDocument.documentName,
-            document_type: isSubmission
-              ? "student_submission"
-              : "professor_document",
-          },
-        },
-      });
       toast.success("Analysis completed successfully");
     } catch (error) {
       console.error("Analysis failed:", error);
@@ -908,7 +936,6 @@ function ProfessorDashboard() {
       });
   };
 
-  // Add this new function to debug document status
   const debugDocumentStatus = (doc) => {
     console.log("Document:", doc);
     console.log("Selected document type:", documentType);
@@ -921,9 +948,10 @@ function ProfessorDashboard() {
         doc.status === "Completed"
     );
     return (
-      doc.status === "Graded" ||
-      doc.status === "Analyzed" ||
-      doc.status === "Completed"
+      (doc.status === "Graded" ||
+        doc.status === "Analyzed" ||
+        doc.status === "Completed") &&
+      doc.results
     );
   };
 
@@ -966,39 +994,20 @@ function ProfessorDashboard() {
       <Navbar />
       <ToastContainer position="top-right" autoClose={5000} />
 
-      <div className="max-w-6xl mx-auto mt-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-800">
-            Professor Dashboard
-          </h1>
-          <p className="text-gray-500">
-            {submissions.filter((s) => s.status === "Submitted").length}{" "}
-            submissions pending review
-          </p>
-        </div>
-
-        {/* Action Cards */}
-        <div className="grid grid-cols-3 gap-6 mb-8">
+      <div className="max-w-6xl mx-auto mt-8 px-4">
+        {/* Header and Statistics Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Upload Document Card */}
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4">Upload Document</h2>
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            {" "}
+            <h2 className="text-base font-semibold mb-3">
+              Upload Document
+            </h2>{" "}
             <UploadModal onUploadComplete={handleProfessorUpload} />
           </div>
 
-          {/* Create Submission Slot Card */}
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4">Create Submission</h2>
-            <button
-              onClick={() => setShowCreateSubmissionModal(true)}
-              className="w-full py-3 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300"
-            >
-              Create New Submission
-            </button>
-          </div>
-
           {/* Active Submissions Card */}
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-semibold mb-4">Active Submissions</h2>
             <div className="space-y-3">
               {submissionSlots
@@ -1006,17 +1015,17 @@ function ProfessorDashboard() {
                 .map((slot) => (
                   <div
                     key={slot.id}
-                    className="flex justify-between items-center"
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                   >
                     <div>
-                      <p className="font-medium">{slot.name}</p>
+                      <p className="font-medium text-gray-900">{slot.name}</p>
                       <p className="text-sm text-gray-500">
                         Due: {new Date(slot.deadline).toLocaleDateString()}
                       </p>
                     </div>
                     <button
                       onClick={() => handleDeleteClick(slot, "slot")}
-                      className="text-gray-400 hover:text-red-500 transition-colors duration-300"
+                      className="text-gray-400 hover:text-[#ff6464] transition-colors duration-300"
                     >
                       <svg
                         className="w-5 h-5"
@@ -1038,18 +1047,20 @@ function ProfessorDashboard() {
           </div>
 
           {/* Quick Stats Card */}
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-semibold mb-4">Overview</h2>
-            <div className="space-y-3">
+            <div className="space-y-4">
+              {" "}
               <div>
-                <p className="text-sm text-gray-500">Total Submissions</p>
-                <p className="text-2xl font-semibold text-[#ff6464]">
+                <p className="text-xs text-gray-500">Total Submissions</p>
+                <p className="text-xl font-semibold text-[#ff6464]">
+                  {" "}
                   {submissions.length}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Pending Review</p>
-                <p className="text-2xl font-semibold text-[#ff6464]">
+                <p className="text-xs text-gray-500">Pending Review</p>
+                <p className="text-xl font-semibold text-[#ff6464]">
                   {submissions.filter((s) => s.status === "Submitted").length}
                 </p>
               </div>
@@ -1057,44 +1068,64 @@ function ProfessorDashboard() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex gap-4 mb-6">
-          <select
-            className="border rounded-lg py-2 text-sm max-w-56 truncate"
-            value={selectedCourse}
-            onChange={(e) => setSelectedCourse(e.target.value)}
-          >
-            <option value="all">All Courses</option>
-            <option value="SWE301">SWE 301</option>
-            <option value="SWE302">SWE 302</option>
-            <option value="SWE401">SWE 401</option>
-            <option value="SWE402">SWE 402</option>
-          </select>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
+          <div className="p-6 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Student Submissions</h2>
+              <button
+                onClick={() => setShowCreateSubmissionModal(true)}
+                className="flex items-center px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-5 h-5 mr-2"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Create New Submission
+              </button>
+            </div>
+          </div>
 
-          <select
-            className="border rounded-lg py-2 text-sm max-w-56 truncate"
-            value={selectedFilter}
-            onChange={(e) => setSelectedFilter(e.target.value)}
-          >
-            <option value="all">All Status</option>
-            <option value="submitted">Pending Review</option>
-            <option value="graded">Reviewed</option>
-          </select>
-        </div>
+          {/* Tables Section */}
+          <div className="space-y-8">
+            {/* Student Submissions Table */}
+            <div className="bg-white rounded-lg">
+              {/* Header and Filters Row */}
+              <div className="flex justify-between items-center px-6 py-3 bg-white">
+                <div className="flex gap-4">
+                  <select
+                    className="border rounded-lg py-2 px-3 text-sm w-40 truncate"
+                    value={selectedCourse}
+                    onChange={(e) => setSelectedCourse(e.target.value)}
+                  >
+                    <option value="all">All Courses</option>
+                    <option value="SWE301">SWE 301</option>
+                    <option value="SWE302">SWE 302</option>
+                    <option value="SWE401">SWE 401</option>
+                    <option value="SWE402">SWE 402</option>
+                  </select>
 
-        {/* Tables Section */}
-        <div className="space-y-8">
-          {/* Student Submissions Table */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Student Submissions</h2>
-            <div className="bg-white rounded-lg shadow mt-8">
-              <div className="flex justify-between items-center px-4 py-3 bg-gray-50">
-                <h2 className="text-lg font-semibold text-gray-700">
-                  Student Submissions
-                </h2>
+                  <select
+                    className="border rounded-lg py-2 px-3 text-sm w-40 truncate"
+                    value={selectedFilter}
+                    onChange={(e) => setSelectedFilter(e.target.value)}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="submitted">Pending Review</option>
+                    <option value="graded">Reviewed</option>
+                  </select>
+                </div>
+
                 <button
                   onClick={fetchSubmissions}
-                  className="px-3 py-1 text-sm text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors duration-300 flex items-center"
+                  className="px-3 py-2 text-sm text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors duration-300 flex items-center"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -1132,7 +1163,7 @@ function ProfessorDashboard() {
                 submissions.map((submission) => (
                   <div
                     key={submission.id}
-                    className="grid grid-cols-8 gap-4 px-4 py-3 border-b text-sm text-gray-600"
+                    className="grid grid-cols-8 gap-4 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-300"
                   >
                     <div>{submission.studentName || "Unknown"}</div>
                     <div className="overflow-hidden">
@@ -1156,7 +1187,8 @@ function ProfessorDashboard() {
                         : "-"}
                     </div>
                     <div className="col-span-1 flex items-center">
-                      {submission.status === "Submitted" ? (
+                      {document.status === "Analyzing" ||
+                      document.analysisInProgress ? (
                         <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                           Submitted
                         </span>
@@ -1206,7 +1238,7 @@ function ProfessorDashboard() {
                       {submission.status === "Submitted" && (
                         <button
                           onClick={() => handleAnalyzeSubmission(submission)}
-                          className="px-3 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300"
+                          className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300"
                           disabled={analyzingSubmission === submission.id}
                         >
                           {analyzingSubmission === submission.id ? (
@@ -1243,7 +1275,7 @@ function ProfessorDashboard() {
                         submission.status === "Graded") && (
                         <button
                           onClick={() => handleViewReport(submission)}
-                          className="px-3 py-1 text-sm text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors duration-300"
+                          className="px-3 py-1 text-xs text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors duration-300"
                         >
                           View Report
                         </button>
@@ -1273,124 +1305,138 @@ function ProfessorDashboard() {
               )}
             </div>
           </div>
+        </div>
 
-          {/* Professor Documents Table */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Uploaded Documents</h2>
-            <div className="bg-white rounded-lg shadow mb-8">
-              <div className="grid grid-cols-[1.5fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-                <div>DOCUMENT NAME</div>
-                <div>UPLOADED DATE</div>
-                <div>SIZE</div>
-                <div>STATUS</div>
-                <div>ACTIONS</div>
+        {/* Professor Documents Table */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">My Uploaded Documents</h2>
+          <div className="bg-white rounded-lg shadow mb-8">
+            {/* Header row */}
+            <div className="grid grid-cols-[minmax(300px,2fr)_200px_100px_120px_250px] gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+              <div>DOCUMENT NAME</div>
+              <div>UPLOAD DATE</div>
+              <div>SIZE</div>
+              <div>STATUS</div>
+              <div className="text-center">ACTIONS</div>
+            </div>
+
+            {/* Table rows */}
+            {professorDocuments.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No documents uploaded yet
               </div>
-
-              {professorDocuments.map((doc) => {
-                // Check if document is viewable (has completed analysis)
+            ) : (
+              professorDocuments.map((doc) => {
                 const isViewable = debugDocumentStatus(doc);
 
                 return (
                   <div
                     key={doc.id}
-                    onClick={() => {
-                      console.log("Row clicked for document:", doc.name);
-                      if (isViewable || doc.status === "Completed") {
-                        console.log(
-                          "Document is viewable, calling handleViewReport"
-                        );
-                        handleViewReport(doc);
-                      } else {
-                        console.log(
-                          "Document is not viewable, status:",
-                          doc.status
-                        );
-                      }
-                    }}
-                    className={`flex items-center px-6 py-3 border-b text-sm text-gray-600 relative ${
-                      isViewable || doc.status === "Completed"
-                        ? "hover:bg-blue-50 cursor-pointer group transition-colors"
-                        : ""
-                    }`}
+                    className="grid grid-cols-[minmax(300px,2fr)_200px_100px_120px_250px] gap-4 px-6 py-4 border-b text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-300"
                   >
-                    <div className="flex-1 grid grid-cols-3 gap-4">
-                      <div
-                        className={`truncate ${
-                          isViewable || doc.status === "Completed"
-                            ? "font-medium text-blue-600"
-                            : ""
-                        }`}
+                    <div className="flex items-center min-w-0">
+                      {" "}
+                      {/* Add min-w-0 to enable truncation */}
+                      <span
+                        className="text-blue-600 hover:underline cursor-pointer truncate"
+                        title={doc.name}
                       >
                         {doc.name}
-                        {(isViewable || doc.status === "Completed") && (
-                          <span className="ml-2 text-green-600">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4 inline"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </span>
-                        )}
-                      </div>
-                      <div>{doc.date}</div>
-                      <div>{doc.size}</div>
+                      </span>
+                      {(isViewable || doc.status === "Completed") && (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 ml-2 flex-shrink-0 text-green-500" // Add flex-shrink-0
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      )}
                     </div>
-                    <div className="w-[120px]">
+                    <div className="truncate">
+                      {doc.uploadDate
+                        ? new Date(doc.uploadDate).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                          })
+                        : "-"}
+                    </div>
+                    <div className="truncate">{doc.size}</div>
+                    <div>
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          isViewable ||
-                          doc.status === "Completed" ||
-                          doc.status === "Graded" ||
-                          doc.status === "Analyzed"
+                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
+                          doc.status === "Completed" || doc.status === "Graded"
                             ? "bg-green-100 text-green-800"
                             : doc.status === "Analyzing"
                             ? "bg-blue-100 text-blue-800"
+                            : doc.status === "Failed"
+                            ? "bg-red-100 text-red-800"
                             : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
+                        {doc.status === "Analyzing" && (
+                          <svg
+                            className="animate-spin h-3 w-3"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                        )}
                         {doc.status}
                       </span>
                     </div>
-
-                    <div
-                      className="w-[150px] flex items-center space-x-2"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <div className="flex items-center justify-end gap-2 w-[250px]">
                       {isViewable || doc.status === "Completed" ? (
                         <>
                           <button
                             onClick={() => handleViewReport(doc)}
-                            className="px-4 py-1 text-sm text-white bg-green-600 rounded-md hover:bg-green-700"
+                            className="px-3 py-1 text-xs text-white bg-green-600 rounded-md hover:bg-green-700 whitespace-nowrap"
                           >
                             View Report
                           </button>
                           <button
                             onClick={() => handleAnalyzeClick(doc)}
-                            className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
+                            className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] whitespace-nowrap"
                           >
                             Re-analyze
                           </button>
                         </>
                       ) : (
-                        <button
-                          onClick={() => handleAnalyzeClick(doc)}
-                          className="px-4 py-1 text-sm text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444]"
-                        >
-                          Analyze
-                        </button>
+                        <>
+                          <div className="flex-1"></div>
+                          <button
+                            onClick={() => handleAnalyzeClick(doc)}
+                            className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] whitespace-nowrap"
+                          >
+                            Analyze
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={() =>
                           handleDeleteClick(doc, "professor_document")
                         }
-                        className="text-gray-400 hover:text-red-500 transition-colors duration-300"
+                        className="text-gray-400 hover:text-[#ff6464] flex-shrink-0 transition-colors duration-300"
                       >
                         <svg
                           className="w-5 h-5"
@@ -1409,8 +1455,8 @@ function ProfessorDashboard() {
                     </div>
                   </div>
                 );
-              })}
-            </div>
+              })
+            )}
           </div>
         </div>
 
