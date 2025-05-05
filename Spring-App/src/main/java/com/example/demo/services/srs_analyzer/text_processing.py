@@ -1,3 +1,4 @@
+
 import re
 # import language_tool_python  # Commented out for performance
 from spellchecker import SpellChecker  # Re-enabled for quick spell checking
@@ -176,17 +177,9 @@ class TextProcessor:
 
         return sections, figures
 
-    def parse_document_sections(self, text, document_type="SRS"):
-        """Parse document into logical segments based on predefined sections.
-        
-        Args:
-            text (str): The document text to parse
-            document_type (str): The type of document ('SRS' or 'SDD')
-        
-        Returns:
-            list: A list of document sections
-        """
-        logger.info(f"Parsing document sections for {document_type}")
+    def parse_document_sections(self, text):
+        """Parse document into logical segments based on predefined sections."""
+        logger.info("Parsing document sections")
         
         try:
             # Add more debug logging
@@ -197,17 +190,11 @@ class TextProcessor:
                 logger.warning("Document text is too short or empty")
                 return []
             
-            # Use SectionParser to get the main sections based on document type
-            if document_type == "SRS":
-                sections_dict = SectionParser.parse_sections_content_analysis(text, document_type="SRS")
-            elif document_type == "SDD":
-                sections_dict = SectionParser.parse_sections_content_analysis(text, document_type="SDD")
-            else:
-                logger.warning(f"Unknown document type: {document_type}, defaulting to SRS")
-                sections_dict = SectionParser.parse_sections_content_analysis(text, document_type="SRS")
+            # Use SectionParser to get only the main sections for SRS documents
+            sections_dict = SectionParser.parse_sections_content_analysis(text)
             
             # Log the sections found
-            logger.info(f"Found {len(sections_dict)} sections in the {document_type} document")
+            logger.info(f"Found {len(sections_dict)} sections in the document")
             for section_title in sections_dict.keys():
                 logger.info(f"Found section: {section_title}")
             
@@ -371,78 +358,79 @@ class TextProcessor:
             return {}, []
 
     def _find_figures_in_sections(self, sections_dict):
-        """
-        Find figures mentioned in the document sections.
-        
-        Args:
-            sections_dict: Dictionary of {section_name: section_content}
-            
-        Returns:
-            Dictionary of {figure_name: {sections: [], mentions: int}}
-        """
-        logger.info("Finding figures in sections")
+        """Find all figures mentioned in the text and their location."""
         figures = {}
         
-        # Define patterns to match figure references
+        # Regex patterns for figure captions - making this more robust
         figure_patterns = [
-            r'Figure\s+(\d+[\.\d]*)\s*[:\-–—]?\s*([^\.]+)',
-            r'Fig\.\s+(\d+[\.\d]*)\s*[:\-–—]?\s*([^\.]+)',
-            r'Figure\s+(\d+[\.\d]*)\s*[:\-–—]?\s*([^\.]+)',
-            r'FIGURE\s+(\d+[\.\d]*)\s*[:\-–—]?\s*([^\.]+)',
-            r'Diagram\s+(\d+[\.\d]*)\s*[:\-–—]?\s*([^\.]+)',
-            r'DIAGRAM\s+(\d+[\.\d]*)\s*[:\-–—]?\s*([^\.]+)',
-            # Add specific patterns for EERD
-            r'EERD\s+[Dd]iagram',
-            r'Entity[\s\-]Relationship\s+[Dd]iagram',
-            r'ER\s+[Dd]iagram',
+            r'Figure\s+\d+[\.:]?\s*([^\.]+)',  # Figure 1: Title
+            r'Fig\.\s*\d+[\.:]?\s*([^\.]+)',    # Fig. 1: Title
+            r'Figure\s+\d+[^a-zA-Z0-9]*([a-zA-Z].+?)\s*(?:\n|$)', # Figure 1 Title
+            r'(?:FIGURE|Fig)[^a-zA-Z0-9]*\d+[^a-zA-Z0-9]*([a-zA-Z].+?)\s*(?:\n|$)', # FIGURE 1 Title
+            r'\bEERD\b',   # Just "EERD" 
+            r'\bEntity\s+Relationship\b',  # Entity Relationship
+            r'\bUse\s+Case\b',  # Use Case
+            r'\bClass\s+Diagram\b',  # Class Diagram
+            r'\bGantt\s+Chart\b',  # Gantt Chart
+            r'\bSystem\s+Overview\b',  # System Overview
+            r'\bSystem\s+Context\b'  # System Context
         ]
         
-        # Compile patterns for efficiency
-        compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in figure_patterns]
-        
-        # Search for figures in each section
-        for section_name, content in sections_dict.items():
-            for pattern in compiled_patterns:
-                matches = pattern.findall(content)
-                for match in matches:
-                    if isinstance(match, tuple) and len(match) >= 2:
-                        # For patterns with figure number and caption
-                        figure_num, figure_caption = match
-                        figure_name = f"Figure {figure_num}: {figure_caption.strip()}"
-                    else:
-                        # For patterns without figure number (like "EERD Diagram")
-                        figure_name = match if isinstance(match, str) else match[0]
-                        
-                    # Check for specific diagram types in the caption
-                    if any(term.lower() in figure_name.lower() for term in IMPORTANT_FIGURES):
-                        # Add or update figure information
-                        if figure_name not in figures:
-                            figures[figure_name] = {
-                                'sections': [section_name],
+        for section_title, content in sections_dict.items():
+            # Store the section itself if it's a potential diagram section
+            section_lower = section_title.lower()
+            for important_term in IMPORTANT_FIGURES:
+                if important_term in section_lower:
+                    clean_title = self.strip_numbering(section_title)
+                    if clean_title not in figures:
+                        figures[clean_title] = {
+                            'sections': [section_title],
+                            'mentions': 1,
+                            'is_section_title': True
+                        }
+                    break
+            
+            # Look for figure captions in content
+            for pattern in figure_patterns:
+                # Special case for single-word patterns
+                if pattern.startswith(r'\b') and pattern.endswith(r'\b'):
+                    term = pattern[2:-2]  # Extract the term between \b markers
+                    if re.search(pattern, content, re.IGNORECASE):
+                        if term not in figures:
+                            figures[term] = {
+                                'sections': [section_title],
                                 'mentions': 1
                             }
                         else:
-                            figures[figure_name]['mentions'] += 1
-                            if section_name not in figures[figure_name]['sections']:
-                                figures[figure_name]['sections'].append(section_name)
-        
-        # Add special handling for EERD and other important diagrams
-        for section_name, content in sections_dict.items():
-            for diagram_type in IMPORTANT_FIGURES:
-                if diagram_type.lower() in content.lower() and diagram_type.lower() in section_name.lower():
-                    figure_name = f"{diagram_type} Diagram"
-                    if figure_name not in figures:
-                        figures[figure_name] = {
-                            'sections': [section_name],
-                            'mentions': 1,
-                            'explicit_match': True  # Mark as explicitly matched
+                            figures[term]['mentions'] += 1
+                            if section_title not in figures[term]['sections']:
+                                figures[term]['sections'].append(section_title)
+                    continue
+                
+                # Regular pattern matching for multi-word patterns
+                matches = re.finditer(pattern, content, re.IGNORECASE)
+                for match in matches:
+                    if pattern.startswith(r'\b'):
+                        # For the special case patterns that don't have capture groups
+                        figure_caption = match.group(0).strip()
+                    else:
+                        figure_caption = match.group(1).strip() 
+                    
+                    if figure_caption not in figures:
+                        figures[figure_caption] = {
+                            'sections': [section_title],
+                            'mentions': 1
                         }
                     else:
-                        figures[figure_name]['mentions'] += 1
-                        if section_name not in figures[figure_name]['sections']:
-                            figures[figure_name]['sections'].append(section_name)
+                        figures[figure_caption]['mentions'] += 1
+                        if section_title not in figures[figure_caption]['sections']:
+                            figures[figure_caption]['sections'].append(section_title)
         
-        logger.info(f"Found {len(figures)} figures in the document")
+        # Log all figures found for debugging
+        logger.info(f"Found {len(figures)} potential figures in document")
+        for fig_name, fig_info in figures.items():
+            logger.info(f"Figure: '{fig_name}' mentioned {fig_info['mentions']} times in {len(fig_info['sections'])} sections")
+        
         return figures
 
     def extract_figure_texts_from_sections(self, sections_dict, pdf_path):
@@ -691,390 +679,209 @@ class TextProcessor:
     def extract_diagrams_from_pdf(self, pdf_path):
         """
         Extract and analyze diagrams from the PDF using OpenAI's vision model.
+        
+        Args:
+            pdf_path: Path to the PDF file
+            
+        Returns:
+            Dictionary of diagram scopes {diagram_name: system_scope}
         """
-        # Create a debug log file
-        debug_log_path = "diagram_extraction_debug.log"
-        with open(debug_log_path, "w") as debug_file:
-            def debug_log(message):
-                debug_file.write(f"{message}\n")
-                debug_file.flush()  # Ensure it's written immediately
-                logger.info(message)
+        logger.info("Extracting and analyzing diagrams from PDF")
+        
+        # Import ImageProcessor here to avoid circular dependency
+        from image_processing import ImageProcessor
+        
+        # Initialize image processor
+        image_processor = ImageProcessor()
+        diagram_scopes = {}
+        
+        # Map of standard figure names for better display
+        figure_name_map = {
+            "system overview": "System Overview",
+            "system context": "System Context Diagram",
+            "use case": "Use Case Diagram",
+            "eerd": "EERD",
+            "entity relationship": "Entity Relationship Diagram",
+            "class diagram": "Class Diagram",
+            "gantt chart": "Gantt Chart"
+        }
+        
+        try:
+            # First, find all figures mentioned in the document
+            sections_dict = {}
+            with open(pdf_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page in pdf_reader.pages:
+                    text = page.extract_text()
+                    if text.strip():
+                        # Split text into sections based on headers
+                        lines = text.splitlines()
+                        current_section = None
+                        current_content = []
+                        
+                        for line in lines:
+                            if re.match(r'^\d+(\.\d+)*\s+[A-Z]', line):
+                                if current_section and current_content:
+                                    sections_dict[current_section] = '\n'.join(current_content)
+                                current_section = line.strip()
+                                current_content = []
+                            elif current_section:
+                                current_content.append(line)
+                        
+                        if current_section and current_content:
+                            sections_dict[current_section] = '\n'.join(current_content)
             
-            debug_log("Extracting and analyzing diagrams from PDF")
-            debug_log(f"Starting diagram extraction from: {pdf_path}")
+            # Find all figures mentioned in the document
+            all_figures = self._find_figures_in_sections(sections_dict)
             
-            # Import ImageProcessor here to avoid circular dependency
-            from image_processing import ImageProcessor
+            # Filter to only the figures we want to process
+            important_figures = {}
+            for figure_name, figure_info in all_figures.items():
+                figure_name_lower = figure_name.lower()
+                is_important = any(
+                    important_term in figure_name_lower 
+                    for important_term in IMPORTANT_FIGURES
+                )
+                
+                if is_important:
+                    important_figures[figure_name] = figure_info
+                    logger.info(f"Will process figure: {figure_name}")
             
-            # Initialize image processor
-            image_processor = ImageProcessor()
-            diagram_scopes = {}
-            
-            # Map of standard figure names for better display
-            figure_name_map = {
-                "system overview": "System Overview",
-                "system context": "System Context Diagram",
-                "use case": "Use Case Diagram",
-                "eerd": "EERD",
-                "entity relationship": "Entity Relationship Diagram",
-                "er diagram": "Entity Relationship Diagram",
-                "class diagram": "Class Diagram",
-                "gantt chart": "Gantt Chart"
-            }
-            
-            # Function to sanitize directory names - more aggressive sanitization
-            def sanitize_dir_name(name):
-                # Replace invalid characters with underscores
-                invalid_chars = [':', '/', '\\', '?', '*', '"', '<', '>', '|', '.', ',', ';']
-                result = name
-                for char in invalid_chars:
-                    result = result.replace(char, '_')
-                
-                # Replace spaces with underscores
-                result = result.replace(' ', '_')
-                
-                # Remove any double underscores
-                while '__' in result:
-                    result = result.replace('__', '_')
-                
-                # Trim underscores from start and end
-                result = result.strip('_')
-                
-                return result
-            
-            # Track which images have been used to avoid duplicates
-            used_images = set()
-            
-            try:
-                # First, find all figures mentioned in the document
-                sections_dict = {}
-                with open(pdf_path, 'rb') as file:
-                    pdf_reader = PyPDF2.PdfReader(file)
-                    debug_log(f"PDF has {len(pdf_reader.pages)} pages")
-                    for page in pdf_reader.pages:
-                        text = page.extract_text()
-                        if text.strip():
-                            # Split text into sections based on headers
-                            lines = text.splitlines()
-                            current_section = None
-                            current_content = []
-                            
-                            for line in lines:
-                                if re.match(r'^\d+(\.\d+)*\s+[A-Z]', line):
-                                    if current_section and current_content:
-                                        sections_dict[current_section] = '\n'.join(current_content)
-                                    current_section = line.strip()
-                                    current_content = []
-                                elif current_section:
-                                    current_content.append(line)
-                            
-                            if current_section and current_content:
-                                sections_dict[current_section] = '\n'.join(current_content)
-                
-                debug_log(f"Found {len(sections_dict)} sections in the PDF")
-                
-                # Find all figures mentioned in the document with their exact captions
-                all_figures = {}
-                
-                # Look for figure captions in the text
-                for section_name, content in sections_dict.items():
-                    # Look for figure captions like "Figure X: Title"
-                    caption_patterns = [
-                        r'Figure\s+(\d+[\.\d]*)\s*[:\-–—]\s*([^\n\.]+)',
-                        r'Fig\.\s+(\d+[\.\d]*)\s*[:\-–—]\s*([^\n\.]+)',
-                        r'FIGURE\s+(\d+[\.\d]*)\s*[:\-–—]\s*([^\n\.]+)'
-                    ]
-                    
-                    for pattern in caption_patterns:
-                        matches = re.finditer(pattern, content, re.IGNORECASE)
-                        for match in matches:
-                            fig_num = match.group(1)
-                            caption = match.group(2).strip()
-                            
-                            # Create a sanitized key for this figure
-                            sanitized_key = f"Figure_{fig_num}_{sanitize_dir_name(caption)}"
-                            
-                            # Check if this is an important figure type
-                            figure_type = None
-                            for important_term in IMPORTANT_FIGURES:
-                                if important_term.lower() in caption.lower():
-                                    figure_type = important_term
-                                    break
-                            
-                            if figure_type:
-                                all_figures[sanitized_key] = {
-                                    'sections': [section_name],
-                                    'mentions': 1,
-                                    'caption': caption,
-                                    'number': fig_num,
-                                    'type': figure_type,
-                                    'original_caption': f"Figure {fig_num}: {caption}",
-                                    'page_hint': None  # Will be filled in later if possible
-                                }
-                                debug_log(f"Found important figure: {sanitized_key} of type {figure_type}")
-                
-                # Also look for sections that are about important diagram types
-                for section_name in sections_dict.keys():
-                    section_lower = section_name.lower()
-                    for important_term in IMPORTANT_FIGURES:
-                        if important_term.lower() in section_lower:
-                            # This section is about an important diagram type
-                            sanitized_key = f"Section_{sanitize_dir_name(section_name)}"
-                            all_figures[sanitized_key] = {
-                                'sections': [section_name],
-                                'mentions': 1,
-                                'is_section': True,
-                                'type': important_term,
-                                'original_caption': section_name,
-                                'page_hint': None  # Will be filled in later if possible
-                            }
-                            debug_log(f"Found section about {important_term}: {sanitized_key}")
-                            break
-                
-                debug_log(f"Found {len(all_figures)} important figures: {list(all_figures.keys())}")
-                
-                # Create placeholder scopes for all important diagram types
+            # If no important figures found, try a more general approach
+            if not important_figures:
+                logger.warning("No important figures found with exact matching, trying broader matching")
                 for important_term in IMPORTANT_FIGURES:
-                    display_name = None
-                    for key, mapped_name in figure_name_map.items():
-                        if key in important_term.lower():
-                            display_name = mapped_name
+                    important_figures[important_term] = {
+                        'sections': ["Generic Section"],
+                        'mentions': 1,
+                        'generic': True
+                    }
+                    logger.info(f"Added generic figure type: {important_term}")
+            
+            # Extract images based on section context
+            logger.info(f"Extracting images for {len(important_figures)} important diagrams")
+            target_names = list(important_figures.keys())
+            target_names.extend(IMPORTANT_FIGURES)
+            logger.info(f"Target figure names: {target_names}")
+            
+            image_paths = image_processor.extract_images_from_pdf(pdf_path, 
+                                                               target_figures=target_names)
+            
+            # Match images to figures
+            for figure_name, figure_info in important_figures.items():
+                logger.info(f"Processing figure: {figure_name}")
+                
+                # Find relevant images for this figure
+                relevant_images = []
+                for image_path in image_paths:
+                    # Skip processing if we already have enough images for this figure
+                    if len(relevant_images) >= 2:
+                        break
+                    
+                    # Check if image belongs to a section that mentions this figure
+                    is_relevant = False
+                    
+                    # If this is a generic figure, be more lenient in matching
+                    if figure_info.get('generic', False):
+                        # Check if path contains any part of the figure name
+                        figure_parts = figure_name.split()
+                        is_relevant = any(part.lower() in image_path.lower() for part in figure_parts)
+                    else:
+                        # Use stricter matching for normal figures
+                        image_sections = figure_info.get('sections', [])
+                        is_relevant = any(
+                            section.lower() in image_path.lower() for section in image_sections
+                        )
+                    
+                    if is_relevant:
+                        relevant_images.append(image_path)
+                        logger.info(f"Found relevant image for {figure_name}: {image_path}")
+                
+                # If no relevant images found, try a broader approach
+                if not relevant_images:
+                    logger.warning(f"No relevant images found for {figure_name}, using broader matching")
+                    # Check for partial matches in image paths
+                    figure_parts = figure_name.lower().split()
+                    for image_path in image_paths:
+                        for part in figure_parts:
+                            if len(part) > 3 and part in image_path.lower():  # Only use parts with >3 chars
+                                relevant_images.append(image_path)
+                                logger.info(f"Found image with partial match for {figure_name}: {image_path}")
+                                break
+                        
+                        if len(relevant_images) >= 2:
                             break
-                    
-                    if not display_name:
-                        continue  # Skip if no mapping found
-                    
-                    if display_name not in diagram_scopes:
-                        placeholder_scope = f"""
-                        System: {display_name}
-                        Components: [Placeholder - No image found]
-                        Relationships: [Placeholder - No image found]
-                        Boundaries: [Placeholder - No image found]
+                
+                # Process the most relevant images with OpenAI vision model
+                for image_path in relevant_images:
+                    try:
+                        # Convert image to base64
+                        with open(image_path, "rb") as image_file:
+                            image_data = base64.b64encode(image_file.read()).decode('utf-8')
+                        
+                        # Create prompt for OpenAI vision model
+                        prompt = """
+                        Analyze this diagram and create a system scope that includes:
+                        1. Main system components and their roles
+                        2. Key relationships between components
+                        3. System boundaries and interfaces
+                        4. Critical interactions
+                        
+                        Format the scope as:
+                        System: [Main system name/description]
+                        Components: [List of main components and their roles]
+                        Relationships: [List of key relationships]
+                        Boundaries: [System boundaries and interfaces]
                         """
                         
-                        diagram_scopes[display_name] = placeholder_scope
-                        debug_log(f"Added placeholder scope for {display_name}")
-                
-                # Extract images based on section context
-                debug_log(f"Extracting images for {len(all_figures)} important figures")
-                
-                # Create a list of target names for image extraction
-                target_names = []
-                
-                # Add sanitized figure keys
-                for figure_key in all_figures.keys():
-                    target_names.append(figure_key)
-                
-                # Add figure types
-                for figure_info in all_figures.values():
-                    if 'type' in figure_info:
-                        target_names.append(sanitize_dir_name(figure_info['type']))
-                
-                debug_log(f"Target figure names: {target_names}")
-                
-                # Pass sanitized names to image processor
-                image_paths = image_processor.extract_images_from_pdf(pdf_path, 
-                                                                   target_figures=target_names)
-                
-                debug_log(f"Extracted {len(image_paths)} images from PDF: {image_paths}")
-                
-                # First, try to match images to figures based on page numbers
-                for image_path in image_paths:
-                    # Try to extract page number from image path
-                    page_match = re.search(r'page_(\d+)img', image_path)
-                    if page_match:
-                        page_num = int(page_match.group(1))
-                        
-                        # Update page hints for figures
-                        for figure_key, figure_info in all_figures.items():
-                            if figure_info['page_hint'] is None:
-                                figure_info['page_hint'] = page_num
-                
-                # Process each figure type separately to avoid confusion
-                for figure_type in IMPORTANT_FIGURES:
-                    debug_log(f"Processing figures of type: {figure_type}")
-                    
-                    # Find all figures of this type
-                    figures_of_type = {}
-                    for key, info in all_figures.items():
-                        if info.get('type') == figure_type:
-                            figures_of_type[key] = info
-                    
-                    if not figures_of_type:
-                        debug_log(f"No figures found of type {figure_type}")
-                        continue
-                    
-                    debug_log(f"Found {len(figures_of_type)} figures of type {figure_type}: {list(figures_of_type.keys())}")
-                    
-                    # Find relevant images for this figure type
-                    relevant_images = []
-                    
-                    # First, try exact figure number matching
-                    for figure_key, figure_info in figures_of_type.items():
-                        if 'number' in figure_info:
-                            fig_num = figure_info['number']
-                            
-                            for image_path in image_paths:
-                                # Skip images that have already been used
-                                if image_path in used_images:
-                                    continue
-                                    
-                                path_lower = image_path.lower()
-                                
-                                # Check for exact figure number match
-                                if f"figure_{fig_num}" in path_lower.replace(" ", "_") or f"figure{fig_num}" in path_lower.replace(" ", ""):
-                                    # Additional check: make sure the image is related to this figure type
-                                    if figure_type.lower() in path_lower or any(section.lower() in path_lower for section in figure_info.get('sections', [])):
-                                        relevant_images.append((image_path, figure_info))
-                                        debug_log(f"Found exact figure number match for {figure_type}: {image_path}")
-                                        break  # Only need one image per figure
-                    
-                    # If no exact matches, try page-based matching
-                    if not relevant_images:
-                        for figure_key, figure_info in figures_of_type.items():
-                            if figure_info.get('page_hint'):
-                                page_num = figure_info['page_hint']
-                                
-                                for image_path in image_paths:
-                                    # Skip images that have already been used
-                                    if image_path in used_images:
-                                        continue
-                                        
-                                    # Check if image is from the same page
-                                    page_match = re.search(r'page_(\d+)img', image_path)
-                                    if page_match and int(page_match.group(1)) == page_num:
-                                        # Additional check: make sure the image is related to this figure type
-                                        if figure_type.lower() in image_path.lower() or any(section.lower() in image_path.lower() for section in figure_info.get('sections', [])):
-                                            relevant_images.append((image_path, figure_info))
-                                            debug_log(f"Found page match for {figure_type}: {image_path}")
-                                            break  # Only need one image per figure
-                    
-                    # If still no matches, try section matching
-                    if not relevant_images:
-                        for figure_key, figure_info in figures_of_type.items():
-                            for section in figure_info.get('sections', []):
-                                sanitized_section = sanitize_dir_name(section)
-                                
-                                for image_path in image_paths:
-                                    # Skip images that have already been used
-                                    if image_path in used_images:
-                                        continue
-                                        
-                                    if sanitized_section in image_path.lower():
-                                        relevant_images.append((image_path, figure_info))
-                                        debug_log(f"Found section match for {figure_type}: {image_path}")
-                                        break  # Only need one image per figure
-                            
-                            if relevant_images:
-                                break
-                    
-                    # If still no matches, try type matching - but be very strict
-                    if not relevant_images:
-                        fig_type_sanitized = sanitize_dir_name(figure_type)
-                        
-                        for image_path in image_paths:
-                            # Skip images that have already been used
-                            if image_path in used_images:
-                                continue
-                                
-                            # Only match if the image path explicitly contains the figure type
-                            if fig_type_sanitized in image_path.lower():
-                                # Use the first figure info for this type
-                                figure_info = next(iter(figures_of_type.values()))
-                                relevant_images.append((image_path, figure_info))
-                                debug_log(f"Found type match for {figure_type}: {image_path}")
-                                break  # Only need one image per type
-                    
-                    # Process the most relevant image with OpenAI vision model
-                    if relevant_images:
-                        image_path, figure_info = relevant_images[0]
-                        used_images.add(image_path)  # Mark this image as used
-                        
-                        try:
-                            debug_log(f"Processing image for {figure_type}: {image_path}")
-                            # Convert image to base64
-                            with open(image_path, "rb") as image_file:
-                                image_data = base64.b64encode(image_file.read()).decode('utf-8')
-                            
-                            # Create prompt for OpenAI vision model
-                            prompt = f"""
-                            Analyze this diagram which is a {figure_type} diagram.
-                            
-                            Create a system scope that includes:
-                            1. Main system components and their roles
-                            2. Key relationships between components
-                            3. System boundaries and interfaces
-                            4. Critical interactions
-                            
-                            Format the scope as:
-                            System: [Main system name/description]
-                            Components: [List of main components and their roles]
-                            Relationships: [List of key relationships]
-                            Boundaries: [System boundaries and interfaces]
-                            
-                            If the image is not actually a {figure_type} diagram, please respond with:
-                            "This image does not appear to be a {figure_type} diagram."
-                            """
-                            
-                            # Call OpenAI vision model with updated API
-                            client = openai.OpenAI()
-                            response = client.chat.completions.create(
-                                # UPDATED MODEL NAME - using gpt-4o which supports vision
-                                model="gpt-4o",
-                                messages=[
-                                    {
-                                        "role": "user",
-                                        "content": [
-                                            {"type": "text", "text": prompt},
-                                            {
-                                                "type": "image_url",
-                                                "image_url": {
-                                                    "url": f"data:image/jpeg;base64,{image_data}"
-                                                }
+                        # Call OpenAI vision model with updated API
+                        client = openai.OpenAI()
+                        response = client.chat.completions.create(
+                            model="gpt-4-vision-preview",
+                            messages=[
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": prompt},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {
+                                                "url": f"data:image/jpeg;base64,{image_data}"
                                             }
-                                        ]
-                                    }
-                                ],
-                                max_tokens=500
-                            )
-                            
-                            # Get the analysis result
-                            analysis = response.choices[0].message.content
-                            debug_log(f"Got analysis from OpenAI: {analysis[:100]}...")
-                            
-                            # Check if the model identified this as not being the right diagram type
-                            if f"not appear to be a {figure_type}" in analysis:
-                                debug_log(f"OpenAI identified this as not being a {figure_type} diagram, using placeholder")
-                                continue
-                            
-                            # Get a cleaner display name for this figure type
-                            display_name = None
-                            for key, mapped_name in figure_name_map.items():
-                                if key in figure_type.lower():
-                                    display_name = mapped_name
-                                    break
-                            
-                            # If no specific match found, use a generic name
-                            if not display_name:
-                                display_name = f"Diagram_{len(diagram_scopes) + 1}"
-                            
-                            # Store the scope with the display name
-                            diagram_scopes[display_name] = analysis
-                            debug_log(f"Added diagram scope for {display_name}")
-                            
-                        except Exception as e:
-                            debug_log(f"Error processing image {image_path}: {str(e)}")
-                            continue
-                        else:
-                            debug_log(f"No relevant images found for {figure_type}, using placeholder")
-                
-                debug_log(f"Finished diagram extraction. Found {len(diagram_scopes)} diagram scopes: {list(diagram_scopes.keys())}")
-                return diagram_scopes
-                
-            except Exception as e:
-                debug_log(f"Error extracting diagrams: {str(e)}")
-                logger.error(f"Error extracting diagrams: {str(e)}")
-                return {}
+                                        }
+                                    ]
+                                }
+                            ],
+                            max_tokens=500
+                        )
+                        
+                        # Get the analysis result
+                        analysis = response.choices[0].message.content
+                        
+                        # Get a cleaner display name for this figure type
+                        display_name = None
+                        for key, mapped_name in figure_name_map.items():
+                            if key in figure_name.lower():
+                                display_name = mapped_name
+                                break
+                        
+                        # If no specific match found, use a generic name
+                        if not display_name:
+                            display_name = f"Diagram_{len(diagram_scopes) + 1}"
+                        
+                        # Store the scope with the display name
+                        diagram_scopes[display_name] = analysis
+                        logger.info(f"Added diagram scope for {display_name}")
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing image {image_path}: {str(e)}")
+                        continue
+            
+            return diagram_scopes
+            
+        except Exception as e:
+            logger.error(f"Error extracting diagrams: {str(e)}")
+            return {}
 
     def _extract_diagram_type(self, analysis: str) -> str:
         """Extract diagram type from analysis text."""
