@@ -17,6 +17,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.annotation.PostConstruct;
+import com.example.demo.models.Submission;
+import com.example.demo.repositories.SubmissionRepository;
+import com.example.demo.services.DocumentAnalysisService;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -29,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 public class DocumentService {
@@ -39,10 +43,13 @@ public class DocumentService {
     private DocumentRepository documentRepository;
 
     @Autowired
-    private RestTemplate restTemplate;
+    private SubmissionRepository submissionRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private DocumentAnalysisService documentAnalysisService;
 
     // Set an absolute file path for uploads
     private final String uploadDir = System.getProperty("user.dir") + File.separator + "uploads";
@@ -338,5 +345,80 @@ public class DocumentService {
 
         // Save to repository
         return documentRepository.save(document);
+    }
+
+    /**
+     * Updates the status of a document
+     */
+    public void updateDocumentStatus(String documentId, String status) {
+        Optional<DocumentModel> documentOpt = documentRepository.findById(documentId);
+        if (documentOpt.isPresent()) {
+            DocumentModel document = documentOpt.get();
+            document.setStatus(status);
+            
+            // Set analyzed flag based on status
+            if ("Completed".equals(status) || "Analyzed".equals(status) || "Graded".equals(status)) {
+                document.setAnalyzed(true);
+                document.setAnalysisInProgress(false);
+            } else if ("Failed".equals(status)) {
+                document.setAnalyzed(false);
+                document.setAnalysisInProgress(false);
+            } else if ("Analyzing".equals(status)) {
+                document.setAnalysisInProgress(true);
+                document.setAnalyzed(false);
+            }
+            
+            documentRepository.save(document);
+        } else {
+            throw new RuntimeException("Document not found: " + documentId);
+        }
+    }
+
+    /**
+     * Updates the status of a submission
+     */
+    public void updateSubmissionStatus(String submissionId, String status) {
+        Optional<Submission> submissionOpt = submissionRepository.findById(submissionId);
+        if (submissionOpt.isPresent()) {
+            Submission submission = submissionOpt.get();
+            submission.setStatus(status);
+            submissionRepository.save(submission);
+        } else {
+            throw new RuntimeException("Submission not found: " + submissionId);
+        }
+    }
+
+    /**
+     * Gets the file path for a document
+     */
+    public String getDocumentFilePath(String documentId) {
+        Optional<DocumentModel> documentOpt = documentRepository.findById(documentId);
+        if (documentOpt.isPresent()) {
+            DocumentModel document = documentOpt.get();
+            return document.getFilePath();
+        } else {
+            throw new RuntimeException("Document not found: " + documentId);
+        }
+    }
+
+    /**
+     * Gets the file path for a submission
+     */
+    public String getSubmissionFilePath(String submissionId) {
+        Optional<Submission> submissionOpt = submissionRepository.findById(submissionId);
+        if (submissionOpt.isPresent()) {
+            Submission submission = submissionOpt.get();
+            return submission.getFilePath();
+        } else {
+            throw new RuntimeException("Submission not found: " + submissionId);
+        }
+    }
+
+    /**
+     * Analyzes a document with the given options
+     */
+    public Map<String, Object> analyzeDocument(String filePath, Map<String, Object> analysisOptions) {
+        // This should call your existing analysis code
+        return documentAnalysisService.analyzeDocument(filePath, analysisOptions);
     }
 }

@@ -1,0 +1,5 @@
+2025-05-06 16:22:12,168 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 16:22:12,169 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 16:22:12,169 - text_processing - INFO - Using device: CPU
+2025-05-06 16:22:12,169 - text_processing - INFO - Loading model: sshleifer/distilbart-cnn-6-6
+2025-05-06 16:22:13,797 - text_processing - INFO - Model loaded successfully

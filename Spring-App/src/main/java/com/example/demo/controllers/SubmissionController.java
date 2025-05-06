@@ -50,9 +50,6 @@ public class SubmissionController {
     @Autowired
     private SubmissionRepository submissionRepository;
 
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
-
     @PostMapping("/submissions")
     public ResponseEntity<?> createSubmission(
             @RequestParam("file") MultipartFile file,
