@@ -2,7 +2,6 @@ package com.example.demo.services;
 
 import com.example.demo.models.User;
 import com.example.demo.models.UserModel;
-import com.example.demo.models.CourseModel;
 import com.example.demo.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -25,9 +24,6 @@ public class UserService implements UserDetailsService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private CourseService courseService;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -74,7 +70,7 @@ public class UserService implements UserDetailsService {
         userModel.setFirstName(user.getFirstName());
         userModel.setLastName(user.getLastName());
         userModel.setPassword(user.getPassword());
-        userModel.setRoles(Collections.singletonList(user.getRole())); // Store role without ROLE_ prefix
+        userModel.setRoles(Collections.singletonList("ROLE_" + user.getRole()));
         userModel.setEnabled(user.isEnabled());
         return userModel;
     }
@@ -93,28 +89,7 @@ public class UserService implements UserDetailsService {
         user.setLastName(lastName);
         user.setRole(role);
         user.setEnabled(true);
-
-        // Save user
-        UserModel userModel = convertToUserModel(user);
-        UserModel savedModel = userRepository.save(userModel);
-        return convertToUser(savedModel);
-    }
-
-    public User createProfessor(String email, String password, String firstName, String lastName) {
-        // Check if user already exists
-        if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Email already in use");
-        }
-
-        // Create a new User object
-        User user = new User();
-        user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setFirstName(firstName);
-        user.setLastName(lastName);
-        user.setRole("PROFESSOR"); // Set as professor without ROLE_ prefix
-        user.setEnabled(true);
-
+        
         // Save user
         UserModel userModel = convertToUserModel(user);
         UserModel savedModel = userRepository.save(userModel);
@@ -126,7 +101,7 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
         User user = convertToUser(userModel);
-
+        
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new IllegalArgumentException("Invalid email or password");
         }
@@ -147,12 +122,7 @@ public class UserService implements UserDetailsService {
 
     public List<User> findAllUsers() {
         List<User> users = new ArrayList<>();
-        userRepository.findAll().forEach(userModel -> {
-            User user = convertToUser(userModel);
-            if (!user.getRole().equals("ADMIN")) { // Exclude admin users
-                users.add(user);
-            }
-        });
+        userRepository.findAll().forEach(userModel -> users.add(convertToUser(userModel)));
         return users;
     }
 
@@ -163,32 +133,39 @@ public class UserService implements UserDetailsService {
     }
 
     /**
-     * Delete a user by ID
+     * Get a user by email
      */
-    public void deleteUser(String userId) {
-        // Check if user exists
-        User user = findById(userId);
-        if (user == null) {
-            throw new IllegalArgumentException("User not found with ID: " + userId);
-        }
+    public UserModel getUserByEmail(String email) {
+        return userRepository.findByEmail(email).orElse(null);
+    }
 
-        // Remove user from any courses they're assigned to
-        if (user.getRole() != null) {
-            String role = user.getRole().toUpperCase();
-            if (role.contains("STUDENT")) {
-                List<CourseModel> courses = courseService.getCoursesForStudent(userId);
-                for (CourseModel course : courses) {
-                    courseService.removeStudentFromCourse(course.getId(), userId);
-                }
-            } else if (role.contains("TEACHER") || role.contains("PROFESSOR")) {
-                List<CourseModel> courses = courseService.getCoursesForTeacher(userId);
-                for (CourseModel course : courses) {
-                    courseService.removeTeacherFromCourse(course.getId(), userId);
-                }
-            }
-        }
+    /**
+     * Create a new user
+     */
+    public UserModel createUser(UserModel user) {
+        // Hash the password before saving
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        return userRepository.save(user);
+    }
 
-        // Delete the user
-        userRepository.deleteById(userId);
+    /**
+     * Get a user by ID
+     */
+    public UserModel getUserById(String id) {
+        return userRepository.findById(id).orElse(null);
+    }
+
+    /**
+     * Update a user
+     */
+    public UserModel updateUser(UserModel user) {
+        return userRepository.save(user);
+    }
+
+    /**
+     * Delete a user
+     */
+    public void deleteUser(String id) {
+        userRepository.deleteById(id);
     }
 }

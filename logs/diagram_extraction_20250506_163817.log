@@ -1,0 +1,416 @@
+2025-05-06 16:38:19,506 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 16:38:19,506 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 16:38:19,506 - text_processing - INFO - Using device: CPU
+2025-05-06 16:38:19,506 - text_processing - INFO - Loading model: sshleifer/distilbart-cnn-6-6
+2025-05-06 16:38:21,198 - text_processing - INFO - Model loaded successfully
+2025-05-06 16:38:37,501 - text_processing - INFO - Extracting text from PDF: uploads\1746538717_5f50bab5-ebe6-429c-aad6-6fa4e02d5040.pdf
+2025-05-06 16:38:37,811 - text_processing - DEBUG - Extracted 35458 characters from PDF
+2025-05-06 16:38:37,813 - text_processing - INFO - Parsing document sections
+2025-05-06 16:38:37,813 - text_processing - INFO - Document length: 35458 characters
+2025-05-06 16:38:37,862 - text_processing - INFO - Found 12 sections in the document
+2025-05-06 16:38:37,862 - text_processing - INFO - Found section: 1 Introduction
+2025-05-06 16:38:37,863 - text_processing - INFO - Found section: 2 Similar Systems
+2025-05-06 16:38:37,863 - text_processing - INFO - Found section: 3 System Description
+2025-05-06 16:38:37,863 - text_processing - INFO - Found section: 4 Functional Requirements
+2025-05-06 16:38:37,864 - text_processing - INFO - Found section: 5 Design Constraints
+2025-05-06 16:38:37,864 - text_processing - INFO - Found section: 6 Non-functional Requirements
+2025-05-06 16:38:37,864 - text_processing - INFO - Found section: 7 Data Design
+2025-05-06 16:38:37,865 - text_processing - INFO - Found section: 11 Appendices
+2025-05-06 16:38:37,865 - text_processing - INFO - Found section: Abstract
+2025-05-06 16:38:37,865 - text_processing - INFO - Found section: 8 Preliminary Object-Oriented Domain Analysis
+2025-05-06 16:38:37,867 - text_processing - INFO - Found section: 9 Operational Scenarios
+2025-05-06 16:38:37,867 - text_processing - INFO - Found section: 10 Project Plan
+2025-05-06 16:38:37,867 - text_processing - DEBUG - Added section: 1 Introduction with length: 1305
+2025-05-06 16:38:37,868 - text_processing - DEBUG - Added section: 2 Similar Systems with length: 6055
+2025-05-06 16:38:37,868 - text_processing - DEBUG - Added section: 3 System Description with length: 5347
+2025-05-06 16:38:37,868 - text_processing - DEBUG - Added section: 4 Functional Requirements with length: 6487
+2025-05-06 16:38:37,869 - text_processing - DEBUG - Added section: 5 Design Constraints with length: 834
+2025-05-06 16:38:37,869 - text_processing - DEBUG - Added section: 6 Non-functional Requirements with length: 1516
+2025-05-06 16:38:37,870 - text_processing - DEBUG - Added section: 7 Data Design with length: 805
+2025-05-06 16:38:37,871 - text_processing - DEBUG - Added section: 11 Appendices with length: 2911
+2025-05-06 16:38:37,871 - text_processing - DEBUG - Added section: Abstract with length: 934
+2025-05-06 16:38:37,871 - text_processing - DEBUG - Added section: 8 Preliminary Object-Oriented Domain Analysis with length: 146
+2025-05-06 16:38:37,872 - text_processing - DEBUG - Added section: 9 Operational Scenarios with length: 4842
+2025-05-06 16:38:37,872 - text_processing - DEBUG - Added section: 10 Project Plan with length: 415
+2025-05-06 16:38:37,893 - text_processing - INFO - Found 33 potential figures in document
+2025-05-06 16:38:37,895 - text_processing - INFO - Figure: 'The annotation was done using the Visual Object Tagging Tool (V oTT), which is an open source labeling and annotation tool for either video or image assets' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,895 - text_processing - INFO - Figure: 'Augmented Reality Maintenance Assistant Using YOLOv5 [4] Konstantinidis et al' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,896 - text_processing - INFO - Figure: 'Comparing MARMA to paper-based and digital processes, it shortened the overall repair time of a car’s AC compressor by 30%' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,896 - text_processing - INFO - Figure: 'A Mobile Augmented reality system to assist auto mechanics [5] Ana Cachada et al' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,896 - text_processing - INFO - Figure: 'AR for Industrial Maintenance [6] Figure 4: AR for Industrial Maintenance [6] 2' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,896 - text_processing - INFO - Figure: 'WorxAR [7] Figure 6: WorxAR [7] 2' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,896 - text_processing - INFO - Figure: 'Bosch [8] Figure 8: Bosch [8]' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,898 - text_processing - INFO - Figure: 'The annotation was done using the Visual Object Tagging Tool (V oTT), which is an open source labeling and annotation tool for either video or image assets. To ensure the technicians are using the right tools and equipment, each equipment is saved by a unique code within the system. FFmpeg Platform was used to record, convert, and stream video and audio within the system. The system was also offered to the users both offline and online. Figure 1: Augmented Reality Maintenance Assistant Using YOLOv5 [4] Konstantinidis et al. [5] propose MARMA, an AR-based maintenance assistant. It is a Unity mobile application that has been implemented and tested by maintenance engineers in the au- tomotive industry. This system identifies a component in the user’s environment, and provides visualizations to its maintenance instructions depending on its condition. To build the system, the 5 Vuforia Object Scanner (including the FAST, and SURF algorithms) is utilized for the feature ex- traction and vector creation processes of the machine. In the runtime, the Vuforia natural feature tracking (NFT) method is integrated to identify and track the component of interest throughout the recording process after feature matching using the SURF algorithm. Employing the tiny-YOLOv3 detector, the system locates the area of interest within the camera’s frame during the real-time pro- cess and crops the recorded image. The 3D CAD models are then overlaid on the asset of interest accompanied by a navigable guide of instructions, as shown in Figure 2 Comparing MARMA to paper-based and digital processes, it shortened the overall repair time of a car’s AC compressor by 30%. Figure 2: A Mobile Augmented reality system to assist auto mechanics [5] Ana Cachada et al. [6] proposes a prototype for an AR maintenance application that serves an automotive production unit. The authors acknowledge how maintenance tasks are becoming increasingly complex, due the numerous steps required to be performed with various tools. Thus, Ana Cachada et al. designed the AR application shown in Figures 3 and 4 to make the training and execution processes easier. The application devises an Intelligent Personal Assistant (IPA) to help technicians in performing the maintenance tasks. Also, an Intelligent Decision Support System (IDSS) was utilized to further improve the decision making process during the execution of the maintenance tasks. Prior to the decision making step, Business Process Model and Notation (BPMN) standard is followed to describe the maintenance steps in a graphical notation, and then they are fed into Camunds platform to be converted into XML files. Then, the XML files are processed to be displayed by Unity 3D. Afterwards, Vuforia AR SDK is used to develop the AR marker-based application. The authors then used Microsoft HoloLens and Lenovo 10 Tablet to furnish the application. To validate the application, a System Usability Scale (SUS) Questionnaire was carried and resulted in a score of 84.4 which corresponds to excellent. Ultimately, the authors aim to make the holoLens more immersive, along with supporting voice media to provide more assistance to technicians. 6 Figure 3: AR for Industrial Maintenance [6] Figure 4: AR for Industrial Maintenance [6] 2.2 Business Applications 2.2.1 WorxAR WorxAR [7] is an AR-based application, as shown in Figures 5 and 6, developed by an Australian company called Tradiebot. The application helps technicians by diagnosing any issues, locating and highlighting the parts, and guiding them throughout performing services and repairs. The latest digital schematic diagrams, data sheets, and step by step instructions are overlaid onto the user’s field of view without concealing what they’re working on. They’re also notified about what cannot be modified without compromising the vehicle systems’ safety and integrity. WorxAR also allows users to enter a remote video call with an expert and receive interactive guidance. Virtual quality control check sheets, including capturing images for quality records, are used so that the users can verify the condition and status of the job. It’s made for Phones, Tablets, and Smart Glasses. Figure 5: WorxAR [7] Figure 6: WorxAR [7] 2.2.2 Re’flekt One Re’flekt One [8] is an AR content platform that enables innovative enterprises to create interactive manuals and documentation. It has provided solutions for many leading companies in the market, such as: Bosch The Bosch Common Augmented Reality Platform (CAP) [9], based on the Re’flekt One operating system, targets workshop trainees. It enables them to stay updated with the constantly changing 7 vehicle product lines developments. The system displays for them any new vehicle functionality or information on demand- as shown in Figures 7 and 8, as well as allows them to enlarge and rotate the components in relevance. It’s made available on both Tablets and Smart Glasses (such as the Microsoft HoloLens). Figure 7: Bosch [8] Figure 8: Bosch [8]' mentioned 2 times in 1 sections
+2025-05-06 16:38:37,899 - text_processing - INFO - Figure: ', the system workflow can be modeled in 4 main steps' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,900 - text_processing - INFO - Figure: 'System Overview 3' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,900 - text_processing - INFO - Figure: ', the application is developed using the Flutter SDK' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,901 - text_processing - INFO - Figure: 'System Context 3' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,901 - text_processing - INFO - Figure: 'the system workflow can be modeled in 4 main steps. 3.2.1 Scanning The user is prompted to scan their car from the inside or outside using their device’s camera. 3.2.2 Object detection and recognition An object detection and recognition model is utilized to identify the objects in real time. This model is trained via Wikitude Studio using a dataset composed of images of different car compo- nents. 8 3.2.3 Instructions request Depending on the user’s choice, the necessary instructions are requested from the cloud Firebase backend. These instructions include text and 3D models with their animation, they guide the user through a certain maintenance procedure or get familiar with a feature. The user has also the option to request remote assistance from a specialist for more advanced maintenance procedures. In this case, a live video call takes place where the professional technician can give instructions throughout the call using their voice or AR annotations through Microsoft’s Dynamics 365 Remote Assist. 3.2.4 AR instructions overlay and object tracking The retrieved instructions are overlaid onto the car components via the Wikitude SDK. Figure 9: System Overview 3.3 System Scope The system shall address the following: • The system shall devise a markerless-based AR system to display detailed instructions for car assistance tasks. 9 • The system shall utilize machine learning models and computer vision techniques for car components detection and recognition. • The system shall overlay the guiding instructions to assist car owners in maintaining their cars and getting acquainted with their cars’ features. • The system shall include procedures that ensures car owners’ safety, that is the system will not incorporate hazardous procedures. • The system shall be able to connect car owners to an expert at the headquarters for assistance. • The system shall offer complementary services for car owners such as finding nearby main- tenance centers. • The system shall be compatible with different hand-held devices. 3.4 System Context The system is built to interact with various external systems in order to achieve its functional and non-functional requirements. As illustrated in figure 10, the application is developed using the Flutter SDK. A connection with a Firebase backend is established for inserting and retrieving the data modeled in section 7.1. Moreover, the Wikitude Studio, SDK, and Encoder provide the needed environment to generate object recognition models, optimize 3D models for low-performance de- vices, and overlay and track objects onto the user’s environment. Furthermore, Microsoft’s Dy- namics 365 Remote Assist shall be integrated to ensure live calls with technicians with the ability to overlay AR annotations. 10 Figure 10: System Context 3.5 Objectives • To develop a user-friendly application that is accessible through mobile devices and tablets to assist average-skilled car owners to easily follow the instructions for their vehicle mainte- nance. • To allow the detection and recognition of the different car parts, whether under-hood com- ponents or car dashboard triggers. • To overlay detailed instructions over the car parts, in the real scene, to perform a task. In- structions can be textual, pictorial, or animated 3D models. 11 • To display warnings to car owners, during a procedure, to prevent them from executing the procedure incorrectly. • To offer a tele-assistance feature for the car owners to get assistance from a remote expert. • To offer complementary car support features to car owners including list of nearby main- tenance centers, reminders for car maintenance procedures, and maintenance checklist for road trips. • To auto-generate detailed report after each car maintenance procedure. 3.6 User Characteristics The system mainly targets car owners to assist them in maintaining their cars and getting ac- quainted with its features. Consequently, the system will also be used by admins and technicians to facilitate the maintenance and feature acquainting procedures onto the car owners. Also, the system is designed to be user-friendly. Howevere, all users must have • basic mobile handling skills e.g connecting to the internet, downloading apps, and signing into a software. • a brief understanding of what AR is and how it works.' mentioned 2 times in 1 sections
+2025-05-06 16:38:37,902 - text_processing - INFO - Figure: 'System\s+Overview' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,902 - text_processing - INFO - Figure: 'System\s+Context' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,902 - text_processing - INFO - Figure: 'demonstrates the system functional requirements' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,904 - text_processing - INFO - Figure: 'Modules Use Case Diagram 1' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,904 - text_processing - INFO - Figure: 'demonstrates the system functional requirements. The system is composed of three user types: car owner, admin, and technician. 12 Figure 11: Modules Use Case Diagram 1. General Requirements (a) The system shall detect and recognize the different car components scanned using ma- chine learning models and computer vision techniques. (GR01) (b) The system shall label the different car components when scanning the car. (GR02) (c) The system shall overlay the guiding instructions in pictorial, textual, and 3d animated forms. (GR03) 13 (d) The system shall generate a full report of each car issue after each maintenance proce- dure. (GR04) 2. Car owner module (a) The car owner shall be able to add/edit their car’s specifications into the system e.g car model. (COR01) (b) The car owner shall be able to choose a procedure from the available procedures, whether it is a repair procedure - e.g add car coolant, jump-start car, replace car fuses, change car tyres - or a feature acquainting procedure. (COR02) (c) The car owner shall be able to scan the car’s under-hood components or dashboard triggers. (COR03) (d) The car owner should be able to preview all the instructions to be done ahead. (COR04) (e) The car owner shall be able to view overlaid instructions in animated 3D and textual forms. (COR05) (f) The car owner shall receive some warnings if a step was done incorrectly. (COR06) (g) The car owner shall be able to seek assistance from a remote mechanical assistant. (COR07) (h) The car owner shall be able to view historical reports for all procedures done. (COR08) (i) The car owner shall be notified when it’s time to do maintenance to their car. (COR09) (j) The car owner shall be able to view the nearby maintenance centers depending on their car model. (COR10) (k) The car owner should be able to formulate a maintenance checklist to be viewed before traveling. (COR11) 3. Admin module (a) The admin shall be able to add/edit/delete a car model to the database. (AR01) (b) The admin shall be able to add/edit/delete the procedures available into the system. (AR02) (c) The admin shall be able to view the history of car owners’ reports and history of the tele-communication between the car owners and the technicians. (AR03) 4. Technician module (a) The technician shall receive assistance requests from car owners. (TR01) (b) The technician shall be able to view a full detailed report of the user’s car issues. (TR02) (c) The technician shall be able to view what is scanned by the car owner’s camera, while in the live call. (TR03) (d) The technician shall be able to annotate on the screen to assist the car owner, while in the live call. (TR04) 14 4.2 Detailed Functional Specification Table 2: selectProcedure Function Description Name selectProcedure Code COR02 priority Extreme CriticalThis function is crucial to allow the car owner to proceed with a specific proce- dure. DescriptionThe car owner is presented with a list of procedures which they shall choose one to be guided through. Input carModelID, procedureID Output instructionIDs[] Pre- condition- The car owner must be logged in. - The car owner must have entered their car specs to be presented with the ap- propriate list of procedures. Post- condi- tionThe instructions will be overlaid onto the screen for the car owner. Dependency Depends on COR01 Risk none Table 3: overlayInstructions Function Description Name overlayInstructions Code GR03 priority Extreme CriticalThis is one of the most crucial functionalities in the system as it encompasses the display of the procedure instructions to assist users in performing the main- tenance tasks. DescriptionAfter the car owner selects the procedure, this function displays the detailed steps by overlaying it using AR to accomplish the procedure. The textual instructions are accompanied with 3d animated models overlaid onto the screen to ensure the car owner will execute the steps correctly. Input instructionID[] Output True if the instructions are overlaid successfully. Pre- condition- User’s car model must be available - A specific procedure is selected Post- condi- tionA report is formulated if the task was for maintenance Dependency Depends on COR02 Risk Instructions for this procedure are unavailable 15 Table 4: generateReport Function Description Name generateReport Code GR04 priority Extreme Critical This function is crucial to facilitate the assistance process onto the technicians. DescriptionAfter the car owner finishes a maintenance task, a detailed report of the issue is generated; the report indicates the car model, the issue happened, the procedure carried out, and the dates on which this issue happened. Input procedureID, userID, carModelID Output True if report was generated successfully. Pre- conditionThe car owner must have reported a car problem whether they chose a procedure or requested remote assistance. Post- condi- tionThe report is displayed to the user. Dependency Depends on COR02 and COR07 Risk The car owner may enter an incorrect description of their car issue. Table 5: addCarModel Function Description Name addCarModel Code AR01 priority Extreme Critical Essential for the system to support more car models. DescriptionThis function allows the admin to add a new car model with its available proce- dures. Input carModelID, procedureID, instructionID Output True if new model was added successfully Pre- conditionAdmin needs to be logged in. Post- condi- tionA pop-up indicates that the car model was added successfully. Dependency none RiskAdmin may add incorrect information but this can be solved by the editing fea- ture. 16 Table 6: annotate Function Description Name annotate Code TR04 priority Extreme CriticalThis function is crucial to allow technicians to guide car owners through a tech- nical procedure through communicating with a remote access and control API. DescriptionAfter the technician receives an assistance request, they will be able to assist the car owner in a procedure through annotating on the screen e.g adding arrows to point to a specific component. Input modelID Output True if API preformed annotation successfully. Pre- condition- Technician must be logged. - Technician must accept the assistance request. Post- condi- tionCar owner will view the annotation on their side. Dependency Depends on TR01 Risk- Annotation is not visible to the car owner. - Connection error.' mentioned 2 times in 1 sections
+2025-05-06 16:38:37,905 - text_processing - INFO - Figure: 'Use\s+Case' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,907 - text_processing - INFO - Figure: ', has been constructed from a car owned by one of the team members' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,907 - text_processing - INFO - Figure: 'Dataset 19 7' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,908 - text_processing - INFO - Figure: 'demonstrates the structure of the stored data' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,910 - text_processing - INFO - Figure: 'EERD' mentioned 3 times in 2 sections
+2025-05-06 16:38:37,913 - text_processing - INFO - Figure: 'has been constructed from a car owned by one of the team members. It consists of 461 images of car components distributed into the following classes: coolant, engine, oil reservoir, power, and windshield fluid. Figure 12: Dataset 19 7.2 Database The dataset images are utilized to create a point cloud on Wikitude Studio, from which a Wiktude Target Object (.wto) model is generated. This model shall be stored in the database and used for object detection and tracking. Moreover, FBX 3D models are converted into the WT3 format using the Wikitude Encoder and are inserted in the database in their new format. The Enhanced Entity Relationship Diagram (EERD) in figure 13 demonstrates the structure of the stored data. 20 Figure 13: EERD' mentioned 2 times in 1 sections
+2025-05-06 16:38:37,914 - text_processing - INFO - Figure: 'Entity\s+Relationship' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,915 - text_processing - INFO - Figure: 'AGM email 1 28 Figure 22: AGM email 2 11' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,916 - text_processing - INFO - Figure: '29 Figure 23: Wikitude Edu License Email References [1] U' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,916 - text_processing - INFO - Figure: 'AGM email 1 28 Figure 22: AGM email 2 11.2.2 Wikitude Edu License The team members successfully applied and received the Wikitude Edu License valid for a year, as demonstrated in the email in figure 23. 29 Figure 23: Wikitude Edu License Email References [1] U.S. new car sales to rise in 2022 .URL:https://www.reuters.com/markets/europe/ us - new - car - sales - rise - 2022 - pent - up - demand - edmunds - 2021 - 12 - 16 / # : ~:text=Data%20firm%20IHS%20Markit%20on, and%2028.99%20million%20in% 202024. . [2] In: Augmented reality will become vital in car sales by 2021 ().URL:https://cardealermagazine. co . uk / publish / augmented - reality - will - become - vital - car - sales - 2021 / 129175 . [3] Azreen Zuriathy Halim. “Applications of Augmented Reality For Inspection and Mainte- nance Process in Automotive Industry”. In: Feb. 2018. DOI:10.4314/jfas.v10i3s.35 . [4] Ana Malta, Mateus Mendes, and Torres Farinha. “Augmented Reality Maintenance Assis- tant Using YOLOv5”. In: Applied Sciences 11.11 (2021). ISSN : 2076-3417. DOI:10.3390/ app11114758 .URL:https://www.mdpi.com/2076-3417/11/11/4758 . 30 [5] Fotios K. Konstantinidis, Ioannis Kansizoglou, Nicholas Santavas, et al. “MARMA: A Mo- bile Augmented Reality Maintenance Assistant for Fast-Track Repair Procedures in the Context of Industry 4.0”. In: Machines 8.4 (2020). ISSN : 2075-1702. DOI:10 . 3390 / machines8040088 .URL:https://www.mdpi.com/2075-1702/8/4/88 . [6] Ana Cachada, David Costa, Hasmik Badikyan, et al. “Using AR Interfaces to Support In- dustrial Maintenance Procedures”. In: IECON 2019 - 45th Annual Conference of the IEEE Industrial Electronics Society . V ol. 1. 2019, pp. 3795–3800. DOI:10.1109/IECON.2019. 8927815 . [7] Worxar - Tradiebot - immersive technologies . Dec. 2021. URL:https://tradiebot.com/ portfolio/worxar/ . [8] Re’flekt. Augmented reality software for maintenance, operations and training .URL:https: //www.re-flekt.com/reflekt-one . [9] Re’flekt. Bosch common AR platform .URL:https://www.re-flekt.com/portfolio- item/bosch-common-ar-platform?hsLang=en . [10] Documentation .URL:https://www.wikitude.com/external/doc/documentation/ 9.10/flutter/supporteddevices.html#supported-devices . 31' mentioned 2 times in 1 sections
+2025-05-06 16:38:37,918 - text_processing - INFO - Figure: '21 Figure 14: Initial UML Class Diagram' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,919 - text_processing - INFO - Figure: 'Initial UML Class Diagram' mentioned 2 times in 1 sections
+2025-05-06 16:38:37,919 - text_processing - INFO - Figure: 'Class\s+Diagram' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,920 - text_processing - INFO - Figure: 'First Phase of Project Plan Gantt Chart 24 Figure 16: Second Phase of Project Plan Gantt Chart Figure 17: Third Part of Project Plan Gantt Chart 25 Figure 18: Fourth Part of Project Plan Gantt Chart Figure 19: Fifth Part of Project Plan Gantt Chart Figure 20: Sixth Part of Project Plan Gantt Chart 26' mentioned 3 times in 1 sections
+2025-05-06 16:38:37,920 - text_processing - INFO - Figure: 'Gantt\s+Chart' mentioned 1 times in 1 sections
+2025-05-06 16:38:37,921 - text_processing - INFO - Starting diagram extraction from PDF: uploads\1746538717_5f50bab5-ebe6-429c-aad6-6fa4e02d5040.pdf
+2025-05-06 16:38:37,922 - text_processing - INFO - Logs being saved to: logs\diagram_extraction_20250506_163817.log
+2025-05-06 16:38:37,922 - text_processing - INFO - Scanning document for figure references
+2025-05-06 16:38:37,943 - text_processing - INFO - PDF has 31 pages
+2025-05-06 16:38:37,943 - text_processing - INFO - Processing page 1/31
+2025-05-06 16:38:37,965 - text_processing - INFO - Processing page 2/31
+2025-05-06 16:38:38,003 - text_processing - DEBUG - Added section: 7.2 Database . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+2025-05-06 16:38:38,003 - text_processing - INFO - Processing page 3/31
+2025-05-06 16:38:38,010 - text_processing - DEBUG - Added section: 11.2.2 Wikitude Edu License . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+2025-05-06 16:38:38,011 - text_processing - INFO - Processing page 4/31
+2025-05-06 16:38:38,028 - text_processing - DEBUG - Added section: 1.1 Purpose of this document
+2025-05-06 16:38:38,028 - text_processing - DEBUG - Added section: 1.2 Scope of this document
+2025-05-06 16:38:38,029 - text_processing - DEBUG - Added section: 1.3 Business Context
+2025-05-06 16:38:38,030 - text_processing - DEBUG - Added section: 2.1 Academic
+2025-05-06 16:38:38,030 - text_processing - INFO - Processing page 5/31
+2025-05-06 16:38:38,043 - text_processing - INFO - Processing page 6/31
+2025-05-06 16:38:38,063 - text_processing - INFO - Processing page 7/31
+2025-05-06 16:38:38,082 - text_processing - DEBUG - Added section: 2.2.1 WorxAR
+2025-05-06 16:38:38,083 - text_processing - DEBUG - Added section: 2.2.2 Re’flekt One
+2025-05-06 16:38:38,083 - text_processing - INFO - Processing page 8/31
+2025-05-06 16:38:38,101 - text_processing - DEBUG - Added section: 3.1 Problem Statement
+2025-05-06 16:38:38,101 - text_processing - DEBUG - Added section: 3.2 System Overview
+2025-05-06 16:38:38,102 - text_processing - DEBUG - Added section: 3.2.1 Scanning
+2025-05-06 16:38:38,102 - text_processing - DEBUG - Added section: 3.2.2 Object detection and recognition
+2025-05-06 16:38:38,103 - text_processing - INFO - Processing page 9/31
+2025-05-06 16:38:38,113 - text_processing - DEBUG - Added section: 3.2.3 Instructions request
+2025-05-06 16:38:38,114 - text_processing - DEBUG - Added section: 3.2.4 AR instructions overlay and object tracking
+2025-05-06 16:38:38,114 - text_processing - DEBUG - Added section: 3.3 System Scope
+2025-05-06 16:38:38,114 - text_processing - INFO - Processing page 10/31
+2025-05-06 16:38:38,123 - text_processing - DEBUG - Added section: 3.4 System Context
+2025-05-06 16:38:38,124 - text_processing - INFO - Processing page 11/31
+2025-05-06 16:38:38,133 - text_processing - DEBUG - Added section: 3.5 Objectives
+2025-05-06 16:38:38,134 - text_processing - INFO - Processing page 12/31
+2025-05-06 16:38:38,143 - text_processing - DEBUG - Added section: 3.6 User Characteristics
+2025-05-06 16:38:38,143 - text_processing - DEBUG - Added section: 4.1 System Functions
+2025-05-06 16:38:38,144 - text_processing - INFO - Processing page 13/31
+2025-05-06 16:38:38,150 - text_processing - INFO - Processing page 14/31
+2025-05-06 16:38:38,164 - text_processing - INFO - Processing page 15/31
+2025-05-06 16:38:38,186 - text_processing - DEBUG - Added section: 4.2 Detailed Functional Specification
+2025-05-06 16:38:38,187 - text_processing - INFO - Processing page 16/31
+2025-05-06 16:38:38,206 - text_processing - INFO - Processing page 17/31
+2025-05-06 16:38:38,221 - text_processing - DEBUG - Added section: 5.1 Standards Compliance
+2025-05-06 16:38:38,221 - text_processing - DEBUG - Added section: 5.2 Hardware Limitations
+2025-05-06 16:38:38,222 - text_processing - DEBUG - Added section: 5.3 Other Constraints
+2025-05-06 16:38:38,224 - text_processing - INFO - Processing page 18/31
+2025-05-06 16:38:38,233 - text_processing - DEBUG - Added section: 6.1 Safety
+2025-05-06 16:38:38,234 - text_processing - DEBUG - Added section: 6.2 Usability
+2025-05-06 16:38:38,234 - text_processing - DEBUG - Added section: 6.3 Portability
+2025-05-06 16:38:38,234 - text_processing - DEBUG - Added section: 6.4 Scalability
+2025-05-06 16:38:38,236 - text_processing - DEBUG - Added section: 6.5 Maintainability
+2025-05-06 16:38:38,236 - text_processing - DEBUG - Added section: 6.6 Security
+2025-05-06 16:38:38,236 - text_processing - INFO - Processing page 19/31
+2025-05-06 16:38:38,241 - text_processing - DEBUG - Added section: 7.1 Dataset
+2025-05-06 16:38:38,242 - text_processing - INFO - Processing page 20/31
+2025-05-06 16:38:38,247 - text_processing - DEBUG - Added section: 7.2 Database
+2025-05-06 16:38:38,247 - text_processing - INFO - Processing page 21/31
+2025-05-06 16:38:38,251 - text_processing - DEBUG - Added section: 8 Preliminary Object-Oriented Domain Analysis
+2025-05-06 16:38:38,252 - text_processing - INFO - Processing page 22/31
+2025-05-06 16:38:38,263 - text_processing - DEBUG - Added section: 9 Operational Scenarios
+2025-05-06 16:38:38,263 - text_processing - INFO - Processing page 23/31
+2025-05-06 16:38:38,278 - text_processing - INFO - Processing page 24/31
+2025-05-06 16:38:38,286 - text_processing - DEBUG - Added section: 10 Project Plan
+2025-05-06 16:38:38,286 - text_processing - INFO - Processing page 25/31
+2025-05-06 16:38:38,290 - text_processing - INFO - Processing page 26/31
+2025-05-06 16:38:38,295 - text_processing - INFO - Processing page 27/31
+2025-05-06 16:38:38,306 - text_processing - DEBUG - Added section: 11.1 Definitions, Acronyms, Abbreviations
+2025-05-06 16:38:38,306 - text_processing - DEBUG - Added section: 11.2.1 Abou Ghaly Motors Collaboration
+2025-05-06 16:38:38,308 - text_processing - INFO - Processing page 28/31
+2025-05-06 16:38:38,309 - text_processing - INFO - Processing page 29/31
+2025-05-06 16:38:38,313 - text_processing - DEBUG - Added section: 11.2.2 Wikitude Edu License
+2025-05-06 16:38:38,314 - text_processing - INFO - Processing page 30/31
+2025-05-06 16:38:38,326 - text_processing - INFO - Processing page 31/31
+2025-05-06 16:38:38,337 - text_processing - INFO - Found 37 sections in the document
+2025-05-06 16:38:38,341 - text_processing - INFO - Found 26 potential figures in document
+2025-05-06 16:38:38,341 - text_processing - INFO - Figure: 'WorxAR [7]
+ Figure 6: WorxAR [7]' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,341 - text_processing - INFO - Figure: 'WorxAR [7]' mentioned 4 times in 1 sections
+2025-05-06 16:38:38,341 - text_processing - INFO - Figure: 'System Overview' mentioned 4 times in 2 sections
+2025-05-06 16:38:38,342 - text_processing - INFO - Figure: ', the system workflow can be modeled in 4 main steps' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,342 - text_processing - INFO - Figure: 'the system workflow can be modeled in 4 main steps.' mentioned 2 times in 1 sections
+2025-05-06 16:38:38,343 - text_processing - INFO - Figure: 'System\s+Overview' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,343 - text_processing - INFO - Figure: 'System Context' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,343 - text_processing - INFO - Figure: ', the application is developed using the
+Flutter SDK' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,343 - text_processing - INFO - Figure: 'the application is developed using the' mentioned 2 times in 1 sections
+2025-05-06 16:38:38,343 - text_processing - INFO - Figure: 'demonstrates the system functional requirements' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,344 - text_processing - INFO - Figure: 'demonstrates the system functional requirements. The' mentioned 2 times in 1 sections
+2025-05-06 16:38:38,344 - text_processing - INFO - Figure: 'Use\s+Case' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,344 - text_processing - INFO - Figure: ', has been constructed from a car owned by one of the
+team members' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,344 - text_processing - INFO - Figure: 'Dataset
+19' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,345 - text_processing - INFO - Figure: 'has been constructed from a car owned by one of the' mentioned 2 times in 1 sections
+2025-05-06 16:38:38,345 - text_processing - INFO - Figure: 'Dataset' mentioned 2 times in 1 sections
+2025-05-06 16:38:38,345 - text_processing - INFO - Figure: 'demonstrates the structure of the stored data' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,345 - text_processing - INFO - Figure: 'demonstrates the structure of the stored data.' mentioned 2 times in 1 sections
+2025-05-06 16:38:38,345 - text_processing - INFO - Figure: 'EERD' mentioned 2 times in 2 sections
+2025-05-06 16:38:38,346 - text_processing - INFO - Figure: 'Entity\s+Relationship' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,346 - text_processing - INFO - Figure: '21' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,346 - text_processing - INFO - Figure: 'Class\s+Diagram' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,346 - text_processing - INFO - Figure: 'First Phase of Project Plan Gantt Chart
+24' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,348 - text_processing - INFO - Figure: 'First Phase of Project Plan Gantt Chart' mentioned 2 times in 1 sections
+2025-05-06 16:38:38,348 - text_processing - INFO - Figure: 'Gantt\s+Chart' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,349 - text_processing - INFO - Figure: '29' mentioned 1 times in 1 sections
+2025-05-06 16:38:38,349 - text_processing - INFO - Found 26 figure references in the document
+2025-05-06 16:38:38,349 - text_processing - INFO - Will process figure: System Overview (mentioned 4 times)
+2025-05-06 16:38:38,350 - text_processing - INFO - Will process figure: System Context (mentioned 1 times)
+2025-05-06 16:38:38,350 - text_processing - INFO - Will process figure: EERD (mentioned 2 times)
+2025-05-06 16:38:38,350 - text_processing - INFO - Will process figure: First Phase of Project Plan Gantt Chart
+24 (mentioned 1 times)
+2025-05-06 16:38:38,350 - text_processing - INFO - Will process figure: First Phase of Project Plan Gantt Chart (mentioned 2 times)
+2025-05-06 16:38:38,351 - text_processing - INFO - Extracting images for 5 important diagrams
+2025-05-06 16:38:38,351 - text_processing - INFO - Target figure names: ['System Overview', 'System Context', 'EERD', 'First Phase of Project Plan Gantt Chart\n24', 'First Phase of Project Plan Gantt Chart', 'system overview', 'system context', 'use case', 'eerd', 'entity relationship', 'class diagram', 'gantt chart']
+2025-05-06 16:38:38,375 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 16:38:38,375 - text_processing - INFO - Extracting text from PDF: uploads\1746538717_5f50bab5-ebe6-429c-aad6-6fa4e02d5040.pdf
+2025-05-06 16:38:38,668 - text_processing - DEBUG - Extracted 35458 characters from PDF
+2025-05-06 16:38:38,673 - text_processing - INFO - Extracted 90 sections with 30 figures
+2025-05-06 16:38:43,465 - text_processing - INFO - Extracted 21 images from PDF
+2025-05-06 16:38:43,466 - text_processing - INFO - Processing figure: System Overview
+2025-05-06 16:38:43,466 - text_processing - WARNING - No relevant images found for System Overview, using broader matching
+2025-05-06 16:38:43,466 - text_processing - INFO - Found image with partial match for System Overview: uploads\System Overview\page_5img1.png
+2025-05-06 16:38:43,467 - text_processing - INFO - Found image with partial match for System Overview: uploads\System Overview\page_7img1.png
+2025-05-06 16:38:43,467 - text_processing - INFO - Processing image: uploads\System Overview\page_5img1.png
+2025-05-06 16:38:43,468 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:38:54,687 - text_processing - INFO - Received analysis from OpenAI (length: 1166)
+2025-05-06 16:38:54,688 - text_processing - INFO - Added diagram scope for System Overview
+2025-05-06 16:38:54,689 - text_processing - INFO - Processing image: uploads\System Overview\page_7img1.png
+2025-05-06 16:38:54,692 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:39:10,300 - text_processing - INFO - Received analysis from OpenAI (length: 1863)
+2025-05-06 16:39:10,300 - text_processing - INFO - Added diagram scope for System Overview
+2025-05-06 16:39:10,300 - text_processing - INFO - Processing figure: System Context
+2025-05-06 16:39:10,301 - text_processing - WARNING - No relevant images found for System Context, using broader matching
+2025-05-06 16:39:10,301 - text_processing - INFO - Found image with partial match for System Context: uploads\System Overview\page_5img1.png
+2025-05-06 16:39:10,302 - text_processing - INFO - Found image with partial match for System Context: uploads\System Overview\page_7img1.png
+2025-05-06 16:39:10,302 - text_processing - INFO - Processing image: uploads\System Overview\page_5img1.png
+2025-05-06 16:39:10,304 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:39:20,402 - text_processing - INFO - Received analysis from OpenAI (length: 1600)
+2025-05-06 16:39:20,402 - text_processing - INFO - Added diagram scope for System Context Diagram
+2025-05-06 16:39:20,402 - text_processing - INFO - Processing image: uploads\System Overview\page_7img1.png
+2025-05-06 16:39:20,406 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:39:37,173 - text_processing - INFO - Received analysis from OpenAI (length: 1830)
+2025-05-06 16:39:37,173 - text_processing - INFO - Added diagram scope for System Context Diagram
+2025-05-06 16:39:37,173 - text_processing - INFO - Processing figure: EERD
+2025-05-06 16:39:37,174 - text_processing - WARNING - No relevant images found for EERD, using broader matching
+2025-05-06 16:39:37,174 - text_processing - INFO - Processing figure: First Phase of Project Plan Gantt Chart
+24
+2025-05-06 16:39:37,174 - text_processing - WARNING - No relevant images found for First Phase of Project Plan Gantt Chart
+24, using broader matching
+2025-05-06 16:39:37,174 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart
+24: uploads\Project Plan\page_24img1.png
+2025-05-06 16:39:37,175 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart
+24: uploads\Project Plan\page_25img1.png
+2025-05-06 16:39:37,175 - text_processing - INFO - Processing image: uploads\Project Plan\page_24img1.png
+2025-05-06 16:39:37,176 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:39:52,035 - text_processing - INFO - Received analysis from OpenAI (length: 2076)
+2025-05-06 16:39:52,035 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 16:39:52,035 - text_processing - INFO - Processing image: uploads\Project Plan\page_25img1.png
+2025-05-06 16:39:52,035 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:40:10,068 - text_processing - INFO - Received analysis from OpenAI (length: 2231)
+2025-05-06 16:40:10,070 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 16:40:10,070 - text_processing - INFO - Processing figure: First Phase of Project Plan Gantt Chart
+2025-05-06 16:40:10,070 - text_processing - WARNING - No relevant images found for First Phase of Project Plan Gantt Chart, using broader matching
+2025-05-06 16:40:10,071 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart: uploads\Project Plan\page_24img1.png
+2025-05-06 16:40:10,071 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart: uploads\Project Plan\page_25img1.png
+2025-05-06 16:40:10,071 - text_processing - INFO - Processing image: uploads\Project Plan\page_24img1.png
+2025-05-06 16:40:10,072 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:40:29,220 - text_processing - INFO - Received analysis from OpenAI (length: 2534)
+2025-05-06 16:40:29,221 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 16:40:29,221 - text_processing - INFO - Processing image: uploads\Project Plan\page_25img1.png
+2025-05-06 16:40:29,221 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:40:42,262 - text_processing - INFO - Received analysis from OpenAI (length: 2227)
+2025-05-06 16:40:42,263 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 16:40:42,263 - text_processing - INFO - Completed diagram extraction with 3 diagrams analyzed
+2025-05-06 16:44:33,239 - text_processing - INFO - Starting diagram extraction from PDF: uploads\1746538717_5f50bab5-ebe6-429c-aad6-6fa4e02d5040.pdf
+2025-05-06 16:44:33,239 - text_processing - INFO - Logs being saved to: logs\diagram_extraction_20250506_163817.log
+2025-05-06 16:44:33,239 - text_processing - INFO - Scanning document for figure references
+2025-05-06 16:44:33,250 - text_processing - INFO - PDF has 31 pages
+2025-05-06 16:44:33,250 - text_processing - INFO - Processing page 1/31
+2025-05-06 16:44:33,267 - text_processing - INFO - Processing page 2/31
+2025-05-06 16:44:33,323 - text_processing - DEBUG - Added section: 7.2 Database . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+2025-05-06 16:44:33,323 - text_processing - INFO - Processing page 3/31
+2025-05-06 16:44:33,332 - text_processing - DEBUG - Added section: 11.2.2 Wikitude Edu License . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+2025-05-06 16:44:33,333 - text_processing - INFO - Processing page 4/31
+2025-05-06 16:44:33,348 - text_processing - DEBUG - Added section: 1.1 Purpose of this document
+2025-05-06 16:44:33,349 - text_processing - DEBUG - Added section: 1.2 Scope of this document
+2025-05-06 16:44:33,349 - text_processing - DEBUG - Added section: 1.3 Business Context
+2025-05-06 16:44:33,351 - text_processing - DEBUG - Added section: 2.1 Academic
+2025-05-06 16:44:33,352 - text_processing - INFO - Processing page 5/31
+2025-05-06 16:44:33,365 - text_processing - INFO - Processing page 6/31
+2025-05-06 16:44:33,387 - text_processing - INFO - Processing page 7/31
+2025-05-06 16:44:33,410 - text_processing - DEBUG - Added section: 2.2.1 WorxAR
+2025-05-06 16:44:33,411 - text_processing - DEBUG - Added section: 2.2.2 Re’flekt One
+2025-05-06 16:44:33,412 - text_processing - INFO - Processing page 8/31
+2025-05-06 16:44:33,436 - text_processing - DEBUG - Added section: 3.1 Problem Statement
+2025-05-06 16:44:33,436 - text_processing - DEBUG - Added section: 3.2 System Overview
+2025-05-06 16:44:33,436 - text_processing - DEBUG - Added section: 3.2.1 Scanning
+2025-05-06 16:44:33,438 - text_processing - DEBUG - Added section: 3.2.2 Object detection and recognition
+2025-05-06 16:44:33,438 - text_processing - INFO - Processing page 9/31
+2025-05-06 16:44:33,452 - text_processing - DEBUG - Added section: 3.2.3 Instructions request
+2025-05-06 16:44:33,452 - text_processing - DEBUG - Added section: 3.2.4 AR instructions overlay and object tracking
+2025-05-06 16:44:33,454 - text_processing - DEBUG - Added section: 3.3 System Scope
+2025-05-06 16:44:33,454 - text_processing - INFO - Processing page 10/31
+2025-05-06 16:44:33,463 - text_processing - DEBUG - Added section: 3.4 System Context
+2025-05-06 16:44:33,465 - text_processing - INFO - Processing page 11/31
+2025-05-06 16:44:33,472 - text_processing - DEBUG - Added section: 3.5 Objectives
+2025-05-06 16:44:33,474 - text_processing - INFO - Processing page 12/31
+2025-05-06 16:44:33,486 - text_processing - DEBUG - Added section: 3.6 User Characteristics
+2025-05-06 16:44:33,486 - text_processing - DEBUG - Added section: 4.1 System Functions
+2025-05-06 16:44:33,487 - text_processing - INFO - Processing page 13/31
+2025-05-06 16:44:33,497 - text_processing - INFO - Processing page 14/31
+2025-05-06 16:44:33,514 - text_processing - INFO - Processing page 15/31
+2025-05-06 16:44:33,541 - text_processing - DEBUG - Added section: 4.2 Detailed Functional Specification
+2025-05-06 16:44:33,541 - text_processing - INFO - Processing page 16/31
+2025-05-06 16:44:33,563 - text_processing - INFO - Processing page 17/31
+2025-05-06 16:44:33,581 - text_processing - DEBUG - Added section: 5.1 Standards Compliance
+2025-05-06 16:44:33,581 - text_processing - DEBUG - Added section: 5.2 Hardware Limitations
+2025-05-06 16:44:33,583 - text_processing - DEBUG - Added section: 5.3 Other Constraints
+2025-05-06 16:44:33,583 - text_processing - INFO - Processing page 18/31
+2025-05-06 16:44:33,595 - text_processing - DEBUG - Added section: 6.1 Safety
+2025-05-06 16:44:33,596 - text_processing - DEBUG - Added section: 6.2 Usability
+2025-05-06 16:44:33,596 - text_processing - DEBUG - Added section: 6.3 Portability
+2025-05-06 16:44:33,596 - text_processing - DEBUG - Added section: 6.4 Scalability
+2025-05-06 16:44:33,598 - text_processing - DEBUG - Added section: 6.5 Maintainability
+2025-05-06 16:44:33,599 - text_processing - DEBUG - Added section: 6.6 Security
+2025-05-06 16:44:33,599 - text_processing - INFO - Processing page 19/31
+2025-05-06 16:44:33,608 - text_processing - DEBUG - Added section: 7.1 Dataset
+2025-05-06 16:44:33,608 - text_processing - INFO - Processing page 20/31
+2025-05-06 16:44:33,617 - text_processing - DEBUG - Added section: 7.2 Database
+2025-05-06 16:44:33,618 - text_processing - INFO - Processing page 21/31
+2025-05-06 16:44:33,623 - text_processing - DEBUG - Added section: 8 Preliminary Object-Oriented Domain Analysis
+2025-05-06 16:44:33,624 - text_processing - INFO - Processing page 22/31
+2025-05-06 16:44:33,638 - text_processing - DEBUG - Added section: 9 Operational Scenarios
+2025-05-06 16:44:33,638 - text_processing - INFO - Processing page 23/31
+2025-05-06 16:44:33,657 - text_processing - INFO - Processing page 24/31
+2025-05-06 16:44:33,667 - text_processing - DEBUG - Added section: 10 Project Plan
+2025-05-06 16:44:33,667 - text_processing - INFO - Processing page 25/31
+2025-05-06 16:44:33,672 - text_processing - INFO - Processing page 26/31
+2025-05-06 16:44:33,676 - text_processing - INFO - Processing page 27/31
+2025-05-06 16:44:33,692 - text_processing - DEBUG - Added section: 11.1 Definitions, Acronyms, Abbreviations
+2025-05-06 16:44:33,692 - text_processing - DEBUG - Added section: 11.2.1 Abou Ghaly Motors Collaboration
+2025-05-06 16:44:33,693 - text_processing - INFO - Processing page 28/31
+2025-05-06 16:44:33,695 - text_processing - INFO - Processing page 29/31
+2025-05-06 16:44:33,702 - text_processing - DEBUG - Added section: 11.2.2 Wikitude Edu License
+2025-05-06 16:44:33,703 - text_processing - INFO - Processing page 30/31
+2025-05-06 16:44:33,716 - text_processing - INFO - Processing page 31/31
+2025-05-06 16:44:33,728 - text_processing - INFO - Found 37 sections in the document
+2025-05-06 16:44:33,731 - text_processing - INFO - Found 26 potential figures in document
+2025-05-06 16:44:33,732 - text_processing - INFO - Figure: 'WorxAR [7]
+ Figure 6: WorxAR [7]' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,732 - text_processing - INFO - Figure: 'WorxAR [7]' mentioned 4 times in 1 sections
+2025-05-06 16:44:33,733 - text_processing - INFO - Figure: 'System Overview' mentioned 4 times in 2 sections
+2025-05-06 16:44:33,733 - text_processing - INFO - Figure: ', the system workflow can be modeled in 4 main steps' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,733 - text_processing - INFO - Figure: 'the system workflow can be modeled in 4 main steps.' mentioned 2 times in 1 sections
+2025-05-06 16:44:33,733 - text_processing - INFO - Figure: 'System\s+Overview' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,733 - text_processing - INFO - Figure: 'System Context' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,733 - text_processing - INFO - Figure: ', the application is developed using the
+Flutter SDK' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,734 - text_processing - INFO - Figure: 'the application is developed using the' mentioned 2 times in 1 sections
+2025-05-06 16:44:33,734 - text_processing - INFO - Figure: 'demonstrates the system functional requirements' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,734 - text_processing - INFO - Figure: 'demonstrates the system functional requirements. The' mentioned 2 times in 1 sections
+2025-05-06 16:44:33,734 - text_processing - INFO - Figure: 'Use\s+Case' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,735 - text_processing - INFO - Figure: ', has been constructed from a car owned by one of the
+team members' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,735 - text_processing - INFO - Figure: 'Dataset
+19' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,735 - text_processing - INFO - Figure: 'has been constructed from a car owned by one of the' mentioned 2 times in 1 sections
+2025-05-06 16:44:33,735 - text_processing - INFO - Figure: 'Dataset' mentioned 2 times in 1 sections
+2025-05-06 16:44:33,735 - text_processing - INFO - Figure: 'demonstrates the structure of the stored data' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,737 - text_processing - INFO - Figure: 'demonstrates the structure of the stored data.' mentioned 2 times in 1 sections
+2025-05-06 16:44:33,737 - text_processing - INFO - Figure: 'EERD' mentioned 2 times in 2 sections
+2025-05-06 16:44:33,738 - text_processing - INFO - Figure: 'Entity\s+Relationship' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,738 - text_processing - INFO - Figure: '21' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,739 - text_processing - INFO - Figure: 'Class\s+Diagram' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,739 - text_processing - INFO - Figure: 'First Phase of Project Plan Gantt Chart
+24' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,740 - text_processing - INFO - Figure: 'First Phase of Project Plan Gantt Chart' mentioned 2 times in 1 sections
+2025-05-06 16:44:33,740 - text_processing - INFO - Figure: 'Gantt\s+Chart' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,740 - text_processing - INFO - Figure: '29' mentioned 1 times in 1 sections
+2025-05-06 16:44:33,740 - text_processing - INFO - Found 26 figure references in the document
+2025-05-06 16:44:33,740 - text_processing - INFO - Will process figure: System Overview (mentioned 4 times)
+2025-05-06 16:44:33,740 - text_processing - INFO - Will process figure: System Context (mentioned 1 times)
+2025-05-06 16:44:33,740 - text_processing - INFO - Will process figure: EERD (mentioned 2 times)
+2025-05-06 16:44:33,741 - text_processing - INFO - Will process figure: First Phase of Project Plan Gantt Chart
+24 (mentioned 1 times)
+2025-05-06 16:44:33,741 - text_processing - INFO - Will process figure: First Phase of Project Plan Gantt Chart (mentioned 2 times)
+2025-05-06 16:44:33,741 - text_processing - INFO - Extracting images for 5 important diagrams
+2025-05-06 16:44:33,741 - text_processing - INFO - Target figure names: ['System Overview', 'System Context', 'EERD', 'First Phase of Project Plan Gantt Chart\n24', 'First Phase of Project Plan Gantt Chart', 'system overview', 'system context', 'use case', 'eerd', 'entity relationship', 'class diagram', 'gantt chart']
+2025-05-06 16:44:33,746 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 16:44:33,747 - text_processing - INFO - Extracting text from PDF: uploads\1746538717_5f50bab5-ebe6-429c-aad6-6fa4e02d5040.pdf
+2025-05-06 16:44:34,065 - text_processing - DEBUG - Extracted 35458 characters from PDF
+2025-05-06 16:44:34,070 - text_processing - INFO - Extracted 90 sections with 30 figures
+2025-05-06 16:44:38,838 - text_processing - INFO - Extracted 21 images from PDF
+2025-05-06 16:44:38,838 - text_processing - INFO - Processing figure: System Overview
+2025-05-06 16:44:38,838 - text_processing - WARNING - No relevant images found for System Overview, using broader matching
+2025-05-06 16:44:38,839 - text_processing - INFO - Found image with partial match for System Overview: uploads\System Overview\page_5img1.png
+2025-05-06 16:44:38,839 - text_processing - INFO - Found image with partial match for System Overview: uploads\System Overview\page_7img1.png
+2025-05-06 16:44:38,839 - text_processing - INFO - Processing image: uploads\System Overview\page_5img1.png
+2025-05-06 16:44:38,841 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:44:52,202 - text_processing - INFO - Received analysis from OpenAI (length: 1327)
+2025-05-06 16:44:52,202 - text_processing - INFO - Added diagram scope for System Overview
+2025-05-06 16:44:52,202 - text_processing - INFO - Processing image: uploads\System Overview\page_7img1.png
+2025-05-06 16:44:52,205 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:45:09,538 - text_processing - INFO - Received analysis from OpenAI (length: 1809)
+2025-05-06 16:45:09,539 - text_processing - INFO - Added diagram scope for System Overview
+2025-05-06 16:45:09,539 - text_processing - INFO - Processing figure: System Context
+2025-05-06 16:45:09,540 - text_processing - WARNING - No relevant images found for System Context, using broader matching
+2025-05-06 16:45:09,540 - text_processing - INFO - Found image with partial match for System Context: uploads\System Overview\page_5img1.png
+2025-05-06 16:45:09,540 - text_processing - INFO - Found image with partial match for System Context: uploads\System Overview\page_7img1.png
+2025-05-06 16:45:09,541 - text_processing - INFO - Processing image: uploads\System Overview\page_5img1.png
+2025-05-06 16:45:09,542 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:45:19,883 - text_processing - INFO - Received analysis from OpenAI (length: 1213)
+2025-05-06 16:45:19,885 - text_processing - INFO - Added diagram scope for System Context Diagram
+2025-05-06 16:45:19,885 - text_processing - INFO - Processing image: uploads\System Overview\page_7img1.png
+2025-05-06 16:45:19,888 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:45:31,112 - text_processing - INFO - Received analysis from OpenAI (length: 1480)
+2025-05-06 16:45:31,113 - text_processing - INFO - Added diagram scope for System Context Diagram
+2025-05-06 16:45:31,113 - text_processing - INFO - Processing figure: EERD
+2025-05-06 16:45:31,113 - text_processing - WARNING - No relevant images found for EERD, using broader matching
+2025-05-06 16:45:31,113 - text_processing - INFO - Processing figure: First Phase of Project Plan Gantt Chart
+24
+2025-05-06 16:45:31,113 - text_processing - WARNING - No relevant images found for First Phase of Project Plan Gantt Chart
+24, using broader matching
+2025-05-06 16:45:31,115 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart
+24: uploads\Project Plan\page_24img1.png
+2025-05-06 16:45:31,116 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart
+24: uploads\Project Plan\page_25img1.png
+2025-05-06 16:45:31,116 - text_processing - INFO - Processing image: uploads\Project Plan\page_24img1.png
+2025-05-06 16:45:31,116 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:45:43,580 - text_processing - INFO - Received analysis from OpenAI (length: 1929)
+2025-05-06 16:45:43,580 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 16:45:43,581 - text_processing - INFO - Processing image: uploads\Project Plan\page_25img1.png
+2025-05-06 16:45:43,581 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:45:56,682 - text_processing - INFO - Received analysis from OpenAI (length: 2154)
+2025-05-06 16:45:56,683 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 16:45:56,683 - text_processing - INFO - Processing figure: First Phase of Project Plan Gantt Chart
+2025-05-06 16:45:56,683 - text_processing - WARNING - No relevant images found for First Phase of Project Plan Gantt Chart, using broader matching
+2025-05-06 16:45:56,683 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart: uploads\Project Plan\page_24img1.png
+2025-05-06 16:45:56,684 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart: uploads\Project Plan\page_25img1.png
+2025-05-06 16:45:56,684 - text_processing - INFO - Processing image: uploads\Project Plan\page_24img1.png
+2025-05-06 16:45:56,685 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:46:04,414 - text_processing - INFO - Received analysis from OpenAI (length: 1337)
+2025-05-06 16:46:04,415 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 16:46:04,415 - text_processing - INFO - Processing image: uploads\Project Plan\page_25img1.png
+2025-05-06 16:46:04,415 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 16:46:21,261 - text_processing - INFO - Received analysis from OpenAI (length: 2391)
+2025-05-06 16:46:21,263 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 16:46:21,263 - text_processing - INFO - Completed diagram extraction with 3 diagrams analyzed

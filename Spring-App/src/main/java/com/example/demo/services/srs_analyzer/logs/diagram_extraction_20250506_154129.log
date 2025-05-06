@@ -1,0 +1,6 @@
+2025-05-06 15:41:32,418 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 15:41:32,419 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 15:41:32,419 - text_processing - INFO - Using device: CPU
+2025-05-06 15:41:32,419 - text_processing - INFO - Loading model: sshleifer/distilbart-cnn-6-6
+2025-05-06 15:41:34,744 - text_processing - INFO - Model loaded successfully
+2025-05-06 16:27:21,432 - text_processing - ERROR - Error during cleanup: 'NoneType' object has no attribute 'close'

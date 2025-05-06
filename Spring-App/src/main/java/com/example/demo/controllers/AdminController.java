@@ -15,16 +15,15 @@ import java.util.List;
 import java.util.Map;
 import com.example.demo.models.CourseModel;
 import com.example.demo.services.CourseService;
-import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/admin-api")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true", allowedHeaders = "*", methods = {
-        RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE })
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true", 
+             allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
 public class AdminController {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
-
+    
     @PostConstruct
     public void init() {
         logger.info("AdminController initialized");
@@ -43,12 +42,12 @@ public class AdminController {
             // Add debug logging
             System.out.println("AdminController: Fetching all users for admin panel");
             System.out.println("Request received at: " + new java.util.Date());
-
+            
             // Temporarily disable authentication check
             List<User> users = userService.findAllUsers();
-
+            
             System.out.println("Found " + users.size() + " users");
-
+            
             return ResponseEntity.ok(users);
         } catch (Exception e) {
             System.out.println("Error fetching users: " + e.getMessage());
@@ -63,24 +62,24 @@ public class AdminController {
         try {
             // Temporarily disable admin check
             /*
-             * // Verify the requester is an admin
-             * User admin = userService.findByEmail(request.getAdminEmail());
-             * if (admin == null || !admin.getEmail().equals("admin@gmail.com")) {
-             * return ResponseEntity.status(HttpStatus.FORBIDDEN)
-             * .body(Map.of("message", "Unauthorized access"));
-             * }
-             */
-
+            // Verify the requester is an admin
+            User admin = userService.findByEmail(request.getAdminEmail());
+            if (admin == null || !admin.getEmail().equals("admin@gmail.com")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Unauthorized access"));
+            }
+            */
+            
             // Update the user's role
             User user = userService.findById(request.getUserId());
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("message", "User not found"));
+                    .body(Map.of("message", "User not found"));
             }
-
+            
             user.setRole(request.getNewRole());
             userService.save(user);
-
+            
             return ResponseEntity.ok(Map.of("message", "Role updated successfully"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -134,7 +133,7 @@ public class AdminController {
             if (teacherId == null) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Teacher ID is required"));
             }
-
+            
             CourseModel updatedCourse = courseService.assignTeacherToCourse(courseId, teacherId);
             return ResponseEntity.ok(updatedCourse);
         } catch (Exception e) {
@@ -156,7 +155,7 @@ public class AdminController {
             if (studentId == null) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Student ID is required"));
             }
-
+            
             CourseModel updatedCourse = courseService.assignStudentToCourse(courseId, studentId);
             return ResponseEntity.ok(updatedCourse);
         } catch (Exception e) {
@@ -199,66 +198,4 @@ public class AdminController {
                     .body(Map.of("error", "Failed to remove teacher from course: " + e.getMessage()));
         }
     }
-
-    /**
-     * Assign multiple students to course
-     */
-    @PostMapping("/courses/{courseId}/students/batch")
-    public ResponseEntity<?> assignMultipleStudentsToCourse(
-            @PathVariable String courseId,
-            @RequestBody Map<String, List<String>> request) {
-        try {
-            List<String> studentIds = request.get("studentIds");
-            if (studentIds == null || studentIds.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Student IDs are required"));
-            }
-
-            List<CourseModel> updatedCourses = new ArrayList<>();
-            for (String studentId : studentIds) {
-                CourseModel updatedCourse = courseService.assignStudentToCourse(courseId, studentId);
-                updatedCourses.add(updatedCourse);
-            }
-
-            return ResponseEntity.ok(updatedCourses.get(updatedCourses.size() - 1));
-        } catch (Exception e) {
-            logger.error("Error assigning students to course", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to assign students to course: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Delete a user
-     */
-    @DeleteMapping("/users/{userId}")
-    public ResponseEntity<?> deleteUser(@PathVariable String userId) {
-        try {
-            userService.deleteUser(userId);
-            return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
-        } catch (Exception e) {
-            logger.error("Error deleting user", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to delete user: " + e.getMessage()));
-        }
-    }
-
-    @PostMapping("/users/professor")
-    public ResponseEntity<?> createProfessor(@RequestBody Map<String, String> request) {
-        try {
-            String email = request.get("email");
-            String password = request.get("password");
-            String firstName = request.get("firstName");
-            String lastName = request.get("lastName");
-
-            if (email == null || password == null || firstName == null || lastName == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
-            }
-
-            User createdProfessor = userService.createProfessor(email, password, firstName, lastName);
-            return ResponseEntity.ok(createdProfessor);
-        } catch (Exception e) {
-            logger.error("Error creating professor: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-}
+} 

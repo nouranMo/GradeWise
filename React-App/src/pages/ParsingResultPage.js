@@ -1,6 +1,98 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useLocation, useNavigate } from "react-router-dom";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
+function PdfDownloadButton() {
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  const generatePdf = async () => {
+    setIsGenerating(true);
+    try {
+      // Target the entire document content
+      const element = document.querySelector('.max-w-6xl');
+      if (!element) {
+        alert('Could not find content to download');
+        return;
+      }
+      
+      // Create PDF with A4 size
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10; // margin in mm
+      
+      // Get the total height of the element
+      const totalHeight = element.scrollHeight;
+      const totalWidth = element.scrollWidth;
+      
+      // Calculate how many canvas captures we need
+      const pageHeightInPx = (pageHeight - 2 * margin) * 3.779; // Convert mm to px (approximate)
+      const numPages = Math.ceil(totalHeight / pageHeightInPx);
+      
+      // Function to capture and add a section of the page
+      const captureAndAddPage = async (pageNum) => {
+        const yPosition = pageNum * pageHeightInPx;
+        
+        // Create canvas for this section
+        const canvas = await html2canvas(element, {
+          scale: 2, // Higher scale for better quality
+          useCORS: true,
+          logging: false,
+          windowHeight: totalHeight,
+          y: yPosition,
+          height: Math.min(pageHeightInPx, totalHeight - yPosition)
+        });
+        
+        // Convert to image
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        
+        // Add new page if not the first page
+        if (pageNum > 0) {
+          pdf.addPage();
+        }
+        
+        // Calculate image dimensions to fit the page
+        const imgWidth = pageWidth - 2 * margin;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        // Add image to PDF
+        pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+        
+        return true;
+      };
+      
+      // Process each page sequentially
+      for (let i = 0; i < numPages; i++) {
+        await captureAndAddPage(i);
+        // Update progress if needed for larger documents
+        if (numPages > 3 && i % 2 === 0) {
+          console.log(`PDF Generation: ${Math.round((i / numPages) * 100)}% complete`);
+        }
+      }
+      
+      // Save the PDF
+      pdf.save('document_analysis_report.pdf');
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  
+  return (
+    <button
+      onClick={generatePdf}
+      disabled={isGenerating}
+      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 ease-in-out ml-4"
+    >
+      {isGenerating ? 'Generating PDF...' : 'Download PDF'}
+    </button>
+  );
+}
 
 // Helper function to determine if a section is a figure
 function isFigureSection(sectionName) {
@@ -633,12 +725,15 @@ function ParsingResult() {
         {/* Navigation */}
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-800">Analysis Results</h1>
-          <button
-            onClick={handleBackClick}
-            className="px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300 ease-in-out"
-          >
-            Back to Dashboard
-          </button>
+          <div className="flex">
+            <PdfDownloadButton />
+            <button
+              onClick={handleBackClick}
+              className="px-4 py-2 bg-[#ff6464] text-white rounded-lg hover:bg-[#ff4444] transition-colors duration-300 ease-in-out"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         </div>
 
         {/* Document Summary */}

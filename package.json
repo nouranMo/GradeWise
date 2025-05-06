@@ -1,5 +1,7 @@
 {
   "dependencies": {
-    "fitz": "^0.0.1"
+    "fitz": "^0.0.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1"
   }
 }

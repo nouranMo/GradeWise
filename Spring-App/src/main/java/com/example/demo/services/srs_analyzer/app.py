@@ -33,6 +33,7 @@ import requests
 import random
 import re
 from flask import send_from_directory
+import traceback
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -66,7 +67,7 @@ spec.loader.exec_module(LLMValidation_)
 process_diagrams = diagram_convention.process_diagrams
 
 
-validate_diagram=LLMValidation_.validate_diagrams
+validate_diagrams = LLMValidation_.validate_diagrams
 
 logger = logging.getLogger(__name__)
 
@@ -339,7 +340,6 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                 print("\nERROR IN REFERENCE VALIDATION:")
                 print(f"Exception type: {type(e)}")
                 print(f"Exception message: {str(e)}")
-                import traceback
                 print("Traceback:")
                 traceback.print_exc()
                 response['references_validation'] = {
@@ -669,7 +669,7 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                 )
                 print("\nDebug: process_diagrams results:", json.dumps(diagram_results, indent=2) if isinstance(diagram_results, dict) else str(diagram_results))
                 # Validate diagram conventions using Gemini
-                validation_results = validate_diagram(output_base="output_results",document_type=document_type)
+                validation_results = validate_diagrams(output_base="output_results",document_type=document_type)
                 
                 logger.debug("Diagram Convention Resultssssssssssss: %s", {
                 'processing_results': diagram_results,
@@ -688,6 +688,11 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                 print("\nDiagram Convention Data in analyze_document:")
                 print(json.dumps(validation_results, indent=2))
             except Exception as e:
+                print(f"\nERROR IN DIAGRAM CONVENTION ANALYSIS:")
+                print(f"Exception type: {type(e)}")
+                print(f"Exception message: {str(e)}")
+                print("Traceback:")
+                traceback.print_exc()
                 response['diagram_convention'] = {
                     "status": "error",
                     "message": f"Error processing diagrams: {str(e)}"
@@ -696,6 +701,11 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
         return response
 
     except Exception as e:
+        print("\nERROR IN ANALYZE_DOCUMENT:")
+        print(f"Exception type: {type(e)}")
+        print(f"Exception message: {str(e)}")
+        print("Traceback:")
+        traceback.print_exc()
         return {
             'status': 'error',
             'message': str(e)
@@ -703,12 +713,6 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
 
 
     except Exception as e:
-        print("\nERROR IN ANALYZE_DOCUMENT:")
-        print(f"Exception type: {type(e)}")
-        print(f"Exception message: {str(e)}")
-        import traceback
-        print("Traceback:")
-        traceback.print_exc()
         return {
             'status': 'error',
             'message': str(e)

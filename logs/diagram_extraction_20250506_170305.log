@@ -1,0 +1,179 @@
+2025-05-06 17:03:07,238 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 17:03:07,239 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 17:03:07,239 - text_processing - INFO - Using device: CPU
+2025-05-06 17:03:07,239 - text_processing - INFO - Loading model: sshleifer/distilbart-cnn-6-6
+2025-05-06 17:03:08,888 - text_processing - INFO - Model loaded successfully
+2025-05-06 17:03:26,128 - text_processing - INFO - Starting diagram extraction from PDF: uploads\1746540206_cd532580-555d-4468-b15c-582de9f7848c.pdf
+2025-05-06 17:03:26,128 - text_processing - INFO - Logs being saved to: logs\diagram_extraction_20250506_170305.log
+2025-05-06 17:03:26,129 - text_processing - INFO - Scanning document for figure references
+2025-05-06 17:03:26,141 - text_processing - INFO - PDF has 31 pages
+2025-05-06 17:03:26,141 - text_processing - INFO - Processing page 1/31
+2025-05-06 17:03:26,157 - text_processing - INFO - Processing page 2/31
+2025-05-06 17:03:26,184 - text_processing - DEBUG - Added section: 7.2 Database . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+2025-05-06 17:03:26,185 - text_processing - INFO - Processing page 3/31
+2025-05-06 17:03:26,191 - text_processing - DEBUG - Added section: 11.2.2 Wikitude Edu License . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+2025-05-06 17:03:26,191 - text_processing - INFO - Processing page 4/31
+2025-05-06 17:03:26,207 - text_processing - DEBUG - Added section: 1.1 Purpose of this document
+2025-05-06 17:03:26,208 - text_processing - DEBUG - Added section: 1.2 Scope of this document
+2025-05-06 17:03:26,208 - text_processing - DEBUG - Added section: 1.3 Business Context
+2025-05-06 17:03:26,209 - text_processing - DEBUG - Added section: 2.1 Academic
+2025-05-06 17:03:26,209 - text_processing - INFO - Processing page 5/31
+2025-05-06 17:03:26,220 - text_processing - INFO - Processing page 6/31
+2025-05-06 17:03:26,236 - text_processing - INFO - Processing page 7/31
+2025-05-06 17:03:26,248 - text_processing - DEBUG - Added section: 2.2.1 WorxAR
+2025-05-06 17:03:26,248 - text_processing - DEBUG - Added section: 2.2.2 Re’flekt One
+2025-05-06 17:03:26,249 - text_processing - INFO - Processing page 8/31
+2025-05-06 17:03:26,261 - text_processing - DEBUG - Added section: 3.1 Problem Statement
+2025-05-06 17:03:26,261 - text_processing - DEBUG - Added section: 3.2 System Overview
+2025-05-06 17:03:26,262 - text_processing - DEBUG - Added section: 3.2.1 Scanning
+2025-05-06 17:03:26,262 - text_processing - DEBUG - Added section: 3.2.2 Object detection and recognition
+2025-05-06 17:03:26,262 - text_processing - INFO - Processing page 9/31
+2025-05-06 17:03:26,273 - text_processing - DEBUG - Added section: 3.2.3 Instructions request
+2025-05-06 17:03:26,273 - text_processing - DEBUG - Added section: 3.2.4 AR instructions overlay and object tracking
+2025-05-06 17:03:26,273 - text_processing - DEBUG - Added section: 3.3 System Scope
+2025-05-06 17:03:26,273 - text_processing - INFO - Processing page 10/31
+2025-05-06 17:03:26,283 - text_processing - DEBUG - Added section: 3.4 System Context
+2025-05-06 17:03:26,284 - text_processing - INFO - Processing page 11/31
+2025-05-06 17:03:26,290 - text_processing - DEBUG - Added section: 3.5 Objectives
+2025-05-06 17:03:26,290 - text_processing - INFO - Processing page 12/31
+2025-05-06 17:03:26,300 - text_processing - DEBUG - Added section: 3.6 User Characteristics
+2025-05-06 17:03:26,300 - text_processing - DEBUG - Added section: 4.1 System Functions
+2025-05-06 17:03:26,301 - text_processing - INFO - Processing page 13/31
+2025-05-06 17:03:26,305 - text_processing - INFO - Processing page 14/31
+2025-05-06 17:03:26,318 - text_processing - INFO - Processing page 15/31
+2025-05-06 17:03:26,337 - text_processing - DEBUG - Added section: 4.2 Detailed Functional Specification
+2025-05-06 17:03:26,338 - text_processing - INFO - Processing page 16/31
+2025-05-06 17:03:26,352 - text_processing - INFO - Processing page 17/31
+2025-05-06 17:03:26,367 - text_processing - DEBUG - Added section: 5.1 Standards Compliance
+2025-05-06 17:03:26,368 - text_processing - DEBUG - Added section: 5.2 Hardware Limitations
+2025-05-06 17:03:26,368 - text_processing - DEBUG - Added section: 5.3 Other Constraints
+2025-05-06 17:03:26,368 - text_processing - INFO - Processing page 18/31
+2025-05-06 17:03:26,378 - text_processing - DEBUG - Added section: 6.1 Safety
+2025-05-06 17:03:26,378 - text_processing - DEBUG - Added section: 6.2 Usability
+2025-05-06 17:03:26,379 - text_processing - DEBUG - Added section: 6.3 Portability
+2025-05-06 17:03:26,379 - text_processing - DEBUG - Added section: 6.4 Scalability
+2025-05-06 17:03:26,379 - text_processing - DEBUG - Added section: 6.5 Maintainability
+2025-05-06 17:03:26,381 - text_processing - DEBUG - Added section: 6.6 Security
+2025-05-06 17:03:26,381 - text_processing - INFO - Processing page 19/31
+2025-05-06 17:03:26,391 - text_processing - DEBUG - Added section: 7.1 Dataset
+2025-05-06 17:03:26,391 - text_processing - INFO - Processing page 20/31
+2025-05-06 17:03:26,395 - text_processing - DEBUG - Added section: 7.2 Database
+2025-05-06 17:03:26,397 - text_processing - INFO - Processing page 21/31
+2025-05-06 17:03:26,400 - text_processing - DEBUG - Added section: 8 Preliminary Object-Oriented Domain Analysis
+2025-05-06 17:03:26,401 - text_processing - INFO - Processing page 22/31
+2025-05-06 17:03:26,409 - text_processing - DEBUG - Added section: 9 Operational Scenarios
+2025-05-06 17:03:26,409 - text_processing - INFO - Processing page 23/31
+2025-05-06 17:03:26,425 - text_processing - INFO - Processing page 24/31
+2025-05-06 17:03:26,435 - text_processing - DEBUG - Added section: 10 Project Plan
+2025-05-06 17:03:26,435 - text_processing - INFO - Processing page 25/31
+2025-05-06 17:03:26,439 - text_processing - INFO - Processing page 26/31
+2025-05-06 17:03:26,442 - text_processing - INFO - Processing page 27/31
+2025-05-06 17:03:26,454 - text_processing - DEBUG - Added section: 11.1 Definitions, Acronyms, Abbreviations
+2025-05-06 17:03:26,455 - text_processing - DEBUG - Added section: 11.2.1 Abou Ghaly Motors Collaboration
+2025-05-06 17:03:26,455 - text_processing - INFO - Processing page 28/31
+2025-05-06 17:03:26,458 - text_processing - INFO - Processing page 29/31
+2025-05-06 17:03:26,462 - text_processing - DEBUG - Added section: 11.2.2 Wikitude Edu License
+2025-05-06 17:03:26,463 - text_processing - INFO - Processing page 30/31
+2025-05-06 17:03:26,475 - text_processing - INFO - Processing page 31/31
+2025-05-06 17:03:26,485 - text_processing - INFO - Found 37 sections in the document
+2025-05-06 17:03:26,491 - text_processing - INFO - Found 26 potential figures in document
+2025-05-06 17:03:26,491 - text_processing - INFO - Figure: 'WorxAR [7]
+ Figure 6: WorxAR [7]' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,491 - text_processing - INFO - Figure: 'WorxAR [7]' mentioned 4 times in 1 sections
+2025-05-06 17:03:26,493 - text_processing - INFO - Figure: 'System Overview' mentioned 4 times in 2 sections
+2025-05-06 17:03:26,493 - text_processing - INFO - Figure: ', the system workflow can be modeled in 4 main steps' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,493 - text_processing - INFO - Figure: 'the system workflow can be modeled in 4 main steps.' mentioned 2 times in 1 sections
+2025-05-06 17:03:26,494 - text_processing - INFO - Figure: 'System\s+Overview' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,494 - text_processing - INFO - Figure: 'System Context' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,494 - text_processing - INFO - Figure: ', the application is developed using the
+Flutter SDK' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,494 - text_processing - INFO - Figure: 'the application is developed using the' mentioned 2 times in 1 sections
+2025-05-06 17:03:26,494 - text_processing - INFO - Figure: 'demonstrates the system functional requirements' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,495 - text_processing - INFO - Figure: 'demonstrates the system functional requirements. The' mentioned 2 times in 1 sections
+2025-05-06 17:03:26,495 - text_processing - INFO - Figure: 'Use\s+Case' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,495 - text_processing - INFO - Figure: ', has been constructed from a car owned by one of the
+team members' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,496 - text_processing - INFO - Figure: 'Dataset
+19' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,497 - text_processing - INFO - Figure: 'has been constructed from a car owned by one of the' mentioned 2 times in 1 sections
+2025-05-06 17:03:26,497 - text_processing - INFO - Figure: 'Dataset' mentioned 2 times in 1 sections
+2025-05-06 17:03:26,498 - text_processing - INFO - Figure: 'demonstrates the structure of the stored data' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,498 - text_processing - INFO - Figure: 'demonstrates the structure of the stored data.' mentioned 2 times in 1 sections
+2025-05-06 17:03:26,498 - text_processing - INFO - Figure: 'EERD' mentioned 2 times in 2 sections
+2025-05-06 17:03:26,498 - text_processing - INFO - Figure: 'Entity\s+Relationship' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,499 - text_processing - INFO - Figure: '21' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,499 - text_processing - INFO - Figure: 'Class\s+Diagram' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,500 - text_processing - INFO - Figure: 'First Phase of Project Plan Gantt Chart
+24' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,500 - text_processing - INFO - Figure: 'First Phase of Project Plan Gantt Chart' mentioned 2 times in 1 sections
+2025-05-06 17:03:26,500 - text_processing - INFO - Figure: 'Gantt\s+Chart' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,500 - text_processing - INFO - Figure: '29' mentioned 1 times in 1 sections
+2025-05-06 17:03:26,500 - text_processing - INFO - Found 26 figure references in the document
+2025-05-06 17:03:26,500 - text_processing - INFO - Will process figure: System Overview (mentioned 4 times)
+2025-05-06 17:03:26,501 - text_processing - INFO - Will process figure: System Context (mentioned 1 times)
+2025-05-06 17:03:26,501 - text_processing - INFO - Will process figure: EERD (mentioned 2 times)
+2025-05-06 17:03:26,501 - text_processing - INFO - Will process figure: First Phase of Project Plan Gantt Chart
+24 (mentioned 1 times)
+2025-05-06 17:03:26,501 - text_processing - INFO - Will process figure: First Phase of Project Plan Gantt Chart (mentioned 2 times)
+2025-05-06 17:03:26,502 - text_processing - INFO - Extracting images for 5 important diagrams
+2025-05-06 17:03:26,502 - text_processing - INFO - Target figure names: ['System Overview', 'System Context', 'EERD', 'First Phase of Project Plan Gantt Chart\n24', 'First Phase of Project Plan Gantt Chart', 'system overview', 'system context', 'use case', 'eerd', 'entity relationship', 'class diagram', 'gantt chart']
+2025-05-06 17:03:26,508 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 17:03:26,508 - text_processing - INFO - Extracting text from PDF: uploads\1746540206_cd532580-555d-4468-b15c-582de9f7848c.pdf
+2025-05-06 17:03:26,813 - text_processing - DEBUG - Extracted 35458 characters from PDF
+2025-05-06 17:03:26,818 - text_processing - INFO - Extracted 90 sections with 30 figures
+2025-05-06 17:03:31,600 - text_processing - INFO - Extracted 21 images from PDF
+2025-05-06 17:03:31,601 - text_processing - INFO - Processing figure: System Overview
+2025-05-06 17:03:31,601 - text_processing - WARNING - No relevant images found for System Overview, using broader matching
+2025-05-06 17:03:31,601 - text_processing - INFO - Found image with partial match for System Overview: uploads\System Overview\page_5img1.png
+2025-05-06 17:03:31,601 - text_processing - INFO - Found image with partial match for System Overview: uploads\System Overview\page_7img1.png
+2025-05-06 17:03:31,603 - text_processing - INFO - Processing image: uploads\System Overview\page_5img1.png
+2025-05-06 17:03:31,604 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 17:03:42,190 - text_processing - INFO - Received analysis from OpenAI (length: 1535)
+2025-05-06 17:03:42,190 - text_processing - INFO - Added diagram scope for System Overview
+2025-05-06 17:03:42,192 - text_processing - INFO - Processing image: uploads\System Overview\page_7img1.png
+2025-05-06 17:03:42,195 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 17:03:59,592 - text_processing - INFO - Received analysis from OpenAI (length: 1862)
+2025-05-06 17:03:59,593 - text_processing - INFO - Added diagram scope for System Overview
+2025-05-06 17:03:59,593 - text_processing - INFO - Processing figure: System Context
+2025-05-06 17:03:59,593 - text_processing - WARNING - No relevant images found for System Context, using broader matching
+2025-05-06 17:03:59,594 - text_processing - INFO - Found image with partial match for System Context: uploads\System Overview\page_5img1.png
+2025-05-06 17:03:59,594 - text_processing - INFO - Found image with partial match for System Context: uploads\System Overview\page_7img1.png
+2025-05-06 17:03:59,594 - text_processing - INFO - Processing image: uploads\System Overview\page_5img1.png
+2025-05-06 17:03:59,597 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 17:04:12,859 - text_processing - INFO - Received analysis from OpenAI (length: 1194)
+2025-05-06 17:04:12,859 - text_processing - INFO - Added diagram scope for System Context Diagram
+2025-05-06 17:04:12,860 - text_processing - INFO - Processing image: uploads\System Overview\page_7img1.png
+2025-05-06 17:04:12,862 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 17:04:26,644 - text_processing - INFO - Received analysis from OpenAI (length: 1321)
+2025-05-06 17:04:26,645 - text_processing - INFO - Added diagram scope for System Context Diagram
+2025-05-06 17:04:26,645 - text_processing - INFO - Processing figure: EERD
+2025-05-06 17:04:26,645 - text_processing - WARNING - No relevant images found for EERD, using broader matching
+2025-05-06 17:04:26,647 - text_processing - INFO - Processing figure: First Phase of Project Plan Gantt Chart
+24
+2025-05-06 17:04:26,647 - text_processing - WARNING - No relevant images found for First Phase of Project Plan Gantt Chart
+24, using broader matching
+2025-05-06 17:04:26,647 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart
+24: uploads\Project Plan\page_24img1.png
+2025-05-06 17:04:26,648 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart
+24: uploads\Project Plan\page_25img1.png
+2025-05-06 17:04:26,648 - text_processing - INFO - Processing image: uploads\Project Plan\page_24img1.png
+2025-05-06 17:04:26,648 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 17:04:44,816 - text_processing - INFO - Received analysis from OpenAI (length: 2229)
+2025-05-06 17:04:44,816 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 17:04:44,816 - text_processing - INFO - Processing image: uploads\Project Plan\page_25img1.png
+2025-05-06 17:04:44,817 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 17:04:55,352 - text_processing - INFO - Received analysis from OpenAI (length: 1792)
+2025-05-06 17:04:55,352 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 17:04:55,353 - text_processing - INFO - Processing figure: First Phase of Project Plan Gantt Chart
+2025-05-06 17:04:55,354 - text_processing - WARNING - No relevant images found for First Phase of Project Plan Gantt Chart, using broader matching
+2025-05-06 17:04:55,355 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart: uploads\Project Plan\page_24img1.png
+2025-05-06 17:04:55,355 - text_processing - INFO - Found image with partial match for First Phase of Project Plan Gantt Chart: uploads\Project Plan\page_25img1.png
+2025-05-06 17:04:55,355 - text_processing - INFO - Processing image: uploads\Project Plan\page_24img1.png
+2025-05-06 17:04:55,357 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 17:05:13,414 - text_processing - INFO - Received analysis from OpenAI (length: 1736)
+2025-05-06 17:05:13,415 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 17:05:13,415 - text_processing - INFO - Processing image: uploads\Project Plan\page_25img1.png
+2025-05-06 17:05:13,416 - text_processing - INFO - Calling OpenAI vision model
+2025-05-06 17:05:29,459 - text_processing - INFO - Received analysis from OpenAI (length: 2428)
+2025-05-06 17:05:29,460 - text_processing - INFO - Added diagram scope for Gantt Chart
+2025-05-06 17:05:29,460 - text_processing - INFO - Completed diagram extraction with 3 diagrams analyzed
