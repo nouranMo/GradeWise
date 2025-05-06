@@ -1287,7 +1287,7 @@ function ParsingResult() {
                               "/"
                             )}`}
                             alt={key}
-                            className="w-1/2 h-auto rounded-lg shadow-md"
+                            className="w-1/2 h-auto rounded-lg shadow-md mx-auto block"
                             onError={(e) =>
                               console.error(
                                 `Failed to load image: ${data.path}`
@@ -1334,7 +1334,7 @@ function ParsingResult() {
                               "/"
                             )}`}
                             alt={key}
-                            className="w-1/2 h-auto rounded-lg shadow-md"
+                            className="w-1/2 h-auto rounded-lg shadow-md mx-auto block"
                             onError={(e) =>
                               console.error(
                                 `Failed to load image: ${data.path}`
@@ -1379,7 +1379,7 @@ function ParsingResult() {
                               "/"
                             )}`}
                             alt={key}
-                            className="w-1/2 h-auto rounded-lg shadow-md"
+                            className="w-1/2 h-auto rounded-lg shadow-md mx-auto block"
                             onError={(e) =>
                               console.error(
                                 `Failed to load image: ${data.path}`
