@@ -1,0 +1,9 @@
+2025-05-06 15:05:38,950 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 15:05:38,950 - text_processing - INFO - Initializing TextProcessor
+2025-05-06 15:05:38,950 - text_processing - INFO - Using device: CPU
+2025-05-06 15:05:38,950 - text_processing - INFO - Loading model: sshleifer/distilbart-cnn-6-6
+2025-05-06 15:05:40,382 - text_processing - INFO - Model loaded successfully
+2025-05-06 15:41:21,539 - text_processing - INFO - Extracting text from PDF: uploads\1746535281_5f50bab5-ebe6-429c-aad6-6fa4e02d5040.pdf
+2025-05-06 15:41:21,888 - text_processing - DEBUG - Extracted 35458 characters from PDF
+2025-05-06 15:41:29,948 - text_processing - INFO - Performing quick spell check
+2025-05-06 15:43:06,821 - text_processing - INFO - Quick spell check completed. Found 142 potential misspellings

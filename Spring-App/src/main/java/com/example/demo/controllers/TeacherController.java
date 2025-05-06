@@ -13,9 +13,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import com.example.demo.models.AnalysisJob;
+import com.example.demo.services.AnalysisJobService;
+import com.example.demo.security.JwtTokenProvider;
+import com.example.demo.models.DocumentModel;
+import com.example.demo.services.DocumentService;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/teacher")
@@ -28,6 +35,15 @@ public class TeacherController {
 
     @Autowired
     private SubmissionService submissionService;
+
+    @Autowired
+    private AnalysisJobService analysisJobService;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private DocumentService documentService;
 
     /**
      * Get courses for the current teacher
@@ -139,4 +155,158 @@ public class TeacherController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
-}
+
+    @PostMapping("/analyze-document/{documentId}")
+    public ResponseEntity<?> analyzeDocument(
+        @PathVariable String documentId,
+        @RequestBody Map<String, Object> request,
+        @RequestHeader("Authorization") String authHeader
+    ) {
+        try {
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+            String userId = jwtTokenProvider.getUserIdFromToken(token);
+            
+            // Create a new analysis job
+            AnalysisJob job = analysisJobService.createJob(
+                documentId, 
+                userId,
+                (Map<String, Object>) request.get("analyses"),
+                false // not a submission
+            );
+            
+            // Start processing the job asynchronously
+            analysisJobService.processJob(job.getId());
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Analysis started successfully",
+                "jobId", job.getId()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/analyze-submission/{submissionId}")
+    public ResponseEntity<?> analyzeSubmission(
+        @PathVariable String submissionId,
+        @RequestBody Map<String, Object> request,
+        @RequestHeader("Authorization") String authHeader
+    ) {
+        try {
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+            String userId = jwtTokenProvider.getUserIdFromToken(token);
+            
+            // Create a new analysis job
+            AnalysisJob job = analysisJobService.createJob(
+                submissionId, 
+                userId,
+                (Map<String, Object>) request.get("analyses"),
+                true // this is a submission
+            );
+            
+            // Start processing the job asynchronously
+            analysisJobService.processJob(job.getId());
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Analysis started successfully",
+                "jobId", job.getId()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Analyze a document uploaded by a teacher
+     */
+    @PostMapping("/documents/{documentId}/analyze")
+    public ResponseEntity<?> analyzeDocument(
+            @PathVariable String documentId,
+            @RequestBody(required = false) Map<String, Object> requestBody,
+            Authentication authentication) {
+
+        logger.info("Received request to analyze document: {}", documentId);
+
+        try {
+            // Get the current user
+            String userId = authentication.getName();
+            logger.info("User {} is requesting analysis for document {}", userId, documentId);
+
+            // Find the document
+            DocumentModel document = documentService.getDocumentById(documentId);
+            if (document == null) {
+                logger.error("Document not found with ID: {}", documentId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Collections.singletonMap("error", "Document not found with ID: " + documentId));
+            }
+
+            // Verify the document belongs to this user
+            if (!document.getUserId().equals(userId)) {
+                logger.error("User {} is not authorized to analyze document {}", userId, documentId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Collections.singletonMap("error", "You are not authorized to analyze this document"));
+            }
+
+            logger.info("Analyzing document ID: {}", documentId);
+
+            // Extract analyses from request body if provided
+            Map<String, Boolean> analyses = new HashMap<>();
+
+            // Default analyses if none provided
+            analyses.put("SrsValidation", true);
+            analyses.put("ReferencesValidation", true);
+            analyses.put("ContentAnalysis", true);
+            analyses.put("SpellCheck", true);
+
+            // Extract documentType from request body
+            String documentType = requestBody != null ? (String) requestBody.get("documentType") : null;
+            if (documentType == null || (!documentType.equals("SRS") && !documentType.equals("SDD"))) {
+                logger.warn("Invalid or missing documentType: {}", documentType);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Invalid or missing documentType: must be SRS or SDD"));
+            }
+            logger.info("Document type: {}", documentType);
+
+            // If analyses were specified in the request, use those instead
+            if (requestBody != null && requestBody.containsKey("analyses")) {
+                Object analysesObj = requestBody.get("analyses");
+                if (analysesObj instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Boolean> requestedAnalyses = (Map<String, Boolean>) analysesObj;
+                    logger.info("Custom analyses requested: {}", requestedAnalyses);
+                    analyses = requestedAnalyses;
+                }
+            }
+
+            logger.info("Performing analysis with options: {}", analyses);
+
+            // Update document status to Analyzing
+            document.setStatus("Analyzing");
+            document.setAnalysisInProgress(true);
+            documentService.updateDocument(document);
+
+            logger.info("Updated document status to Analyzing");
+
+            // Start analysis in background
+            try {
+                documentService.startAnalysis(documentId, analyses, documentType);
+                logger.info("Analysis started for document: {}", documentId);
+
+                return ResponseEntity.ok(Map.of(
+                        "status", "success",
+                        "message", "Analysis started successfully",
+                        "documentId", documentId,
+                        "analyses", analyses,
+                        "documentStatus", "Analyzing"));
+            } catch (Exception e) {
+                logger.error("Failed to start analysis: {}", e.getMessage(), e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "Failed to start analysis: " + e.getMessage()));
+            }
+        } catch (Exception e) {
+            logger.error("Error analyzing document: " + documentId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Error analyzing document: " + e.getMessage()));
+        }
+    }
+ }

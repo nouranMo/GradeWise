@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
 
 // API URL constant
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
@@ -296,6 +297,9 @@ function ProfessorDashboard() {
     FullAnalysis: false,
   });
   const [analyzingSubmission, setAnalyzingSubmission] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [documents, setDocuments] = useState([]);
 
   const navigate = useNavigate();
   const { currentUser } = useAuth();
@@ -371,6 +375,30 @@ function ProfessorDashboard() {
       toast.error(`Failed to fetch submissions: ${error.message}`);
     }
   }, [API_URL, currentUser?.id]);
+
+  const fetchProfessorDocuments = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        toast.error("Authentication required");
+        return;
+      }
+
+      const response = await axios.get('/api/documents/professor', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      setDocuments(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching professor documents:', error);
+      toast.error('Failed to load documents. Please try again later.');
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -811,50 +839,22 @@ function ProfessorDashboard() {
   };
 
   const startAnalysis = async () => {
-    if (!selectedDocument) return;
-
     setIsAnalyzing(true);
-    setShowAnalysisModal(false);
-
-    // Get JWT token
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No authentication token found");
-      toast.error("Authentication required");
-      setIsAnalyzing(false);
-      return;
-    }
-
-    // Determine if we're analyzing a professor document or a student submission
-    const isSubmission =
-      !!selectedDocument.submissionSlotId || selectedDocument.submissionType;
-    const endpointUrl = isSubmission
-      ? `${API_URL}/api/submissions/${selectedDocument.id}/analyze`
-      : `${API_URL}/api/documents/${selectedDocument.id}/analyze`;
-
-    console.log(
-      `Starting analysis for ${isSubmission ? "submission" : "document"}: ${
-        selectedDocument.id
-      }`
-    );
-    console.log("Selected analyses:", selectedAnalyses);
-
+    
     try {
-      if (isSubmission) {
-        // Also set the analyzing submission ID for UI feedback
-        setAnalyzingSubmission(selectedDocument.id);
-
-        // Update submission status
-        const updatedSubmissions = submissions.map((sub) =>
-          sub.id === selectedDocument.id ? { ...sub, status: "Analyzing" } : sub
-        );
-        setSubmissions(updatedSubmissions);
-      } else {
-        // Update document status
-        const updatedDocs = professorDocuments.map((doc) =>
-          doc.id === selectedDocument.id ? { ...doc, status: "Analyzing" } : doc
-        );
-        setProfessorDocuments(updatedDocs);
+      // Determine if we're analyzing a submission or a professor document
+      const isSubmission = selectedDocument && selectedDocument.submissionSlotId;
+      const documentId = selectedDocument.id;
+      
+      // Determine the endpoint URL
+    const endpointUrl = isSubmission
+        ? `${API_URL}/api/teacher/analyze-submission/${documentId}`
+        : `${API_URL}/api/teacher/analyze-document/${documentId}`;
+      
+      // Get the authentication token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication token not found");
       }
 
       // Send request to Spring backend with selected analyses
@@ -871,217 +871,217 @@ function ProfessorDashboard() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Analysis failed");
+        throw new Error("Failed to start analysis");
       }
-
-      // Wait for 5 seconds to allow the analysis to complete
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-
-      // Fetch the updated document or submission with analysis results
-      const resultResponse = await fetch(
-        isSubmission
-          ? `${API_URL}/api/submissions/${selectedDocument.id}`
-          : `${API_URL}/api/documents/${selectedDocument.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!resultResponse.ok) {
-        throw new Error(
-          `Failed to fetch ${isSubmission ? "submission" : "document"} results`
-        );
-      }
-
-      const updatedItem = await resultResponse.json();
-      console.log(
-        `Updated ${isSubmission ? "submission" : "document"} with results:`,
-        updatedItem
-      );
-      console.log("Updated results:", updatedItem.results);
-
-      // Update document/submission status to "Graded" on success
-      if (isSubmission) {
-        const updatedSubmissions = submissions.map((sub) => {
-          if (sub.id === selectedDocument.id) {
-            return {
-              ...sub,
-              status: "Graded",
-              analyzed: true,
-              results: updatedItem.results,
-            };
+      
+      // Get the job ID from the response
+      const { jobId } = await response.json();
+      
+      // Update UI to show analyzing status
+      updateDocumentStatus(documentId, "Analyzing", isSubmission);
+      
+      // Start polling for status
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`${API_URL}/api/analysis-jobs/${jobId}/status`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (!statusResponse.ok) {
+            throw new Error("Failed to check analysis status");
           }
-          return sub;
-        });
-        setSubmissions(updatedSubmissions);
-
-        // Also fetch all submissions to make sure our list is updated
+          
+          const { status, results, errorMessage } = await statusResponse.json();
+          
+          console.log(`Analysis job ${jobId} status: ${status}`);
+          
+          // Update UI based on current status
+          if (status === "PROCESSING") {
+            updateDocumentStatus(documentId, "Analyzing", isSubmission);
+          } else if (status === "COMPLETED" || status === "FAILED") {
+            // Stop polling when job is done
+            clearInterval(pollInterval);
+            
+            // Update document status
+            updateDocumentStatus(
+              documentId, 
+              status === "COMPLETED" ? "Completed" : "Failed", 
+              isSubmission
+            );
+            
+            if (status === "COMPLETED") {
+              toast.success("Analysis completed successfully");
+            } else {
+              toast.error(`Analysis failed: ${errorMessage || "Unknown error"}`);
+            }
+            
+            // Refresh the document list
+            if (isSubmission) {
         fetchSubmissions();
       } else {
-        const updatedDocs = professorDocuments.map((doc) => {
-          if (doc.id === selectedDocument.id) {
-            return {
-              ...doc,
-              status: "Completed",
-              analyzed: true,
-              results: updatedItem.results,
-            };
+              fetchProfessorDocuments();
+            }
+            
+            setIsAnalyzing(false);
+            setShowAnalysisModal(false);
           }
-          return doc;
-        });
-        setProfessorDocuments(updatedDocs);
-      }
-
-      toast.success("Analysis completed successfully");
+        } catch (error) {
+          console.error("Error checking analysis status:", error);
+          clearInterval(pollInterval);
+          toast.error("Error checking analysis status");
+          setIsAnalyzing(false);
+          setShowAnalysisModal(false);
+        }
+      }, 5000); // Check every 5 seconds
+      
     } catch (error) {
-      console.error("Analysis failed:", error);
-      toast.error(error.message || "Failed to analyze document");
-
-      // Update document/submission status to reflect failure
-      const isSubmission =
-        !!selectedDocument.submissionSlotId || selectedDocument.submissionType;
-
-      if (isSubmission) {
-        const updatedSubmissions = submissions.map((sub) => {
-          if (sub.id === selectedDocument.id) {
-            return { ...sub, status: "Analysis Failed" };
-          }
-          return sub;
-        });
-        setSubmissions(updatedSubmissions);
-      } else {
-        const updatedDocs = professorDocuments.map((doc) => {
-          if (doc.id === selectedDocument.id) {
-            return { ...doc, status: "Analysis Failed" };
-          }
-          return doc;
-        });
-        setProfessorDocuments(updatedDocs);
-      }
-    } finally {
+      console.error("Error starting analysis:", error);
+      toast.error(`Error starting analysis: ${error.message}`);
       setIsAnalyzing(false);
-      setAnalyzingSubmission(null);
+    }
+  };
+
+  // Helper function to update document status in the UI
+  const updateDocumentStatus = (documentId, status, isSubmission) => {
+      if (isSubmission) {
+      setSubmissions(prev => 
+        prev.map(sub => 
+          sub.id === documentId ? { ...sub, status } : sub
+        )
+      );
+      } else {
+      setProfessorDocuments(prev => 
+        prev.map(doc => 
+          doc.id === documentId ? { ...doc, status } : doc
+        )
+      );
     }
   };
 
   // Unified view report function for both professor documents and student submissions
-  const handleViewReport = (item) => {
-    console.log("Viewing report for item:", item);
+  const viewReport = async (documentId) => {
+    try {
+      setLoading(true);
+      
+      // Get the JWT token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        toast.error("Authentication required");
+        setLoading(false);
+        return;
+      }
 
-    if (!item || !item.id) {
-      toast.error("Invalid item data");
-      return;
-    }
-
-    // Get JWT token
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No authentication token found");
-      toast.error("Authentication required");
-      return;
-    }
-
-    // Determine if this is a submission or a document
-    const isSubmission = !!item.submissionSlotId || !!item.documentId;
-    const endpoint = isSubmission
-      ? `${API_URL}/api/submissions/${item.id}`
-      : `${API_URL}/api/documents/${item.id}`;
-
-    console.log(
-      `Fetching ${
-        isSubmission ? "submission" : "document"
-      } data from: ${endpoint}`
-    );
-
-    // Fetch the item with the latest results
-    fetch(endpoint, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(
-            `Error fetching ${isSubmission ? "submission" : "document"}: ${
-              response.status
-            }`
-          );
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log(
-          `Fetched ${isSubmission ? "submission" : "document"} data:`,
-          data
-        );
-
-        // For submissions, we might need to fetch the document
-        if (isSubmission && !data.results && data.documentId) {
-          // If submission has no results directly, try to fetch the document
-          return fetch(`${API_URL}/api/documents/${data.documentId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
+      // First, get the document
+      try {
+        const documentResponse = await axios.get(`${API_URL}/api/documents/${documentId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        const document = documentResponse.data;
+        console.log("Document data:", document);
+        
+        // Check if the document has results directly
+        if (document.results && Object.keys(document.results).length > 0) {
+          console.log("Found results directly on document:", document.results);
+          
+          // Navigate to the results page with the document data
+          navigate("/parsing-result", {
+            state: {
+              parsingResult: {
+                ...document.results,
+                status: "success",
+                document_name: document.name,
+                document_type: "professor_document",
+              },
             },
-          })
-            .then((docResponse) => {
-              if (!docResponse.ok) {
-                throw new Error(
-                  `Error fetching document: ${docResponse.status}`
-                );
-              }
-              return docResponse.json();
-            })
-            .then((docData) => {
-              if (!docData.results) {
-                throw new Error("No analysis results found for this document");
-              }
+          });
+          
+          setLoading(false);
+          return;
+        }
+        
+        // Check if the document is analyzed but doesn't have results directly on it
+        if (document.analyzed && !document.results) {
+          console.log("Document is marked as analyzed but doesn't have results directly. Checking jobs...");
+        }
 
-              // Navigate with document results
+        // Get analysis jobs regardless of document.analyzed flag - there might be results in jobs
+        try {
+          console.log("Checking for analysis jobs for document:", documentId);
+          const jobsResponse = await axios.get(`${API_URL}/api/analysis-jobs/document/${documentId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          const jobs = jobsResponse.data;
+          console.log("Analysis jobs found:", jobs);
+          
+          if (jobs && jobs.length > 0) {
+            // Sort jobs by date (newest first)
+            const sortedJobs = jobs.sort((a, b) => 
+              new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0)
+            );
+            
+            const latestJob = sortedJobs[0];
+            console.log("Latest job:", latestJob);
+            
+            if (latestJob.status === 'COMPLETED' && latestJob.results) {
+              console.log("Using results from the latest job");
+              
+              // Navigate to the results page with the job results
               navigate("/parsing-result", {
                 state: {
                   parsingResult: {
-                    ...docData.results,
+                    ...latestJob.results,
                     status: "success",
-                    document_name: data.documentName || docData.name,
-                    document_type: "student_submission",
-                    document_id: data.documentId,
+                    document_name: document.name,
+                    document_type: "professor_document",
                   },
                 },
               });
-            });
+              
+              setLoading(false);
+              return;
+            }
+            
+            // Check if analysis is in progress
+            if (latestJob.status === 'PROCESSING' || latestJob.status === 'CREATED' || latestJob.status === 'QUEUED') {
+              toast.info("Analysis is still in progress. Please wait and try again later.");
+              setLoading(false);
+              return;
+            }
+            
+            // Check if analysis failed
+            if (latestJob.status === 'FAILED') {
+              toast.error(`Analysis failed: ${latestJob.errorMessage || "Unknown error"}`);
+              setLoading(false);
+              return;
+            }
+          }
+          
+          // If we reach here, no results found
+          if (document.analyzed) {
+            toast.error("The document is marked as analyzed but no results were found.");
+          } else {
+            toast.warning("This document has not been analyzed yet. Please click 'Analyze' first.");
+          }
+          
+        } catch (error) {
+          console.error("Error fetching analysis jobs:", error);
+          toast.error("Error retrieving analysis results. Please try again later.");
         }
-
-        // If no results are available
-        if (!data.results) {
-          throw new Error(
-            `No analysis results found for this ${
-              isSubmission ? "submission" : "document"
-            }`
-          );
-        }
-
-        // Navigate with results
-        navigate("/parsing-result", {
-          state: {
-            parsingResult: {
-              ...data.results,
-              status: "success",
-              document_name: isSubmission ? data.documentName : data.name,
-              document_type: isSubmission
-                ? "student_submission"
-                : "professor_document",
-              document_id: isSubmission ? data.documentId : data.id,
-            },
-          },
-        });
-      })
-      .catch((error) => {
-        console.error("Error viewing report:", error);
-        toast.error(error.message || "Error viewing report");
-      });
+        
+      } catch (error) {
+        console.error("Error retrieving document:", error);
+        toast.error("Error retrieving document information. Please try again later.");
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error("Error in viewReport:", error);
+      toast.error("An unexpected error occurred. Please try again later.");
+      setLoading(false);
+    }
   };
 
   const debugDocumentStatus = (doc) => {
@@ -1441,7 +1441,7 @@ function ProfessorDashboard() {
                       {(submission.status === "Analyzed" ||
                         submission.status === "Graded") && (
                         <button
-                          onClick={() => handleViewReport(submission)}
+                          onClick={() => viewReport(submission.id)}
                           className="px-3 py-1 text-xs text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors duration-300"
                         >
                           View Report
@@ -1577,7 +1577,7 @@ function ProfessorDashboard() {
                       {isViewable || doc.status === "Completed" ? (
                         <>
                           <button
-                            onClick={() => handleViewReport(doc)}
+                            onClick={() => viewReport(doc.id)}
                             className="px-3 py-1 text-xs text-white bg-green-600 rounded-md hover:bg-green-700 whitespace-nowrap transition-colors duration-300"
                           >
                             View Report
