@@ -1143,8 +1143,8 @@ function ProfessorDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Upload Document Card */}
 
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4">Upload Test Document</h2>
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h2 className="text-md font-semibold mb-4">Upload Test Document</h2>
             <p className="text-sm text-gray-500 mb-4">
               Upload documents for testing and analysis. These documents will be
               saved under your account and displayed in the "Uploaded Documents"
@@ -1297,7 +1297,7 @@ function ProfessorDashboard() {
                   Refresh
                 </button>
               </div>
-              <div className="grid grid-cols-8 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+              <div className="grid grid-cols-8 gap-6 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500">
                 <div className="flex items-center justify-center">STUDENT</div>
                 <div className="flex items-center justify-center">DOCUMENT</div>
                 <div className="flex items-center justify-center">
@@ -1313,14 +1313,14 @@ function ProfessorDashboard() {
               </div>
 
               {submissions.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500 text-sm">
                   No student submissions yet
                 </div>
               ) : (
                 submissions.map((submission) => (
                   <div
                     key={submission.id}
-                    className="grid grid-cols-8 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-300"
+                    className="grid grid-cols-8 gap-6 px-4 py-3 border-b text-xs text-gray-600 hover:bg-gray-50 transition-colors duration-300"
                   >
                     <div
                       className="flex items-center col-span-1 justify-center"
@@ -1475,12 +1475,12 @@ function ProfessorDashboard() {
 
         {/* Professor Documents Table */}
         <div>
-          <h2 className="text-xl font-semibold mb-4">My Test Documents</h2>
+          <h2 className="text-md font-semibold text-gray-800 mb-4">My Test Documents</h2>
           <p className="text-sm text-gray-500 mb-4">
             Documents uploaded for testing and analysis purposes.
           </p>
           <div className="bg-white rounded-lg shadow mb-8">
-            <div className="grid grid-cols-[minmax(300px,0.8fr)_200px_150px_120px_200px] px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
+            <div className="grid grid-cols-[minmax(300px,0.8fr)_200px_120px_120px_200px] gap-6 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500">
               <div className="flex items-center justify-center">
                 DOCUMENT NAME
               </div>
@@ -1496,7 +1496,7 @@ function ProfessorDashboard() {
 
             {/* Table rows */}
             {professorDocuments.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-gray-500 text-sm">
                 No documents uploaded yet
               </div>
             ) : (
@@ -1506,7 +1506,7 @@ function ProfessorDashboard() {
                 return (
                   <div
                     key={doc.id}
-                    className="grid grid-cols-[minmax(300px,0.8fr)_200px_150px_120px_200px] px-4 py-4 border-b text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-300"
+                    className="grid grid-cols-[minmax(300px,0.8fr)_200px_120px_120px_200px] gap-6 px-4 py-4 border-b text-xs text-gray-600 hover:bg-gray-50 transition-colors duration-300"
                   >
                     <div className="flex items-center min-w-0 justify-center">
                       {" "}
@@ -1578,7 +1578,7 @@ function ProfessorDashboard() {
                         {doc.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 justify-center">
+                    <div className="flex items-center gap-2 justify-center">
                       {isViewable || doc.status === "Completed" ? (
                         <>
                           <button
