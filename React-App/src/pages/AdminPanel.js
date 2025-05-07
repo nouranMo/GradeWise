@@ -136,7 +136,18 @@ const AdminPanel = () => {
   useEffect(() => {
     const fetchAssignedUsers = async () => {
       try {
-        const response = await axios.get('http://localhost:8080/admin-api/courses');
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No authentication token found");
+          toast.error("Authentication required");
+          return;
+        }
+        
+        const response = await axios.get('http://localhost:8080/admin-api/courses', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         const courses = response.data;
         
         // Collect all teacher and student IDs from courses
@@ -421,7 +432,19 @@ function CourseManagement() {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('http://localhost:8080/admin-api/courses');
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        toast.error("Authentication required");
+        setLoading(false);
+        return;
+      }
+
+      const response = await axios.get('http://localhost:8080/admin-api/courses', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       setCourses(response.data);
     } catch (error) {
       const errorMessage = handleApiError(error, 'Failed to load courses');
@@ -433,7 +456,18 @@ function CourseManagement() {
 
   const fetchTeachers = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/admin-api/users');
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        toast.error("Authentication required");
+        return;
+      }
+
+      const response = await axios.get('http://localhost:8080/admin-api/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       // Filter users with teacher/professor roles
       const teacherUsers = response.data.filter(user => {
         const role = user.role ? user.role.toUpperCase() : '';
@@ -448,7 +482,18 @@ function CourseManagement() {
 
   const fetchStudents = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/admin-api/users');
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        toast.error("Authentication required");
+        return;
+      }
+
+      const response = await axios.get('http://localhost:8080/admin-api/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       // Filter users with student role - more flexible check
       const studentUsers = response.data.filter(user => {
         const role = user.role ? user.role.toUpperCase() : '';
@@ -495,7 +540,17 @@ function CourseManagement() {
     }
     
     try {
-      await axios.post('http://localhost:8080/admin-api/courses', newCourse);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication required");
+        return;
+      }
+      
+      await axios.post('http://localhost:8080/admin-api/courses', newCourse, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       setNewCourse({ name: '', code: '', description: '' });
       setOpenCourseDialog(false);
       fetchCourses();
@@ -513,8 +568,18 @@ function CourseManagement() {
     }
     
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication required");
+        return;
+      }
+      
       await axios.post(`http://localhost:8080/admin-api/courses/${selectedCourse.id}/teachers`, {
         teacherId: selectedTeacher
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       setOpenAssignTeacherDialog(false);
       setSelectedTeacher('');
@@ -533,11 +598,21 @@ function CourseManagement() {
     }
 
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication required");
+        return;
+      }
+      
       // Create a promise for each student assignment
       const assignmentPromises = selectedStudents.map(studentId => {
         console.log("Assigning student:", studentId);
         return axios.post(`http://localhost:8080/admin-api/courses/${selectedCourse.id}/students`, {
           studentId
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         }).catch(error => {
           // Log individual errors but don't fail the whole batch
           console.error(`Error assigning student ${studentId}:`, error.response?.data || error.message);
@@ -573,7 +648,17 @@ function CourseManagement() {
 
   const handleRemoveTeacher = async (courseId, teacherId) => {
     try {
-      await axios.delete(`http://localhost:8080/admin-api/courses/${courseId}/teachers/${teacherId}`);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication required");
+        return;
+      }
+      
+      await axios.delete(`http://localhost:8080/admin-api/courses/${courseId}/teachers/${teacherId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       fetchCourses();
       toast.success('Teacher removed successfully');
     } catch (error) {
@@ -584,7 +669,17 @@ function CourseManagement() {
 
   const handleRemoveStudent = async (courseId, studentId) => {
     try {
-      await axios.delete(`http://localhost:8080/admin-api/courses/${courseId}/students/${studentId}`);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication required");
+        return;
+      }
+      
+      await axios.delete(`http://localhost:8080/admin-api/courses/${courseId}/students/${studentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       fetchCourses();
       toast.success('Student removed successfully');
     } catch (error) {
@@ -596,7 +691,17 @@ function CourseManagement() {
   const handleDeleteCourse = async (courseId) => {
     if (window.confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
       try {
-        await axios.delete(`http://localhost:8080/admin-api/courses/${courseId}`);
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Authentication required");
+          return;
+        }
+        
+        await axios.delete(`http://localhost:8080/admin-api/courses/${courseId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         fetchCourses();
         toast.success('Course deleted successfully');
       } catch (error) {

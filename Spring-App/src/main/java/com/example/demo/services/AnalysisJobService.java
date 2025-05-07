@@ -112,10 +112,34 @@ public class AnalysisJobService {
             
             // Get document path
             String documentPath;
+            String effectiveDocumentId = job.getDocumentId(); // The ID we'll actually use
+            
             if (job.isSubmission()) {
-                documentPath = documentService.getSubmissionFilePath(job.getDocumentId());
+                logger.info("Processing job for submission ID: {}", job.getDocumentId());
+                
+                // Get the submission first
+                Submission submission = submissionService.getSubmission(job.getDocumentId());
+                if (submission == null) {
+                    throw new RuntimeException("Submission not found: " + job.getDocumentId());
+                }
+                
+                // Check if the submission has a document ID
+                String submissionDocumentId = submission.getDocumentId();
+                if (submissionDocumentId == null || submissionDocumentId.isEmpty()) {
+                    throw new RuntimeException("Submission has no associated document ID: " + job.getDocumentId());
+                }
+                
+                logger.info("Found document ID {} in submission {}", submissionDocumentId, job.getDocumentId());
+                effectiveDocumentId = submissionDocumentId;
+                
+                // Now get the document path using the document ID from the submission
+                documentPath = documentService.getDocumentFilePath(submissionDocumentId);
+                logger.info("Retrieved document path for submission document: {}", documentPath);
             } else {
+                // Regular document - get path directly
+                logger.info("Processing job for document ID: {}", job.getDocumentId());
                 documentPath = documentService.getDocumentFilePath(job.getDocumentId());
+                logger.info("Retrieved direct document path: {}", documentPath);
             }
             
             // Start the analysis process
@@ -126,6 +150,35 @@ public class AnalysisJobService {
             
             // Update job with results
             completeJob(jobId, results);
+            
+            // If this was a submission analysis, make sure to update both document and submission
+            if (job.isSubmission()) {
+                try {
+                    // Find the submission
+                    Submission submission = submissionService.getSubmission(job.getDocumentId());
+                    if (submission != null) {
+                        // Update submission status
+                        submission.setStatus("Analyzed");
+                        submission.setResults(results);
+                        submissionService.saveSubmission(submission);
+                        logger.info("Updated submission {} with analysis results", job.getDocumentId());
+                    }
+                    
+                    // Also update the document
+                    DocumentModel document = documentService.getDocumentById(effectiveDocumentId);
+                    if (document != null) {
+                        document.setStatus("Analyzed");
+                        document.setResults(results);
+                        document.setAnalyzed(true);
+                        document.setAnalysisInProgress(false);
+                        documentService.updateDocument(document);
+                        logger.info("Updated document {} with analysis results", effectiveDocumentId);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error updating submission/document after analysis: {}", e.getMessage(), e);
+                    // Continue anyway, the main analysis was successful
+                }
+            }
             
         } catch (Exception e) {
             logger.error("Error processing analysis job: " + jobId, e);

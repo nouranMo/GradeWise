@@ -243,33 +243,34 @@ public class DocumentService {
     }
 
     public DocumentModel getDocumentById(String documentId) {
-        if (documentId == null || documentId.isEmpty()) {
-            System.out.println("Invalid document ID: null or empty");
+        if (documentId == null || documentId.isEmpty() || documentId.equals("undefined") || documentId.equals("null")) {
+            logger.error("Invalid document ID: {} (length: {})", documentId, 
+                        documentId != null ? documentId.length() : "null");
             return null;
         }
 
-        System.out.println("Looking for document with ID: " + documentId);
+        logger.info("Looking for document with ID: '{}' (length: {})", documentId, documentId.length());
         try {
             // Try to find by ID in database
-            DocumentModel document = documentRepository.findById(documentId).orElse(null);
-
-            if (document != null) {
-                System.out.println("Found document in database: " + document.getName());
+            Optional<DocumentModel> documentOpt = documentRepository.findById(documentId);
+            
+            if (documentOpt.isPresent()) {
+                DocumentModel document = documentOpt.get();
+                logger.info("Found document in database: {} (ID: {})", document.getName(), document.getId());
                 return document;
             }
 
             // If not found by ID, try to find by ID field
-            document = documentRepository.findByIdEquals(documentId);
+            DocumentModel document = documentRepository.findByIdEquals(documentId);
             if (document != null) {
-                System.out.println("Found document by ID field: " + document.getName());
+                logger.info("Found document by ID field: {} (ID: {})", document.getName(), document.getId());
                 return document;
             }
 
-            System.out.println("Document not found in database with ID: " + documentId);
+            logger.warn("Document not found in database with ID: {}", documentId);
             return null;
         } catch (Exception e) {
-            System.out.println("Error retrieving document: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error retrieving document with ID {}: {}", documentId, e.getMessage(), e);
             return null;
         }
     }
