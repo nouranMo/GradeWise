@@ -1,40 +1,40 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useLocation, useNavigate } from "react-router-dom";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 function PdfDownloadButton() {
   const [isGenerating, setIsGenerating] = useState(false);
-  
+
   const generatePdf = async () => {
     setIsGenerating(true);
     try {
       // Target the entire document content
-      const element = document.querySelector('.max-w-6xl');
+      const element = document.querySelector(".max-w-6xl");
       if (!element) {
-        alert('Could not find content to download');
+        alert("Could not find content to download");
         return;
       }
-      
+
       // Create PDF with A4 size
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF("p", "mm", "a4");
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 10; // margin in mm
-      
+
       // Get the total height of the element
       const totalHeight = element.scrollHeight;
       const totalWidth = element.scrollWidth;
-      
+
       // Calculate how many canvas captures we need
       const pageHeightInPx = (pageHeight - 2 * margin) * 3.779; // Convert mm to px (approximate)
       const numPages = Math.ceil(totalHeight / pageHeightInPx);
-      
+
       // Function to capture and add a section of the page
       const captureAndAddPage = async (pageNum) => {
         const yPosition = pageNum * pageHeightInPx;
-        
+
         // Create canvas for this section
         const canvas = await html2canvas(element, {
           scale: 2, // Higher scale for better quality
@@ -42,54 +42,55 @@ function PdfDownloadButton() {
           logging: false,
           windowHeight: totalHeight,
           y: yPosition,
-          height: Math.min(pageHeightInPx, totalHeight - yPosition)
+          height: Math.min(pageHeightInPx, totalHeight - yPosition),
         });
-        
+
         // Convert to image
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
         // Add new page if not the first page
         if (pageNum > 0) {
           pdf.addPage();
         }
-        
+
         // Calculate image dimensions to fit the page
         const imgWidth = pageWidth - 2 * margin;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        
+
         // Add image to PDF
-        pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
-        
+        pdf.addImage(imgData, "JPEG", margin, margin, imgWidth, imgHeight);
+
         return true;
       };
-      
+
       // Process each page sequentially
       for (let i = 0; i < numPages; i++) {
         await captureAndAddPage(i);
         // Update progress if needed for larger documents
         if (numPages > 3 && i % 2 === 0) {
-          console.log(`PDF Generation: ${Math.round((i / numPages) * 100)}% complete`);
+          console.log(
+            `PDF Generation: ${Math.round((i / numPages) * 100)}% complete`
+          );
         }
       }
-      
+
       // Save the PDF
-      pdf.save('document_analysis_report.pdf');
-      
+      pdf.save("document_analysis_report.pdf");
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Please try again.");
     } finally {
       setIsGenerating(false);
     }
   };
-  
+
   return (
     <button
       onClick={generatePdf}
       disabled={isGenerating}
       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 ease-in-out ml-4"
     >
-      {isGenerating ? 'Generating PDF...' : 'Download PDF'}
+      {isGenerating ? "Generating PDF..." : "Download PDF"}
     </button>
   );
 }
@@ -400,7 +401,6 @@ function RelationshipGraph({
                     <p className="text-sm bg-white p-3 rounded border border-gray-200">
                       {relationshipAnalyses[selectedRelationship].description}
                     </p>
-
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -485,89 +485,6 @@ function RelationshipGraph({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function CollapsibleSection({
-  title,
-  children,
-  defaultOpen = false,
-  icon = null,
-  badgeContent = null,
-}) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  const [isRecent, setIsRecent] = useState(false);
-  const sectionRef = useRef(null);
-
-  const handleClick = () => {
-    // Store current scroll position
-    const currentScroll = window.scrollY;
-
-    setIsOpen(!isOpen);
-    setIsRecent(true);
-
-    // Restore scroll position after state update
-    setTimeout(() => {
-      window.scrollTo(0, currentScroll);
-    }, 0);
-
-    setTimeout(() => setIsRecent(false), 2000);
-  };
-
-  return (
-    <div
-      ref={sectionRef}
-      className={`bg-white rounded-lg shadow-lg mb-4 transition-all duration-700 ease-in-out ${
-        isRecent ? "ring-2 ring-blue-200" : "ring-0 ring-transparent"
-      }`}
-    >
-      <div
-        className={`p-4 cursor-pointer w-full transition-all duration-700 ease-in-out ${
-          isRecent ? "bg-blue-50" : "bg-white"
-        }`}
-        onClick={handleClick}
-      >
-        <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            {icon && <span className="mr-2">{icon}</span>}
-            <h2 className="text-xl font-bold text-gray-800">{title}</h2>
-            {badgeContent && <span className="ml-3">{badgeContent}</span>}
-          </div>
-          <button
-            className="text-gray-500 hover:text-gray-700 transition-colors duration-300"
-            aria-label={isOpen ? "Collapse section" : "Expand section"}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleClick();
-            }}
-          >
-            <svg
-              className={`w-5 h-5 transform transition-transform duration-300 ease-in-out ${
-                isOpen ? "rotate-180" : ""
-              }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div
-        className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${
-          isOpen ? "max-h-[2000px]" : "max-h-0"
-        }`}
-      >
-        <div className="px-4 pb-4">{children}</div>
-      </div>
     </div>
   );
 }
@@ -778,11 +695,11 @@ function ParsingResult() {
           !!parsingResult?.srs_validation
         )}
         {parsingResult.srs_validation && (
-          <CollapsibleSection
-            title="SRS Structure Analysis"
-            defaultOpen={false}
-          >
+          <>
             <div className="space-y-4">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">
+                SRS Structure Validation
+              </h2>
               <div className="grid grid-cols-2 gap-4">
                 <StatCard
                   title="Matching Sections"
@@ -869,7 +786,7 @@ function ParsingResult() {
                 </div>
               )}
             </div>
-          </CollapsibleSection>
+          </>
         )}
 
         {/* SDD Structure Validation */}
@@ -878,10 +795,10 @@ function ParsingResult() {
           !!parsingResult?.sdd_validation
         )}
         {parsingResult.sdd_validation && (
-          <CollapsibleSection
-            title="SDD Structure Analysis"
-            defaultOpen={false}
-          >
+          <>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              SDD Structure Validation
+            </h2>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <StatCard
@@ -970,7 +887,7 @@ function ParsingResult() {
                 </div>
               )}
             </div>
-          </CollapsibleSection>
+          </>
         )}
 
         {/* References Analysis */}
@@ -979,7 +896,10 @@ function ParsingResult() {
           !!parsingResult?.references_validation
         )}
         {parsingResult.references_validation && (
-          <CollapsibleSection title="References Analysis" defaultOpen={false}>
+          <>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              References Validation
+            </h2>
             {process.env.NODE_ENV !== "production" && (
               <div className="p-2 bg-yellow-50 border border-yellow-200 rounded mb-4 text-xs">
                 <p>Available data:</p>
@@ -1161,7 +1081,7 @@ function ParsingResult() {
                 </div>
               )}
             </div>
-          </CollapsibleSection>
+          </>
         )}
 
         {/* Content Analysis */}
@@ -1170,9 +1090,10 @@ function ParsingResult() {
           !!parsingResult?.content_analysis
         )}
         {parsingResult.content_analysis && (
-
-          <CollapsibleSection title="Content Analysis" defaultOpen={false}>
-
+          <>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Content Analysis
+            </h2>
             {parsingResult.content_analysis.relationship_analyses && (
               <RelationshipGraph
                 matrix={parsingResult.content_analysis.similarity_matrix}
@@ -1182,7 +1103,7 @@ function ParsingResult() {
                 }
               />
             )}
-          </CollapsibleSection>
+          </>
         )}
 
         {/* Image Analysis */}
@@ -1191,7 +1112,10 @@ function ParsingResult() {
           !!parsingResult?.image_analysis
         )}
         {parsingResult.image_analysis && (
-          <CollapsibleSection title="Image Analysis" defaultOpen={false}>
+          <>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Image Analysis
+            </h2>
             <div className="space-y-4">
               {parsingResult.image_analysis.processed_images.map(
                 (image, index) => (
@@ -1206,7 +1130,7 @@ function ParsingResult() {
                 )
               )}
             </div>
-          </CollapsibleSection>
+          </>
         )}
 
         {/* Spelling and Grammar Section */}
@@ -1219,9 +1143,10 @@ function ParsingResult() {
         )}
         {(parsingResult.content_analysis?.spelling_grammar?.length > 0 ||
           parsingResult.spelling_check) && (
-
-          <CollapsibleSection title="Spelling Analysis" defaultOpen={false}>
-
+          <>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Spelling and Grammar Check
+            </h2>
             <div className="space-y-6">
               {/* Quick Spell Check Summary */}
               <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
@@ -1277,9 +1202,7 @@ function ParsingResult() {
                 </div>
               )}
             </div>
-
-          </CollapsibleSection>
-
+          </>
         )}
 
         {/* Business Value Analysis */}
@@ -1288,10 +1211,10 @@ function ParsingResult() {
           !!parsingResult?.business_value_analysis
         )}
         {parsingResult?.business_value_analysis && (
-          <CollapsibleSection
-            title="Business Value Analysis"
-            defaultOpen={false}
-          >
+          <>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Business Value Analysis
+            </h2>
             <div className="prose prose-lg text-gray-700 max-w-none">
               <ReactMarkdown>
                 {(() => {
@@ -1316,113 +1239,194 @@ function ParsingResult() {
                 })()}
               </ReactMarkdown>
             </div>
-          </CollapsibleSection>
+          </>
         )}
 
-{console.log(
-  "Checking Diagram Convention Section - Present:",
-  !!parsingResult?.diagram_convention
-)}
-{parsingResult?.diagram_convention && (
-  <CollapsibleSection title="Diagram Convention Analysis" defaultOpen={false}>
-    <div className="space-y-4">
-      {/* Render Images */}
-      {console.log(
-        "Diagram Convention - Processing Results Present:",
-        !!parsingResult?.diagram_convention?.processing_results
-      )}
-      {(parsingResult?.diagram_convention?.processing_results?.use_case_diagrams ||
-        parsingResult?.diagram_convention?.processing_results?.class_diagrams ||
-        parsingResult?.diagram_convention?.processing_results?.sequence_diagrams) && (
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold mb-4 text-gray-700">Processed Diagrams</h3>
-          <div className="grid grid-cols-1 gap-4">
-            {/* Use Case Diagrams */}
-            {Object.entries(parsingResult?.diagram_convention?.processing_results?.use_case_diagrams || {}).map(([key, data]) => {
-              console.log(`Rendering Use Case Diagram: ${key} -> ${data.path}`);
-              return (
-                <div key={key} className="p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium mb-2">Use Case: {key.replace(/_/g, " ")}</h4>
-                  <img
-                    src={`http://localhost:5000/output_results/${data.path.replace(/\\/g, '/')}`}
-                    alt={key}
-                    className="w-1/2 h-auto rounded-lg shadow-md"
-                    onError={(e) => console.error(`Failed to load image: ${data.path}`)}
-                  />
-                  {parsingResult?.diagram_convention?.validation_results?.validation_results[`use_case_use_case_${key}`] && (
-                    <div className="mt-2">
-                      <h5 className="font-medium text-gray-700">Validation Results:</h5>
-                      <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
-                        {parsingResult?.diagram_convention?.validation_results?.validation_results[`use_case_use_case_${key}`]}
-                      </pre>
-                    </div>
-                  )}
+        {console.log(
+          "Checking Diagram Convention Section - Present:",
+          !!parsingResult?.diagram_convention
+        )}
+        {parsingResult?.diagram_convention && (
+          <>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Diagram Convention Analysis
+            </h2>
+            <div className="space-y-4">
+              {/* Render Images */}
+              {console.log(
+                "Diagram Convention - Processing Results Present:",
+                !!parsingResult?.diagram_convention?.processing_results
+              )}
+              {(parsingResult?.diagram_convention?.processing_results
+                ?.use_case_diagrams ||
+                parsingResult?.diagram_convention?.processing_results
+                  ?.class_diagrams ||
+                parsingResult?.diagram_convention?.processing_results
+                  ?.sequence_diagrams) && (
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold mb-4 text-gray-700">
+                    Processed Diagrams
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {/* Use Case Diagrams */}
+                    {Object.entries(
+                      parsingResult?.diagram_convention?.processing_results
+                        ?.use_case_diagrams || {}
+                    ).map(([key, data]) => {
+                      console.log(
+                        `Rendering Use Case Diagram: ${key} -> ${data.path}`
+                      );
+                      return (
+                        <div key={key} className="p-4 bg-gray-50 rounded-lg">
+                          <h4 className="font-medium mb-2">
+                            Use Case: {key.replace(/_/g, " ")}
+                          </h4>
+                          <img
+                            src={`http://localhost:5000/output_results/${data.path.replace(
+                              /\\/g,
+                              "/"
+                            )}`}
+                            alt={key}
+                            className="w-1/2 h-auto rounded-lg shadow-md mx-auto block"
+                            onError={(e) =>
+                              console.error(
+                                `Failed to load image: ${data.path}`
+                              )
+                            }
+                          />
+                          {parsingResult?.diagram_convention?.validation_results
+                            ?.validation_results[
+                            `use_case_use_case_${key}`
+                          ] && (
+                            <div className="mt-2">
+                              <h5 className="font-medium text-gray-700">
+                                Validation Results:
+                              </h5>
+                              <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
+                                {
+                                  parsingResult?.diagram_convention
+                                    ?.validation_results?.validation_results[
+                                    `use_case_use_case_${key}`
+                                  ]
+                                }
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {/* Class Diagrams */}
+                    {Object.entries(
+                      parsingResult?.diagram_convention?.processing_results
+                        ?.class_diagrams || {}
+                    ).map(([key, data]) => {
+                      console.log(
+                        `Rendering Class Diagram: ${key} -> ${data.path}`
+                      );
+                      return (
+                        <div key={key} className="p-4 bg-gray-50 rounded-lg">
+                          <h4 className="font-medium mb-2">
+                            Class Diagram: {key.replace(/_/g, " ")}
+                          </h4>
+                          <img
+                            src={`http://localhost:5000/output_results/${data.path.replace(
+                              /\\/g,
+                              "/"
+                            )}`}
+                            alt={key}
+                            className="w-1/2 h-auto rounded-lg shadow-md mx-auto block"
+                            onError={(e) =>
+                              console.error(
+                                `Failed to load image: ${data.path}`
+                              )
+                            }
+                          />
+                          {parsingResult?.diagram_convention?.validation_results
+                            ?.validation_results[`class_class_${key}`] && (
+                            <div className="mt-2">
+                              <h5 className="font-medium text-gray-700">
+                                Validation Results:
+                              </h5>
+                              <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
+                                {
+                                  parsingResult?.diagram_convention
+                                    ?.validation_results?.validation_results[
+                                    `class_class_${key}`
+                                  ]
+                                }
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {/* Sequence Diagrams */}
+                    {Object.entries(
+                      parsingResult?.diagram_convention?.processing_results
+                        ?.sequence_diagrams || {}
+                    ).map(([key, data]) => {
+                      console.log(
+                        `Rendering Sequence Diagram: ${key} -> ${data.path}`
+                      );
+                      return (
+                        <div key={key} className="p-4 bg-gray-50 rounded-lg">
+                          <h4 className="font-medium mb-2">
+                            Sequence Diagram: {key.replace(/_/g, " ")}
+                          </h4>
+                          <img
+                            src={`http://localhost:5000/output_results/${data.path.replace(
+                              /\\/g,
+                              "/"
+                            )}`}
+                            alt={key}
+                            className="w-1/2 h-auto rounded-lg shadow-md mx-auto block"
+                            onError={(e) =>
+                              console.error(
+                                `Failed to load image: ${data.path}`
+                              )
+                            }
+                          />
+                          {parsingResult?.diagram_convention?.validation_results
+                            ?.validation_results[
+                            `sequence_sequence_${key}`
+                          ] && (
+                            <div className="mt-2">
+                              <h5 className="font-medium text-gray-700">
+                                Validation Results:
+                              </h5>
+                              <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
+                                {
+                                  parsingResult?.diagram_convention
+                                    ?.validation_results?.validation_results[
+                                    `sequence_sequence_${key}`
+                                  ]
+                                }
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              );
-            })}
-            {/* Class Diagrams */}
-            {Object.entries(parsingResult?.diagram_convention?.processing_results?.class_diagrams || {}).map(([key, data]) => {
-              console.log(`Rendering Class Diagram: ${key} -> ${data.path}`);
-              return (
-                <div key={key} className="p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium mb-2">Class Diagram: {key.replace(/_/g, " ")}</h4>
-                  <img
-                    src={`http://localhost:5000/output_results/${data.path.replace(/\\/g, '/')}`}
-                    alt={key}
-                    className="w-1/2 h-auto rounded-lg shadow-md"
-                    onError={(e) => console.error(`Failed to load image: ${data.path}`)}
-                  />
-                  {parsingResult?.diagram_convention?.validation_results?.validation_results[`class_class_${key}`] && (
-                    <div className="mt-2">
-                      <h5 className="font-medium text-gray-700">Validation Results:</h5>
-                      <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
-                        {parsingResult?.diagram_convention?.validation_results?.validation_results[`class_class_${key}`]}
-                      </pre>
-                    </div>
-                  )}
+              )}
+              {/* Issues */}
+              {parsingResult?.diagram_convention?.processing_results?.issues
+                ?.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="font-medium text-red-600 mb-2">Issues:</h3>
+                  <ul className="list-disc list-inside text-red-600">
+                    {parsingResult?.diagram_convention?.processing_results?.issues.map(
+                      (issue, idx) => (
+                        <li key={idx}>{issue}</li>
+                      )
+                    )}
+                  </ul>
                 </div>
-              );
-            })}
-            {/* Sequence Diagrams */}
-            {Object.entries(parsingResult?.diagram_convention?.processing_results?.sequence_diagrams || {}).map(([key, data]) => {
-              console.log(`Rendering Sequence Diagram: ${key} -> ${data.path}`);
-              return (
-                <div key={key} className="p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium mb-2">Sequence Diagram: {key.replace(/_/g, " ")}</h4>
-                  <img
-                    src={`http://localhost:5000/output_results/${data.path.replace(/\\/g, '/')}`}
-                    alt={key}
-                    className="w-1/2 h-auto rounded-lg shadow-md"
-                    onError={(e) => console.error(`Failed to load image: ${data.path}`)}
-                  />
-                  {parsingResult?.diagram_convention?.validation_results?.validation_results[`sequence_sequence_${key}`] && (
-                    <div className="mt-2">
-                      <h5 className="font-medium text-gray-700">Validation Results:</h5>
-                      <pre className="whitespace-pre-wrap text-sm p-3 rounded bg-gray-100 text-gray-800">
-                        {parsingResult?.diagram_convention?.validation_results?.validation_results[`sequence_sequence_${key}`]}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      {/* Issues */}
-      {parsingResult?.diagram_convention?.processing_results?.issues?.length > 0 && (
-        <div className="mt-4">
-          <h3 className="font-medium text-red-600 mb-2">Issues:</h3>
-          <ul className="list-disc list-inside text-red-600">
-            {parsingResult?.diagram_convention?.processing_results?.issues.map((issue, idx) => (
-              <li key={idx}>{issue}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  </CollapsibleSection>
-)}
+              )}
+            </div>
+          </>
+        )}
 
         {/* Plagiarism Check */}
         {console.log(
@@ -1430,9 +1434,10 @@ function ParsingResult() {
           !!parsingResult?.plagiarism_check
         )}
         {parsingResult.plagiarism_check && (
-
-          <CollapsibleSection title="Plagiarism Analysis" defaultOpen={false}>
-
+          <>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Plagiarism Check
+            </h2>
             <div className="space-y-6">
               {/* Summary Card */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-lg border border-blue-100 shadow-sm">
@@ -1791,7 +1796,7 @@ function ParsingResult() {
                 </ul>
               </div>
             </div>
-          </CollapsibleSection>
+          </>
         )}
       </div>
     </div>

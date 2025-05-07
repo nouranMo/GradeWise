@@ -429,7 +429,6 @@ function ProfessorDashboard() {
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
-
         // Get JWT token
         const token = localStorage.getItem("token");
         if (!token) {
@@ -448,7 +447,6 @@ function ProfessorDashboard() {
             },
           }
         );
-
 
         if (response.ok) {
           const documents = await response.json();
@@ -482,7 +480,6 @@ function ProfessorDashboard() {
           console.error("Failed to fetch documents:", await response.text());
         }
 
-
         // Fetch submission slots with professor ID filter
         const slotsResponse = await fetch(
           `${API_URL}/api/submissions/slots?professorId=${currentUser.id}`,
@@ -493,7 +490,6 @@ function ProfessorDashboard() {
             },
           }
         );
-
 
         if (slotsResponse.ok) {
           const slots = await slotsResponse.json();
@@ -1370,8 +1366,8 @@ function ProfessorDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Upload Document Card */}
 
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4">Upload Test Document</h2>
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h2 className="text-md font-semibold mb-4">Upload Test Document</h2>
             <p className="text-sm text-gray-500 mb-4">
               Upload documents for testing and analysis. These documents will be
               saved under your account and displayed in the "Uploaded Documents"
@@ -1524,30 +1520,36 @@ function ProfessorDashboard() {
                   Refresh
                 </button>
               </div>
-              <div className="grid grid-cols-8 gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-                <div className="flex items-center">STUDENT</div>
-                <div className="flex items-center">DOCUMENT</div>
-                <div className="flex items-center">SUBMISSION TYPE</div>
-                <div className="flex items-center">COURSE</div>
-                <div className="flex items-center">SUBMISSION DATE</div>
+              <div className="grid grid-cols-8 gap-6 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500">
+                <div className="flex items-center justify-center">STUDENT</div>
+                <div className="flex items-center justify-center">DOCUMENT</div>
+                <div className="flex items-center justify-center">
+                  SUBMISSION TYPE
+                </div>
+                <div className="flex items-center justify-center">COURSE</div>
+                <div className="flex items-center justify-center">
+                  SUBMISSION DATE
+                </div>
                 <div className="flex items-center justify-center">STATUS</div>
                 <div className="flex items-center justify-center">GRADE</div>
-                <div className="flex items-center justify-end">ACTIONS</div>
+                <div className="flex items-center justify-center">ACTIONS</div>
               </div>
 
               {submissions.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500 text-sm">
                   No student submissions yet
                 </div>
               ) : (
                 submissions.map((submission) => (
                   <div
                     key={submission.id}
+
                     onClick={() => handleSubmissionClick(submission)}
                     className="grid grid-cols-8 gap-4 px-4 py-3 border-b text-sm cursor-pointer text-gray-600 hover:bg-gray-50 transition-colors duration-300"
+
                   >
                     <div
-                      className="flex items-center col-span-1"
+                      className="flex items-center col-span-1 justify-center"
                       title={submission.studentName}
                     >
                       <span className="whitespace-normal break-words overflow-hidden max-h-16 hyphens-auto">
@@ -1565,10 +1567,9 @@ function ProfessorDashboard() {
                         ID: {submission.documentId}
                       </span>
                     </div>
-                    <div>{submission.submissionType}</div>
-                    <div>{submission.courseName || submission.courseCode}</div>
-                    <div>
-
+                    <div className="flex items-center justify-center">{submission.submissionType}</div>
+                    <div className="flex items-center justify-center">{submission.courseName || submission.courseCode}</div>
+                    <div className="flex items-center justify-center">
                       {submission.submissionDate
                         ? new Date(
                             submission.submissionDate
@@ -1625,7 +1626,7 @@ function ProfessorDashboard() {
                     <div className="flex items-center justify-center">
                       {submission.grade ? `${submission.grade}%` : "-"}
                     </div>
-                    <div className="flex items-center justify-end space-x-2">
+                    <div className="flex items-center justify-center space-x-2">
                       {submission.status === "Submitted" && (
                         <button
                           onClick={() => handleAnalyzeSubmission(submission)}
@@ -1698,26 +1699,30 @@ function ProfessorDashboard() {
           </div>
         </div>
 
-
-          {/* Professor Documents Table */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">My Test Documents</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Documents uploaded for testing and analysis purposes.
-            </p>
-            <div className="bg-white rounded-lg shadow mb-8">
-              <div className="grid grid-cols-[1.5fr_1fr_1fr_140px_150px] gap-4 px-6 py-3 bg-gray-50 text-sm font-medium text-gray-500">
-                <div>DOCUMENT NAME</div>
-                <div>UPLOADED DATE</div>
-                <div>SIZE</div>
-                <div>STATUS</div>
-                <div>ACTIONS</div>
+        {/* Professor Documents Table */}
+        <div>
+          <h2 className="text-md font-semibold text-gray-800 mb-4">My Test Documents</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Documents uploaded for testing and analysis purposes.
+          </p>
+          <div className="bg-white rounded-lg shadow mb-8">
+            <div className="grid grid-cols-[minmax(300px,0.8fr)_200px_120px_120px_200px] gap-6 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500">
+              <div className="flex items-center justify-center">
+                DOCUMENT NAME
               </div>
-
+              <div className="flex items-center justify-center">
+                UPLOADED DATE
+              </div>
+              <div className="flex items-center justify-center">SIZE</div>
+              <div className="flex items-center justify-center">STATUS</div>
+              <div className="flex items-center justify-center gap-2">
+                ACTIONS
+              </div>
+            </div>
 
             {/* Table rows */}
             {professorDocuments.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-gray-500 text-sm">
                 No documents uploaded yet
               </div>
             ) : (
@@ -1727,9 +1732,9 @@ function ProfessorDashboard() {
                 return (
                   <div
                     key={doc.id}
-                    className="grid grid-cols-[minmax(300px,2fr)_200px_100px_120px_250px] gap-4 px-6 py-4 border-b text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-300"
+                    className="grid grid-cols-[minmax(300px,0.8fr)_200px_120px_120px_200px] gap-6 px-4 py-4 border-b text-xs text-gray-600 hover:bg-gray-50 transition-colors duration-300"
                   >
-                    <div className="flex items-center min-w-0">
+                    <div className="flex items-center min-w-0 justify-center">
                       {" "}
                       {/* Add min-w-0 to enable truncation */}
                       <span
@@ -1753,14 +1758,16 @@ function ProfessorDashboard() {
                         </svg>
                       )}
                     </div>
-                    <div className="truncate">{formatDate(doc.uploadDate)}</div>
+                    <div className="truncate flex items-center justify-center">
+                      {formatDate(doc.uploadDate)}
+                    </div>
                     <div
-                      className="truncate"
+                      className="truncate flex items-center justify-center"
                       title={formatFileSize(doc.fileSize)}
                     >
                       {doc.fileSize ? formatFileSize(doc.fileSize) : "N/A"}
                     </div>
-                    <div>
+                    <div className="flex items-center justify-center">
                       <span
                         className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
                           doc.status === "Completed" || doc.status === "Graded"
@@ -1797,7 +1804,7 @@ function ProfessorDashboard() {
                         {doc.status}
                       </span>
                     </div>
-                    <div className="flex items-center justify-end gap-2 w-[250px]">
+                    <div className="flex items-center gap-2 justify-center">
                       {isViewable || doc.status === "Completed" ? (
                         <>
                           <button
@@ -1815,10 +1822,9 @@ function ProfessorDashboard() {
                         </>
                       ) : (
                         <>
-                          <div className="flex-1"></div>
                           <button
                             onClick={() => handleAnalyzeClick(doc)}
-                            className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] whitespace-nowrap"
+                            className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] whitespace-nowrap transition-colors duration-300"
                           >
                             Analyze
                           </button>
