@@ -154,6 +154,29 @@ public class SubmissionService {
         submission.setStatus("Submitted");
         submission.setLastModified(new Date());
         submission.setSubmissionType(submissionType);
+        
+        // CRITICAL FIX: Set the documentId field
+        submission.setDocumentId(documentId);
+        
+        // Also set other document details for completeness
+        submission.setFileName(document.getName());
+        // Use filename extension or a safe default for file type instead of contentType
+        String fileType = "application/octet-stream"; // default mime type
+        if (document.getFilePath() != null) {
+            String fileName = document.getFilePath();
+            int lastDot = fileName.lastIndexOf('.');
+            if (lastDot > 0) {
+                String extension = fileName.substring(lastDot + 1).toLowerCase();
+                if (extension.equals("pdf")) {
+                    fileType = "application/pdf";
+                } else if (extension.equals("doc")) {
+                    fileType = "application/msword";
+                } else if (extension.equals("docx")) {
+                    fileType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                }
+            }
+        }
+        submission.setFileType(fileType);
 
         logger.info("Created submission with document ID: {}", submission.getDocumentId());
 
@@ -192,7 +215,16 @@ public class SubmissionService {
             throw new Exception("Submission not found");
         }
 
-        logger.info("Found submission with document ID: {}", submission.getDocumentId());
+        logger.info("Found submission with ID: {}", submission.getId());
+        
+        // CRITICAL: Check if documentId exists in the submission
+        String documentId = submission.getDocumentId();
+        if (documentId == null || documentId.isEmpty()) {
+            logger.error("Submission {} has no associated document ID", submissionId);
+            throw new Exception("Submission has no associated document ID. Cannot analyze.");
+        }
+        
+        logger.info("Using document ID: {} from submission: {}", documentId, submissionId);
 
         // Check if the submission is already analyzed or graded
         if ("Analyzed".equals(submission.getStatus()) || "Graded".equals(submission.getStatus())) {
@@ -210,13 +242,12 @@ public class SubmissionService {
         // Start analysis in a background thread
         new Thread(() -> {
             try {
-                // Get the document
-                String documentId = submission.getDocumentId();
-                logger.info("Retrieving document with ID: {}", documentId);
+                // Get the document using the document ID from the submission
+                logger.info("Retrieving document with ID: {} for submission: {}", documentId, submissionId);
 
                 DocumentModel document = documentService.getDocumentById(documentId);
                 if (document == null) {
-                    logger.error("Document not found with ID: {}", documentId);
+                    logger.error("Document not found with ID: {} for submission: {}", documentId, submissionId);
                     submission.setStatus("Failed");
                     submission.setLastModified(new Date());
                     submission.setFeedback("Document not found in the database");
@@ -250,10 +281,12 @@ public class SubmissionService {
                     analyses.put("SrsValidation", true);
                 }
 
-                logger.info("Starting document analysis with analyses: {}", analyses, documentType);
+                logger.info("Starting document analysis with analyses: {}, documentType: {}", analyses, documentType);
 
                 // Analyze the document
                 try {
+                    // CRITICAL: Make sure we're using the document ID, not the submission ID
+                    logger.info("Calling startAnalysis with DOCUMENT ID: {}", document.getId()); 
                     documentService.startAnalysis(document.getId(), analyses, documentType);
                     logger.info("Analysis started successfully for document: {}", document.getId());
                 } catch (Exception e) {
@@ -459,5 +492,17 @@ public class SubmissionService {
         List<Submission> studentSubmissions = submissionRepository.findByUserId(userId);
         return studentSubmissions.stream()
                 .anyMatch(s -> s.getCourseId().equals(courseId));
+    }
+
+    // Save an updated submission
+    public Submission saveSubmission(Submission submission) {
+        if (submission == null) {
+            throw new IllegalArgumentException("Submission cannot be null");
+        }
+        
+        logger.info("Saving submission: ID={}, DocumentID={}, Status={}", 
+            submission.getId(), submission.getDocumentId(), submission.getStatus());
+        
+        return submissionRepository.save(submission);
     }
 }

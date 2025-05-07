@@ -121,7 +121,13 @@ public class DocumentController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getDocumentById(@PathVariable String id) {
         try {
-            logger.info("Getting document with ID: {}", id);
+            if (id == null || id.isEmpty() || id.equals("undefined") || id.equals("null")) {
+                logger.warn("Invalid document ID provided: {}", id);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("status", "error", "message", "Invalid document ID provided: " + id));
+            }
+            
+            logger.info("Getting document with ID: '{}', ID length: {}", id, id.length());
             DocumentModel document = documentService.getDocumentById(id);
             if (document == null) {
                 logger.warn("Document not found with ID: {}", id);

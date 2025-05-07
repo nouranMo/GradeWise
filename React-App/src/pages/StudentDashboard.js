@@ -16,10 +16,6 @@ const StudentDashboard = () => {
   const [selectedCourse, setSelectedCourse] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [uploadedDocument, setUploadedDocument] = useState(null);
-  const [documents, setDocuments] = useState([]);
-  const [uploadingDocument, setUploadingDocument] = useState(false);
-  const [submittingDocument, setSubmittingDocument] = useState(false);
   const [studentInfo, setStudentInfo] = useState(null);
   const [courses, setCourses] = useState([]);
   const [submissionType, setSubmissionType] = useState("SRS");
@@ -102,128 +98,15 @@ const StudentDashboard = () => {
     }
   }, [navigate]);
 
-  // Fetch student's documents
-  const fetchStudentDocuments = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      const response = await fetch(`${API_URL}/api/student/documents`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setDocuments(data);
-      }
-    } catch (error) {
-      console.error("Error fetching documents:", error);
-    }
-  }, []);
-
   useEffect(() => {
     fetchStudentInfo();
     fetchStudentCourses();
     fetchSubmissionSlots();
-    fetchStudentDocuments();
   }, [
     fetchStudentInfo,
     fetchStudentCourses,
     fetchSubmissionSlots,
-    fetchStudentDocuments,
   ]);
-
-  // Handle file upload to create a new document
-  const handleFileUpload = async (file) => {
-    try {
-      setUploadingDocument(true);
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("Authentication required");
-        return null;
-      }
-
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("name", file.name);
-
-      // Upload file as a document first
-      const response = await fetch(`${API_URL}/api/student/documents`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast.success("Document uploaded successfully!");
-
-        // Refresh documents list
-        await fetchStudentDocuments();
-
-        // Return the uploaded document
-        return data.document;
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Document upload failed");
-      }
-    } catch (error) {
-      console.error("Error uploading document:", error);
-      toast.error(error.message);
-      return null;
-    } finally {
-      setUploadingDocument(false);
-    }
-  };
-
-  // Submit document to a submission slot
-  const submitDocumentToSlot = async (documentId, slotId) => {
-    try {
-      setSubmittingDocument(true);
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("Authentication required");
-        return;
-      }
-
-      const response = await fetch(
-        `${API_URL}/api/student/submissions/slots/${slotId}/submit`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            documentId: documentId,
-            submissionType: submissionType,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        toast.success("Document submitted successfully!");
-        setIsModalOpen(false);
-        setSelectedSlot(null);
-        setUploadedDocument(null);
-        // Refresh the submission slots list
-        fetchSubmissionSlots();
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Submission failed");
-      }
-    } catch (error) {
-      console.error("Error submitting document:", error);
-      toast.error(error.message);
-    } finally {
-      setSubmittingDocument(false);
-    }
-  };
 
   const handleSlotClick = (slot) => {
     if (slot.hasSubmitted) {
@@ -233,18 +116,6 @@ const StudentDashboard = () => {
       // Open upload modal for submission
       setSelectedSlot(slot);
       setIsModalOpen(true);
-    }
-  };
-
-  const handleDocumentSelection = (document) => {
-    setUploadedDocument(document);
-  };
-
-  const handleSubmitSelection = () => {
-    if (uploadedDocument && selectedSlot) {
-      submitDocumentToSlot(uploadedDocument.id, selectedSlot.slot.id);
-    } else {
-      toast.error("Please select a document to submit");
     }
   };
 
@@ -392,16 +263,9 @@ const StudentDashboard = () => {
           onClose={() => {
             setIsModalOpen(false);
             setSelectedSlot(null);
-            setUploadedDocument(null);
           }}
           selectedSlot={selectedSlot}
-          documents={documents}
-          onDocumentSelect={handleDocumentSelection}
-          onUploadFile={handleFileUpload}
-          onSubmit={handleSubmitSelection}
-          selectedDocument={uploadedDocument}
-          isUploading={uploadingDocument}
-          isSubmitting={submittingDocument}
+          fetchSubmissionSlots={fetchSubmissionSlots}
           submissionType={submissionType}
           setSubmissionType={setSubmissionType}
         />
@@ -495,26 +359,17 @@ const UploadModal = ({
   isOpen,
   onClose,
   selectedSlot,
-  documents,
-  onDocumentSelect,
-  onUploadFile,
-  onSubmit,
-  selectedDocument,
-  isUploading,
-  isSubmitting,
+  fetchSubmissionSlots,
   submissionType,
   setSubmissionType,
 }) => {
   const [file, setFile] = useState(null);
-  const [uploadStep, setUploadStep] = useState("select"); // 'select', 'upload'
+  const [uploadingAndSubmitting, setUploadingAndSubmitting] = useState(false);
 
   const onDrop = useCallback(async (acceptedFiles) => {
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
       setFile(file);
-
-      // Switch to upload view
-      setUploadStep("upload");
     }
   }, []);
 
@@ -529,18 +384,132 @@ const UploadModal = ({
     maxFiles: 1,
   });
 
-  const handleUploadFile = async () => {
-    const uploadedDoc = await onUploadFile(file);
-    if (uploadedDoc) {
-      onDocumentSelect(uploadedDoc);
-      setFile(null);
-      setUploadStep("select");
+  const handleUploadAndSubmit = async () => {
+    if (!file) {
+      toast.error("Please select a file to upload");
+      return;
+    }
+
+    try {
+      setUploadingAndSubmitting(true);
+      
+      // Upload the file directly
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication required");
+        return;
+      }
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("name", file.name);
+      
+      // Use the student-specific document upload endpoint
+      const uploadResponse = await fetch(`${API_URL}/api/student/documents`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || "Document upload failed");
+      }
+      
+      // Extract document data including ID
+      const uploadData = await uploadResponse.json();
+      console.log("Document upload response:", uploadData);
+      
+      if (!uploadData.document) {
+        console.error("Document upload error: Missing document in response", uploadData);
+        throw new Error("Document upload failed: Invalid server response");
+      }
+      
+      // Get the document object and its ID
+      const document = uploadData.document;
+      // Make sure we're using the correct ID field (_id or id depending on server response)
+      const documentId = document._id || document.id;
+      
+      console.log("Document details:", document);
+      console.log("Using document ID for submission:", documentId);
+      
+      if (!documentId) {
+        console.error("Error: No document ID found in upload response");
+        throw new Error("Document upload successful but no ID was returned");
+      }
+      
+      // Submit the document to the slot
+      // This creates the connection between the document and the submission slot
+      const submitResponse = await fetch(
+        `${API_URL}/api/student/submissions/slots/${selectedSlot.slot.id}/submit`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            documentId: documentId,
+            submissionType: submissionType,
+            fileName: file.name,
+            // Include critical document details that need to be associated with the submission
+            documentName: document.name,
+            documentPath: document.filePath,
+            documentSize: document.fileSize,
+            documentContentType: document.contentType,
+            // Add both ID formats to ensure compatibility
+            _id: document._id,
+            id: document.id,
+            // These fields ensure the submission has all necessary document info
+            document: {
+              _id: document._id, 
+              id: document.id || document._id,
+              name: document.name,
+              filePath: document.filePath, 
+              fileSize: document.fileSize,
+              contentType: document.contentType,
+              userId: document.userId
+            }
+          }),
+        }
+      );
+      
+      if (!submitResponse.ok) {
+        const submitError = await submitResponse.json();
+        throw new Error(submitError.error || "Submission failed");
+      }
+      
+      const submitData = await submitResponse.json();
+      console.log("Submission response:", submitData);
+      
+      // Verify the submission contains the document ID
+      if (submitData.submission) {
+        console.log("Created submission:", submitData.submission);
+        console.log("Submission document ID:", submitData.submission.documentId);
+        
+        if (!submitData.submission.documentId) {
+          console.warn("Warning: Submission created without document ID!");
+        }
+      }
+      
+      toast.success("Document uploaded and submitted successfully!");
+      resetModal();
+      
+      // Refresh the submission slots list
+      fetchSubmissionSlots();
+    } catch (error) {
+      console.error("Error uploading and submitting:", error);
+      toast.error(error.message);
+    } finally {
+      setUploadingAndSubmitting(false);
     }
   };
 
   const resetModal = () => {
     setFile(null);
-    setUploadStep("select");
     onClose();
   };
 
@@ -577,7 +546,7 @@ const UploadModal = ({
                   as="h3"
                   className="text-lg font-medium leading-6 text-gray-900"
                 >
-                  Submit Document for {selectedSlot?.slot.name}
+                  Upload and Submit Document for {selectedSlot?.slot.name}
                 </Dialog.Title>
                 <div className="mt-2">
                   <p className="text-sm text-gray-500">
@@ -605,105 +574,11 @@ const UploadModal = ({
                     <option value="SDD">SDD (Software Design Document)</option>
                   </select>
 
-                  {uploadStep === "select" ? (
-                    <>
-                      {/* Document Selection Step */}
-                      <div className="space-y-4">
-                        {/* Existing Documents */}
-                        {documents.length > 0 && (
-                          <div>
-                            <h4 className="font-medium text-gray-700 mb-2">
-                              Select from your documents:
-                            </h4>
-                            <div className="max-h-52 overflow-y-auto border rounded-md divide-y">
-                              {documents.map((doc) => (
-                                <div
-                                  key={doc.id}
-                                  className={`p-3 flex items-center cursor-pointer hover:bg-gray-50 ${
-                                    selectedDocument?.id === doc.id
-                                      ? "bg-blue-50"
-                                      : ""
-                                  }`}
-                                  onClick={() => onDocumentSelect(doc)}
-                                >
-                                  <svg
-                                    className="h-5 w-5 text-gray-500 mr-2"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                    />
-                                  </svg>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 truncate">
-                                      {doc.name}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      {new Date(
-                                        doc.createdAt || doc.uploadDate
-                                      ).toLocaleDateString()}
-                                    </p>
-                                  </div>
-                                  {selectedDocument?.id === doc.id && (
-                                    <svg
-                                      className="h-5 w-5 text-blue-500"
-                                      fill="currentColor"
-                                      viewBox="0 0 20 20"
-                                    >
-                                      <path
-                                        fillRule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clipRule="evenodd"
-                                      />
-                                    </svg>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Upload New Document */}
-                        <div>
-                          <h4 className="font-medium text-gray-700 mb-2">
-                            Or upload a new document:
-                          </h4>
-                          <div
-                            {...getRootProps()}
-                            className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors
-                              ${
-                                isDragActive
-                                  ? "border-blue-500 bg-blue-50"
-                                  : "border-gray-300"
-                              }`}
-                          >
-                            <input {...getInputProps()} />
-                            {isDragActive ? (
-                              <p className="text-blue-500">
-                                Drop the file here...
-                              </p>
-                            ) : (
-                              <div>
-                                <p className="text-gray-600">
-                                  Drag and drop a file here, or click to select
-                                </p>
-                                <p className="text-xs text-gray-500 mt-2">
-                                  Supported formats: PDF, DOC, DOCX
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {/* File Upload Preview Step */}
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-2">
+                      Upload your document:
+                    </h4>
+                    {file ? (
                       <div className="border rounded-lg p-4">
                         <div className="flex items-center">
                           <svg
@@ -732,26 +607,41 @@ const UploadModal = ({
                           <button
                             type="button"
                             className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
-                            onClick={() => {
-                              setFile(null);
-                              setUploadStep("select");
-                            }}
-                            disabled={isUploading}
+                            onClick={() => setFile(null)}
+                            disabled={uploadingAndSubmitting}
                           >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
-                            onClick={handleUploadFile}
-                            disabled={isUploading}
-                          >
-                            {isUploading ? "Uploading..." : "Upload Document"}
+                            Remove
                           </button>
                         </div>
                       </div>
-                    </>
-                  )}
+                    ) : (
+                      <div
+                        {...getRootProps()}
+                        className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors
+                          ${
+                            isDragActive
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-300"
+                          }`}
+                      >
+                        <input {...getInputProps()} />
+                        {isDragActive ? (
+                          <p className="text-blue-500">
+                            Drop the file here...
+                          </p>
+                        ) : (
+                          <div>
+                            <p className="text-gray-600">
+                              Drag and drop a file here, or click to select
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Supported formats: PDF, DOC, DOCX
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-6 flex justify-end space-x-3">
@@ -759,16 +649,17 @@ const UploadModal = ({
                     type="button"
                     className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
                     onClick={resetModal}
+                    disabled={uploadingAndSubmitting}
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
-                    onClick={onSubmit}
-                    disabled={!selectedDocument || isSubmitting}
+                    onClick={handleUploadAndSubmit}
+                    disabled={!file || uploadingAndSubmitting}
                   >
-                    {isSubmitting ? "Submitting..." : "Submit"}
+                    {uploadingAndSubmitting ? "Uploading & Submitting..." : "Upload & Submit"}
                   </button>
                 </div>
               </Dialog.Panel>
