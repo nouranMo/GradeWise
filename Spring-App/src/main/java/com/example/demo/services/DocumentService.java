@@ -156,8 +156,8 @@ public class DocumentService {
         try {
             // Create RestTemplate with timeout
             SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-            factory.setConnectTimeout(300000);
-            factory.setReadTimeout(300000);
+            factory.setConnectTimeout(1800000); // 30 minutes
+            factory.setReadTimeout(1800000);    // 30 minutes
             RestTemplate restTemplate = new RestTemplate(factory);
 
             // Create request to Python API
