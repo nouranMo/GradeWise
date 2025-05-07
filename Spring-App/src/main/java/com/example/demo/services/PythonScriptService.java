@@ -19,9 +19,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 /**
@@ -151,8 +153,14 @@ public class PythonScriptService {
         try {
             logger.info("Sending analysis request to Flask server for file: {}", filePath);
             
-            // Create RestTemplate
+            // Create RestTemplate with timeout configuration
             RestTemplate restTemplate = new RestTemplate();
+            
+            // Configure timeouts (30 minutes for connect and read)
+            SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+            factory.setConnectTimeout(1800000); // 30 minutes
+            factory.setReadTimeout(1800000);    // 30 minutes
+            restTemplate.setRequestFactory(factory);
             
             // Create request headers
             HttpHeaders headers = new HttpHeaders();
@@ -177,21 +185,42 @@ public class PythonScriptService {
             // Create the request entity
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
             
-            // Send the request
-            ResponseEntity<String> response = restTemplate.exchange(
-                    pythonApiUrl,
-                    HttpMethod.POST,
-                    requestEntity,
-                    String.class);
+            // Send the request with retry logic
+            int maxRetries = 2;  // Reduced retries since we have longer timeouts
+            int retryCount = 0;
+            Exception lastException = null;
             
-            // Parse the response
-            String responseBody = response.getBody();
-            logger.info("Received response from Flask server: {}", responseBody);
+            while (retryCount < maxRetries) {
+                try {
+                    logger.info("Attempt {} of {} to send analysis request", retryCount + 1, maxRetries);
+                    
+                    ResponseEntity<String> response = restTemplate.exchange(
+                            pythonApiUrl,
+                            HttpMethod.POST,
+                            requestEntity,
+                            String.class);
+                    
+                    // Parse the response
+                    String responseBody = response.getBody();
+                    logger.info("Received response from Flask server: {}", responseBody);
+                    
+                    // Convert to Map
+                    Map<String, Object> results = objectMapper.readValue(responseBody, Map.class);
+                    return results;
+                    
+                } catch (ResourceAccessException e) {
+                    lastException = e;
+                    retryCount++;
+                    if (retryCount < maxRetries) {
+                        logger.warn("Request timed out, retrying in 2 minutes... (Attempt {}/{})", 
+                            retryCount + 1, maxRetries);
+                        Thread.sleep(120000); // Wait 2 minutes before retrying
+                    }
+                }
+            }
             
-            // Convert to Map
-            Map<String, Object> results = objectMapper.readValue(responseBody, Map.class);
-            
-            return results;
+            // If we get here, all retries failed
+            throw new RuntimeException("Failed to get response from Flask server after " + maxRetries + " attempts", lastException);
             
         } catch (Exception e) {
             logger.error("Error sending analysis request to Flask server", e);
