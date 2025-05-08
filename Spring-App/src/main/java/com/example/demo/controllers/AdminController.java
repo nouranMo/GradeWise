@@ -35,6 +35,9 @@ public class AdminController {
 
     @Autowired
     private CourseService courseService;
+    
+    @Autowired
+    private org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
     @GetMapping("/users")
     public ResponseEntity<?> getAllUsers() {
@@ -196,6 +199,207 @@ public class AdminController {
             logger.error("Error removing teacher from course", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to remove teacher from course: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete a user
+     */
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable String userId) {
+        try {
+            User user = userService.findById(userId);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "User not found"));
+            }
+            
+            // Prevent deleting admin users
+            if (user.getRole() != null && user.getRole().equals("ROLE_ADMIN")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Cannot delete admin users"));
+            }
+            
+            // Direct implementation to delete the user from MongoDB
+            try {
+                // Log the user object to help debugging
+                logger.info("Deleting user: {}", user);
+                
+                // Try the most basic approach first - delete directly with the entity
+                try {
+                    mongoTemplate.remove(user);
+                    logger.info("User deleted successfully using entity removal");
+                    return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
+                } catch (Exception entityRemoveException) {
+                    logger.warn("Entity removal failed: {}, trying query approach", entityRemoveException.getMessage());
+                    
+                    // Try with a query as backup
+                    org.springframework.data.mongodb.core.query.Query query = 
+                        new org.springframework.data.mongodb.core.query.Query();
+                    
+                    // Build a list of criteria to use with the orOperator
+                    java.util.List<org.springframework.data.mongodb.core.query.Criteria> criteriaList = 
+                        new java.util.ArrayList<>();
+                    
+                    // Add ID criteria 
+                    criteriaList.add(
+                        org.springframework.data.mongodb.core.query.Criteria.where("id").is(userId)
+                    );
+                    
+                    // Add _id criteria if it looks like a valid ObjectId
+                    if (userId.matches("[0-9a-fA-F]{24}")) {
+                        try {
+                            org.bson.types.ObjectId objectId = new org.bson.types.ObjectId(userId);
+                            criteriaList.add(
+                                org.springframework.data.mongodb.core.query.Criteria.where("_id").is(objectId)
+                            );
+                            logger.info("Added ObjectId criteria");
+                        } catch (Exception e) {
+                            logger.warn("Could not convert to ObjectId: {}", e.getMessage());
+                        }
+                    }
+                    
+                    // Also try by email if available
+                    if (user.getEmail() != null) {
+                        criteriaList.add(
+                            org.springframework.data.mongodb.core.query.Criteria.where("email").is(user.getEmail())
+                        );
+                        logger.info("Added email criteria");
+                    }
+                    
+                    // Convert the list to an array for orOperator
+                    org.springframework.data.mongodb.core.query.Criteria[] criteriaArray = 
+                        criteriaList.toArray(new org.springframework.data.mongodb.core.query.Criteria[criteriaList.size()]);
+                    
+                    query.addCriteria(
+                        new org.springframework.data.mongodb.core.query.Criteria().orOperator(criteriaArray)
+                    );
+                    
+                    logger.info("Executing MongoDB query with {} criteria", criteriaList.size());
+                    mongoTemplate.remove(query, User.class);
+                    logger.info("User deleted successfully using query removal");
+                }
+                
+                return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
+            } catch (Exception e) {
+                logger.error("Error deleting user with MongoDB: {}", e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "Failed to delete user from database: " + e.getMessage()));
+            }
+        } catch (Exception e) {
+            logger.error("Error in user deletion process: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to process user deletion: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete a course
+     */
+    @DeleteMapping("/courses/{courseId}")
+    public ResponseEntity<?> deleteCourse(@PathVariable String courseId) {
+        try {
+            logger.info("Attempting to delete course with ID or code: {}", courseId);
+            
+            // The actual ID we'll use for deletion (might be different from the path variable)
+            String deletionId = courseId;
+            
+            // First try to find the course by ID
+            CourseModel course = courseService.getCourseById(courseId);
+            
+            // If not found by ID, try to find by course code
+            if (course == null) {
+                logger.info("Course not found by ID, attempting to find by code");
+                // Assuming there's a method to find by code, or we need to get all courses and filter
+                List<CourseModel> allCourses = courseService.getAllCourses();
+                course = allCourses.stream()
+                    .filter(c -> courseId.equals(c.getCode()))
+                    .findFirst()
+                    .orElse(null);
+                
+                if (course != null) {
+                    logger.info("Found course by code: {}, with ID: {}", courseId, course.getId());
+                    deletionId = course.getId(); // Use the actual ID for deletion
+                }
+            }
+            
+            if (course == null) {
+                logger.warn("Course not found for deletion: {}", courseId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Course not found"));
+            }
+            
+            // Try to delete with both the service method and direct MongoDB access for backup
+            try {
+                // First try using the service method
+                try {
+                    courseService.deleteCourse(deletionId);
+                    logger.info("Course deleted successfully via service method");
+                } catch (Exception e) {
+                    logger.warn("Service method failed, falling back to direct MongoDB removal: {}", e.getMessage());
+                    
+                    // Create a query that tries both id and _id fields
+                    org.springframework.data.mongodb.core.query.Query query = 
+                        new org.springframework.data.mongodb.core.query.Query();
+                    
+                    // Build a list of criteria to use with the orOperator
+                    java.util.List<org.springframework.data.mongodb.core.query.Criteria> criteriaList = 
+                        new java.util.ArrayList<>();
+                    
+                    // Add ID criteria
+                    criteriaList.add(
+                        org.springframework.data.mongodb.core.query.Criteria.where("id").is(deletionId)
+                    );
+                    
+                    // Add _id criteria if it looks like a valid ObjectId
+                    if (deletionId.matches("[0-9a-fA-F]{24}")) {
+                        try {
+                            org.bson.types.ObjectId objectId = new org.bson.types.ObjectId(deletionId);
+                            criteriaList.add(
+                                org.springframework.data.mongodb.core.query.Criteria.where("_id").is(objectId)
+                            );
+                            logger.info("Added ObjectId criteria for course deletion");
+                        } catch (Exception objIdEx) {
+                            logger.warn("Could not convert to ObjectId: {}", objIdEx.getMessage());
+                        }
+                    }
+                    
+                    // Also try by code if the original input looks like a course code
+                    if (!courseId.equals(deletionId) && !courseId.matches("[0-9a-fA-F]{24}")) {
+                        criteriaList.add(
+                            org.springframework.data.mongodb.core.query.Criteria.where("code").is(courseId)
+                        );
+                        logger.info("Added code criteria for course deletion");
+                    }
+                    
+                    // Convert the list to an array for orOperator
+                    org.springframework.data.mongodb.core.query.Criteria[] criteriaArray = 
+                        criteriaList.toArray(new org.springframework.data.mongodb.core.query.Criteria[criteriaList.size()]);
+                    
+                    query.addCriteria(
+                        new org.springframework.data.mongodb.core.query.Criteria().orOperator(criteriaArray)
+                    );
+                    
+                    logger.info("Executing MongoDB query with {} criteria for course deletion", criteriaList.size());
+                    // Remove from MongoDB directly as a fallback
+                    mongoTemplate.remove(query, "courses");
+                    logger.info("Course deleted successfully via direct MongoDB access");
+                }
+                
+                return ResponseEntity.ok(Map.of(
+                    "message", "Course deleted successfully", 
+                    "id", deletionId,
+                    "originalInput", courseId
+                ));
+            } catch (Exception e) {
+                logger.error("Error deleting course from database: {}", e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "Failed to delete course from database: " + e.getMessage()));
+            }
+        } catch (Exception e) {
+            logger.error("Error processing course deletion: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to process course deletion: " + e.getMessage()));
         }
     }
 } 

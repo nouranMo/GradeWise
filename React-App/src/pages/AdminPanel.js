@@ -358,7 +358,7 @@ function UserManagement({ assignedUsers, handleDeleteUser }) {
                       >
                         <MenuItem value="" disabled>Change Role</MenuItem>
                         <MenuItem value="ROLE_STUDENT">Student</MenuItem>
-                        <MenuItem value="ROLE_TEACHER">Teacher</MenuItem>
+                        <MenuItem value="ROLE_PROFESSOR">Professor</MenuItem>
                         <MenuItem value="ROLE_ADMIN">Admin</MenuItem>
                       </Select>
                     </FormControl>
@@ -697,9 +697,11 @@ function CourseManagement() {
           return;
         }
         
+        console.log(`Deleting course with ID: ${courseId}`);
+        
         await axios.delete(`http://localhost:8080/admin-api/courses/${courseId}`, {
           headers: {
-            'Authorization': `Bearer ${token}`
+            "Authorization": `Bearer ${token}`
           }
         });
         fetchCourses();
