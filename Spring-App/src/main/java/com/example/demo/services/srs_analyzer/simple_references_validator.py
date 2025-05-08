@@ -47,8 +47,11 @@ class SimpleReferencesValidator:
         logger.info("Extracting references from text")
         references = []
         
-        # Find the References section
-        references_match = re.search(r'References\s*\n', text, re.IGNORECASE)
+        # Find the References section with more flexible pattern
+        # Handles "References", "Bibliography", "Works Cited", etc.
+        references_pattern = r'(?:References|Bibliography|Works Cited|Citations)\s*\n'
+        references_match = re.search(references_pattern, text, re.IGNORECASE)
+        
         if not references_match:
             logger.warning("No References section found")
             return []
@@ -57,12 +60,13 @@ class SimpleReferencesValidator:
         references_text = text[references_match.end():]
         
         # Method 1: Extract references using regex pattern for reference numbers
+        # More robust pattern that handles multi-line references
         ref_pattern = r'(\[\d+\].*?)(?=\[\d+\]|\Z)'
         matches = re.finditer(ref_pattern, references_text, re.DOTALL)
         
         for match in matches:
             ref = match.group(1).strip()
-            # Clean up the reference (remove extra whitespace, newlines, etc.)
+            # Clean up the reference (normalize whitespace)
             ref = re.sub(r'\s+', ' ', ref)
             if ref:
                 references.append(ref)
@@ -92,6 +96,20 @@ class SimpleReferencesValidator:
             if current_ref:
                 references.append(current_ref)
         
+        # Post-process references to ensure they are complete
+        processed_references = []
+        for ref in references:
+            # Check if reference has a number
+            if re.match(r'^\[\d+\]', ref):
+                # Check if reference seems complete (has year or DOI or URL)
+                if re.search(r'\d{4}|doi|http|www', ref, re.IGNORECASE):
+                    processed_references.append(ref)
+                else:
+                    logger.warning(f"Reference may be incomplete: {ref}")
+        
+        if processed_references:
+            references = processed_references
+            
         logger.info(f"Extracted {len(references)} references")
         return references
 
@@ -101,18 +119,26 @@ class SimpleReferencesValidator:
         logger.info(f"Finding citations for reference [{ref_number}]")
         citations = []
         
-        # Simple pattern to find citations
-        pattern = rf'\[{ref_number}\]'
+        # More robust patterns to find citations
+        # Single reference pattern
+        single_pattern = rf'\[{ref_number}\]'
         
-        # Find all matches
-        for match in re.finditer(pattern, text):
+        # Multiple reference pattern (e.g., [1, 2, 3] or [1-3])
+        multiple_patterns = [
+            rf'\[(?:\d+,\s*)*{ref_number}(?:,\s*\d+)*\]',  # [1, 2, 3]
+            rf'\[\d+-{ref_number}\]',                       # [1-3]
+            rf'\[{ref_number}-\d+\]'                        # [3-5]
+        ]
+        
+        # Find all matches for single pattern
+        for match in re.finditer(single_pattern, text):
             # Get context (100 chars before and after)
             start = max(0, match.start() - 100)
             end = min(len(text), match.end() + 100)
             context = text[start:end]
             
             # Skip if this is in the References section
-            if "References" in context and re.search(r'^\[\d+\]', context):
+            if re.search(r'(?:References|Bibliography|Works Cited)', context, re.IGNORECASE) and re.search(r'^\[\d+\]', context):
                 continue
                 
             # Add to citations
@@ -121,8 +147,34 @@ class SimpleReferencesValidator:
                 "position": match.start()
             })
         
-        logger.info(f"Found {len(citations)} citations for reference [{ref_number}]")
-        return citations
+        # Find all matches for multiple patterns
+        for pattern in multiple_patterns:
+            for match in re.finditer(pattern, text):
+                # Get context
+                start = max(0, match.start() - 100)
+                end = min(len(text), match.end() + 100)
+                context = text[start:end]
+                
+                # Skip if this is in the References section
+                if re.search(r'(?:References|Bibliography|Works Cited)', context, re.IGNORECASE) and re.search(r'^\[\d+\]', context):
+                    continue
+                    
+                # Add to citations
+                citations.append({
+                    "context": context.replace(match.group(0), f"**{match.group(0)}**"),
+                    "position": match.start()
+                })
+        
+        # Remove duplicates based on position
+        unique_citations = []
+        positions = set()
+        for citation in citations:
+            if citation["position"] not in positions:
+                unique_citations.append(citation)
+                positions.add(citation["position"])
+        
+        logger.info(f"Found {len(unique_citations)} citations for reference [{ref_number}]")
+        return unique_citations
     
     @staticmethod
     def extract_title_from_reference_with_gemini(reference):
@@ -175,20 +227,37 @@ class SimpleReferencesValidator:
     @staticmethod
     def extract_title_from_reference(reference):
         """Extract the title from a reference."""
+        # Normalize reference by replacing newlines with spaces
+        normalized_ref = reference.replace('\n', ' ')
+        
         # Try to extract using Gemini first
-        title = SimpleReferencesValidator.extract_title_from_reference_with_gemini(reference)
+        title = SimpleReferencesValidator.extract_title_from_reference_with_gemini(normalized_ref)
         if title:
             return title
             
-        # Try to extract title from quotes
-        title_match = re.search(r'"([^"]+)"', reference)
+        # Try to extract title from quotes with improved pattern for hyphenated words
+        title_match = re.search(r'"([^"]+)"', normalized_ref)
         if title_match:
             return title_match.group(1)
         
         # If no quotes, try to extract from the reference text
         # Remove the reference number
-        ref_without_num = re.sub(r'^\[\d+\]\s+', '', reference)
-        # Take the first sentence or up to 100 characters
+        ref_without_num = re.sub(r'^\[\d+\]\s+', '', normalized_ref)
+        
+        # Try to find title after author names and before journal/conference
+        # Look for patterns that typically follow author names
+        author_end_patterns = [
+            r'et al\.\s+"([^"]+)"',
+            r'[A-Z][a-z]+\.\s+"([^"]+)"',
+            r'[A-Z][a-z]+\s+and\s+[A-Z][a-z]+\.\s+"([^"]+)"'
+        ]
+        
+        for pattern in author_end_patterns:
+            match = re.search(pattern, normalized_ref)
+            if match:
+                return match.group(1)
+        
+        # Fall back to simple approach - take the first sentence or up to 100 characters
         title = ref_without_num.split('.')[0]
         if len(title) > 100:
             title = title[:100]
@@ -204,36 +273,138 @@ class SimpleReferencesValidator:
         if not re.match(r"^\[\d+\]", reference):
             issues.append("Missing reference number (e.g., [1]).")
         
-        # Check for author names (typically at the beginning after reference number)
-        author_pattern = r"^\[\d+\]\s+([A-Z]\.\s+[A-Za-z]+|[A-Za-z]+\s+[A-Z]\.)"
+        # Improved author pattern to accept full names and "et al."
+        # This accepts both initial formats (A. Author/Author A.) and full names with et al.
+        author_pattern = r"^\[\d+\]\s+([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)*(?:\s+et al\.)?|[A-Z]\.\s+[A-Za-z]+|[A-Za-z]+\s+[A-Z]\.)"
         if not re.search(author_pattern, reference):
-            issues.append("Author names should follow format: 'A. Author' or 'Author A.'")
+            issues.append("Author names should follow IEEE format.")
         
-        # Check for title in quotation marks
-        if not re.search(r'"[^"]+"', reference):
-            issues.append("Title should be in quotation marks.")
+        # COMPLETELY NEW APPROACH for title detection with extreme debugging
+        # Normalize the reference
+        normalized_ref = reference.replace('\n', ' ')
+        print(f"\n===== DEBUGGING TITLE VALIDATION =====")
+        print(f"Reference: {normalized_ref}")
+        
+        # Print each character and its Unicode code point for debugging
+        print("Character code points:")
+        char_codes = []
+        for i, char in enumerate(normalized_ref):
+            code_point = ord(char)
+            char_codes.append((i, char, code_point))
+            if 8200 <= code_point <= 8300 or code_point == 34 or code_point == 39 or code_point in [8216, 8217, 8220, 8221]:
+                print(f"Special char at position {i}: '{char}' (U+{code_point:04X})")
+        
+        # A comprehensive list of quotation mark characters
+        quote_chars = ['"', "'", '"', '"', ''', ''', '«', '»', '‹', '›', '„', '‟', '❝', '❞', '❮', '❯', '〝', '〞', '＂']
+        quote_pairs = [
+            ('"', '"'),   # Regular double quotes
+            ("'", "'"),   # Regular single quotes
+            ('"', '"'),   # Curly double quotes
+            (''', '''),   # Curly single quotes
+            ('«', '»'),   # Guillemets
+            ('‹', '›'),   # Single guillemets
+            ('„', '"'),   # German quotes
+            ('„', '‟'),   # Alternative German quotes
+            ('❝', '❞'),   # Heavy double quotes
+            ('❮', '❯'),   # Angular quotes
+            ('〝', '〞'),   # CJK quotes
+            ('＂', '＂'),   # Fullwidth quotes
+        ]
+        
+        # Check for any kind of quoted text
+        has_quotes = False
+        detected_quotes = []
+        
+        # Try regex pattern with all individual quote chars
+        for quote in quote_chars:
+            pattern = f"{quote}[^{quote}]+{quote}"
+            matches = re.findall(pattern, normalized_ref)
+            if matches:
+                print(f"Found quote match with '{quote}': {matches}")
+                detected_quotes.extend(matches)
+                has_quotes = True
+        
+        # Try regex pattern with quote pairs
+        for open_q, close_q in quote_pairs:
+            pattern = f"{re.escape(open_q)}[^{re.escape(close_q)}]+{re.escape(close_q)}"
+            matches = re.findall(pattern, normalized_ref)
+            if matches:
+                print(f"Found quote pair match with '{open_q}'/'{close_q}': {matches}")
+                detected_quotes.extend(matches)
+                has_quotes = True
+        
+        # Simple heuristic: look for text between any kind of quotes
+        if not has_quotes:
+            print("No quotes found with regex. Trying direct index search...")
+            for i, char, code in char_codes:
+                if char in quote_chars:
+                    # Found opening quote, now look for closing quote
+                    for j, char2, code2 in char_codes[i+1:]:
+                        if char2 in quote_chars:
+                            # Found a potential title
+                            potential_title = normalized_ref[i:j+1]
+                            if len(potential_title) > 10:  # Arbitrary minimum length for a title
+                                print(f"Found potential title using direct index: {potential_title}")
+                                detected_quotes.append(potential_title)
+                                has_quotes = True
+                                break
+        
+        # Last resort: Look for anything that might be a title
+        if not has_quotes:
+            # Look for capitalized text followed by a period after the author names
+            title_pattern = r"\]\s+[^\.]+\.\s+([A-Z][^\.]+)\."
+            title_match = re.search(title_pattern, normalized_ref)
+            if title_match:
+                potential_title = title_match.group(1)
+                print(f"Found unquoted title: {potential_title}")
+                issues.append(f"Title not properly quoted: '{potential_title}'")
+            else:
+                issues.append("Could not find title in quotation marks.")
+        
+        # If we found quotes but they're not in the expected IEEE format
+        if has_quotes:
+            print(f"Total quoted texts found: {len(detected_quotes)}")
+            for i, quote in enumerate(detected_quotes):
+                print(f"  {i+1}. {quote}")
+            
+            print("\nChecking if any detected quotes match IEEE title format...")
+            title_like = False
+            for quote in detected_quotes:
+                # Title is typically capitalized and doesn't start with symbols
+                if re.match(r'^["\']?[A-Z]', quote):
+                    print(f"Found title-like quote: {quote}")
+                    title_like = True
+                    break
+            
+            if not title_like:
+                issues.append("Title should be properly quoted and capitalized.")
+        
+        print("===== END DEBUGGING =====\n")
         
         # Check for journal/conference details
         journal_pattern = r'[A-Za-z\s\.]+,\s+vol\.\s+\d+'
-        conference_pattern = r'In:\s+[A-Za-z0-9\s\-]+'
+        conference_pattern = r'(?:In:|Proc\.|Proceedings of)\s+[A-Za-z0-9\s\-\.]+'
         
-        if not (re.search(journal_pattern, reference) or re.search(conference_pattern, reference)) and "URL:" in reference:
+        if not (re.search(journal_pattern, normalized_ref) or re.search(conference_pattern, normalized_ref)) and "URL:" in normalized_ref:
             # For web references, check for access date
-            if not re.search(r'accessed\s+[A-Za-z]+\s+\d+,\s+\d{4}', reference, re.IGNORECASE):
+            if not re.search(r'accessed\s+[A-Za-z]+\s+\d+,\s+\d{4}', normalized_ref, re.IGNORECASE):
                 issues.append("Website citation missing access date (e.g., accessed Jan. 10, 2023).")
         
         # Check for volume, issue, pages for journal articles
-        if "vol." in reference.lower() and not all(term in reference.lower() for term in ["vol.", "no.", "pp."]):
+        if "vol." in normalized_ref.lower() and not all(term in normalized_ref.lower() for term in ["vol.", "no.", "pp."]):
             issues.append("Journal reference missing volume (vol.), issue (no.), or page numbers (pp.).")
         
         # Check for year
-        if not re.search(r'\d{4}', reference):
+        if not re.search(r'\d{4}', normalized_ref):
             issues.append("Missing publication year.")
         
-        # Check for DOI (if applicable)
-        if "doi:" in reference.lower() and not re.search(r'doi:\s+10\.\d+/[^\s\.]+', reference.lower()):
-            issues.append("Incorrect DOI format. Should be 'doi: 10.xxxx/xxxxx'.")
+        # More flexible DOI format check that handles various formats
+        # Case insensitive, allows spacing variations, and handles line breaks
+        if re.search(r'(?i)doi', normalized_ref):
+            if not re.search(r'(?i)doi:?\s*10\.\d+/[^\s\.]+', normalized_ref):
+                issues.append("Incorrect DOI format. Should be 'doi: 10.xxxx/xxxxx'.")
         
+        print(f"Final validation issues: {issues}")
         return {
             "is_valid": len(issues) == 0,
             "issues": issues
