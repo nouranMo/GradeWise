@@ -843,4 +843,193 @@ public class SubmissionController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.emptyList());
         }
     }
+
+    // Grade a submission
+    @PostMapping("/submissions/{submissionId}/grade")
+    public ResponseEntity<?> gradeSubmission(
+            @PathVariable String submissionId,
+            @RequestBody Map<String, Object> gradeData,
+            Authentication authentication) {
+        
+        logger.info("Processing grade submission for ID: {}", submissionId);
+        
+        try {
+            // Get current user
+            String userId = authentication.getName();
+            
+            // Check if user is professor
+            User currentUser = userService.findByEmail(userId);
+            if (currentUser == null) {
+                currentUser = userService.findById(userId);
+            }
+            
+            if (currentUser == null) {
+                logger.error("User not found with ID/email: {}", userId);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "User not found"));
+            }
+            
+            if (!"PROFESSOR".equals(currentUser.getRole()) && !"ADMIN".equals(currentUser.getRole())) {
+                logger.error("User {} with role {} attempted to grade a submission", 
+                        currentUser.getId(), currentUser.getRole());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Only professors can grade submissions"));
+            }
+            
+            // Extract grade data
+            Double grade = null;
+            String feedback = null;
+            String status = "Graded";
+            
+            if (gradeData.containsKey("grade")) {
+                if (gradeData.get("grade") instanceof Number) {
+                    grade = ((Number) gradeData.get("grade")).doubleValue();
+                } else if (gradeData.get("grade") instanceof String) {
+                    try {
+                        grade = Double.parseDouble((String) gradeData.get("grade"));
+                    } catch (NumberFormatException e) {
+                        logger.error("Invalid grade format: {}", gradeData.get("grade"));
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Map.of("error", "Invalid grade format"));
+                    }
+                }
+            }
+            
+            if (gradeData.containsKey("feedback")) {
+                feedback = (String) gradeData.get("feedback");
+            }
+            
+            if (gradeData.containsKey("status")) {
+                status = (String) gradeData.get("status");
+            }
+            
+            // Validate grade
+            if (grade == null || grade < 0 || grade > 100) {
+                logger.error("Invalid grade value: {}", grade);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Grade must be between 0 and 100"));
+            }
+            
+            // Update the submission with grade
+            Submission gradedSubmission = submissionService.gradeSubmission(
+                    submissionId, grade, feedback, status);
+            
+            return ResponseEntity.ok(Map.of(
+                    "message", "Submission graded successfully",
+                    "submission", gradedSubmission));
+            
+        } catch (Exception e) {
+            logger.error("Error grading submission: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to grade submission: " + e.getMessage()));
+        }
+    }
+
+    // Download document for a submission
+    @GetMapping("/submissions/{id}/download")
+    public ResponseEntity<?> downloadSubmissionDocument(@PathVariable String id, Authentication authentication) {
+        try {
+            logger.info("Processing download request for submission: {}", id);
+            
+            // Get current user
+            String userId = authentication.getName();
+            
+            // Check if user exists
+            User currentUser = userService.findByEmail(userId);
+            if (currentUser == null) {
+                currentUser = userService.findById(userId);
+            }
+            
+            if (currentUser == null) {
+                logger.error("User not found with ID/email: {}", userId);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "User not found"));
+            }
+            
+            // Get the submission
+            Submission submission = submissionService.getSubmission(id);
+            if (submission == null) {
+                logger.error("Submission not found with ID: {}", id);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Submission not found"));
+            }
+            
+            // For non-professors, only allow downloading their own submissions
+            if (!"PROFESSOR".equals(currentUser.getRole()) && 
+                !"ADMIN".equals(currentUser.getRole()) && 
+                !submission.getUserId().equals(currentUser.getId())) {
+                
+                logger.error("User {} attempted to download submission {} belonging to {}", 
+                        currentUser.getId(), id, submission.getUserId());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "You can only download your own submissions"));
+            }
+            
+            // Get the document associated with the submission
+            String documentId = submission.getDocumentId();
+            if (documentId == null || documentId.isEmpty()) {
+                logger.error("Submission {} has no associated document", id);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Submission has no associated document"));
+            }
+            
+            // Get the document
+            DocumentModel document = documentService.getDocumentById(documentId);
+            if (document == null) {
+                logger.error("Document not found for submission {}, documentId: {}", id, documentId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Document not found"));
+            }
+            
+            // Get the file path
+            String filePath = document.getFilePath();
+            if (filePath == null || filePath.isEmpty()) {
+                logger.error("Document {} has no file path", documentId);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Document has no file path"));
+            }
+            
+            // Check if file exists
+            java.io.File file = new java.io.File(filePath);
+            if (!file.exists()) {
+                logger.error("File not found at path: {}", filePath);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "File not found on server"));
+            }
+            
+            // Read file and return as resource
+            try {
+                byte[] fileContent = java.nio.file.Files.readAllBytes(file.toPath());
+                
+                // Determine content type based on file extension
+                String contentType = "application/octet-stream"; // Default
+                String fileName = document.getName() != null ? document.getName() : "document";
+                
+                if (fileName.toLowerCase().endsWith(".pdf")) {
+                    contentType = "application/pdf";
+                } else if (fileName.toLowerCase().endsWith(".doc")) {
+                    contentType = "application/msword";
+                } else if (fileName.toLowerCase().endsWith(".docx")) {
+                    contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                }
+                
+                // Create downloadable response
+                return ResponseEntity.ok()
+                    .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, 
+                            "attachment; filename=\"" + fileName + "\"")
+                    .body(fileContent);
+                
+            } catch (java.io.IOException e) {
+                logger.error("Error reading file: {}", e.getMessage(), e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "Error reading file: " + e.getMessage()));
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error downloading submission document: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error downloading document: " + e.getMessage()));
+        }
+    }
 }
