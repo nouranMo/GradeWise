@@ -1,0 +1,55 @@
+2025-05-09 17:25:26,876 - INFO - ==================================================
+2025-05-09 17:25:26,877 - INFO - STARTING CONTENT ANALYSIS
+2025-05-09 17:25:26,878 - INFO - ==================================================
+2025-05-09 17:25:26,879 - INFO - Parsing document sections for document type: SRS...
+2025-05-09 17:25:26,961 - INFO - Found 12 sections
+2025-05-09 17:25:26,963 - INFO - Creating system scopes for sections...
+2025-05-09 17:25:26,966 - INFO - Created scope for section: 1 Introduction
+2025-05-09 17:25:26,968 - INFO - Created scope for section: 2 Similar Systems
+2025-05-09 17:25:26,969 - INFO - Created scope for section: 3 System Description
+2025-05-09 17:25:26,971 - INFO - Created scope for section: 4 Functional Requirements
+2025-05-09 17:25:26,973 - INFO - Created scope for section: 5 Design Constraints
+2025-05-09 17:25:26,976 - INFO - Created scope for section: 7 Data Design
+2025-05-09 17:25:26,978 - INFO - Created scope for section: 11 Appendices
+2025-05-09 17:25:26,979 - INFO - Created scope for section: Abstract
+2025-05-09 17:25:26,983 - INFO - Created scope for section: 6 Non-functional Requirements
+2025-05-09 17:25:26,985 - INFO - Created scope for section: 8 Preliminary Object-Oriented Domain Analysis
+2025-05-09 17:25:26,987 - INFO - Created scope for section: 9 Operational Scenarios
+2025-05-09 17:25:26,989 - INFO - Created scope for section: 10 Project Plan
+2025-05-09 17:25:26,989 - INFO - Processing diagrams...
+2025-05-09 17:27:31,328 - INFO - Added 2 diagram scopes
+2025-05-09 17:27:31,328 - INFO - Creating filtered similarity matrix...
+2025-05-09 17:30:58,162 - INFO - Created filtered similarity matrix with 14 scopes
+2025-05-09 17:30:58,164 - INFO - Generated 20 relationship analyses
+2025-05-09 17:30:58,169 - INFO - Found 2 diagrams with 2 relationships
+2025-05-09 17:30:58,171 - INFO - Looking for these diagram types: ['system overview', 'system context', 'use case', 'eerd', 'entity relationship', 'class diagram', 'gantt chart']
+2025-05-09 17:30:58,171 - INFO - Available scope sources: ['1 Introduction', '2 Similar Systems', '3 System Description', '4 Functional Requirements', '5 Design Constraints', '7 Data Design', '11 Appendices', 'Abstract', '6 Non-functional Requirements', '8 Preliminary Object-Oriented Domain Analysis', '9 Operational Scenarios', '10 Project Plan', 'System Overview', 'System Context Diagram']
+2025-05-09 17:30:58,172 - INFO - FORCING ALL IMPORTANT DIAGRAM TYPES TO BE INCLUDED
+2025-05-09 17:30:58,172 - INFO - Found existing diagram type: system overview in System Overview
+2025-05-09 17:30:58,172 - INFO - Found existing diagram type: system context in System Context Diagram
+2025-05-09 17:30:58,172 - INFO - Existing diagram types: {'system context', 'system overview'}
+2025-05-09 17:30:58,173 - INFO - Missing diagram types: {'entity relationship', 'class diagram', 'eerd', 'use case', 'gantt chart'}
+2025-05-09 17:30:58,173 - INFO - Skipping System Overview - already exists in all_scopes
+2025-05-09 17:30:58,173 - INFO - ADDING FORCED PLACEHOLDER: System Context
+2025-05-09 17:30:58,174 - INFO - Added System Context to scope_sources
+2025-05-09 17:30:58,174 - INFO - Added System Context to important_diagrams
+2025-05-09 17:30:58,174 - INFO - ADDING FORCED PLACEHOLDER: Use Case
+2025-05-09 17:30:58,174 - INFO - Added Use Case to scope_sources
+2025-05-09 17:30:58,174 - INFO - Added Use Case to important_diagrams
+2025-05-09 17:30:58,174 - INFO - ADDING FORCED PLACEHOLDER: EERD
+2025-05-09 17:30:58,177 - INFO - Added EERD to scope_sources
+2025-05-09 17:30:58,177 - INFO - Added EERD to important_diagrams
+2025-05-09 17:30:58,177 - INFO - ADDING FORCED PLACEHOLDER: Entity Relationship
+2025-05-09 17:30:58,177 - INFO - Added Entity Relationship to scope_sources
+2025-05-09 17:30:58,177 - INFO - Added Entity Relationship to important_diagrams
+2025-05-09 17:30:58,178 - INFO - ADDING FORCED PLACEHOLDER: Class Diagram
+2025-05-09 17:30:58,178 - INFO - Added Class Diagram to scope_sources
+2025-05-09 17:30:58,178 - INFO - Added Class Diagram to important_diagrams
+2025-05-09 17:30:58,178 - INFO - ADDING FORCED PLACEHOLDER: Gantt Chart
+2025-05-09 17:30:58,178 - INFO - Added Gantt Chart to scope_sources
+2025-05-09 17:30:58,178 - INFO - Added Gantt Chart to important_diagrams
+2025-05-09 17:30:58,179 - INFO - Final state before matrix creation:
+2025-05-09 17:30:58,179 - INFO - all_scopes keys (20): ['1 Introduction', '2 Similar Systems', '3 System Description', '4 Functional Requirements', '5 Design Constraints', '7 Data Design', '11 Appendices', 'Abstract', '6 Non-functional Requirements', '8 Preliminary Object-Oriented Domain Analysis', '9 Operational Scenarios', '10 Project Plan', 'System Overview', 'System Context Diagram', 'System Context', 'Use Case', 'EERD', 'Entity Relationship', 'Class Diagram', 'Gantt Chart']
+2025-05-09 17:30:58,181 - INFO - scope_sources (20): ['1 Introduction', '2 Similar Systems', '3 System Description', '4 Functional Requirements', '5 Design Constraints', '7 Data Design', '11 Appendices', 'Abstract', '6 Non-functional Requirements', '8 Preliminary Object-Oriented Domain Analysis', '9 Operational Scenarios', '10 Project Plan', 'System Overview', 'System Context Diagram', 'System Context', 'Use Case', 'EERD', 'Entity Relationship', 'Class Diagram', 'Gantt Chart']
+2025-05-09 17:30:58,181 - INFO - important_diagrams (6): ['System Context', 'Use Case', 'EERD', 'Entity Relationship', 'Class Diagram', 'Gantt Chart']
+2025-05-09 17:30:58,181 - INFO - Content analysis completed

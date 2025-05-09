@@ -801,6 +801,171 @@ class TextProcessor:
                 # Process the most relevant images with OpenAI vision model
                 for image_path in relevant_images:
                     try:
+                        
+                        
+                        # Get a cleaner display name for this figure type
+                        display_name = None
+                        for key, mapped_name in figure_name_map.items():
+                            if key in figure_name.lower():
+                                display_name = mapped_name
+                                break
+                        
+                        # If no specific match found, use a generic name
+                        if not display_name:
+                            display_name = f"Diagram_{len(diagram_scopes) + 1}"
+                        
+
+                        logger.info(f"Added diagram scope for {display_name}")
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing image {image_path}: {str(e)}")
+                        continue
+            
+            return diagram_scopes
+            
+        except Exception as e:
+            logger.error(f"Error extracting diagrams: {str(e)}")
+            return {}
+
+    def extract_diagrams_from_pdf_cotentanalysis(self, pdf_path):
+        """
+        Extract and analyze diagrams from the PDF using OpenAI's vision model.
+        
+        Args:
+            pdf_path: Path to the PDF file
+            
+        Returns:
+            Dictionary of diagram scopes {diagram_name: system_scope}
+        """
+        logger.info("Extracting and analyzing diagrams from PDF")
+        
+        # Import ImageProcessor here to avoid circular dependency
+        from image_processing import ImageProcessor
+        
+        # Initialize image processor
+        image_processor = ImageProcessor()
+        diagram_scopes = {}
+        
+        # Map of standard figure names for better display
+        figure_name_map = {
+            "system overview": "System Overview",
+            "system context": "System Context Diagram",
+            "use case": "Use Case Diagram",
+            "eerd": "EERD",
+            "entity relationship": "Entity Relationship Diagram",
+            "class diagram": "Class Diagram",
+            "gantt chart": "Gantt Chart"
+        }
+        
+        try:
+            # First, find all figures mentioned in the document
+            sections_dict = {}
+            with open(pdf_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page in pdf_reader.pages:
+                    text = page.extract_text()
+                    if text.strip():
+                        # Split text into sections based on headers
+                        lines = text.splitlines()
+                        current_section = None
+                        current_content = []
+                        
+                        for line in lines:
+                            if re.match(r'^\d+(\.\d+)*\s+[A-Z]', line):
+                                if current_section and current_content:
+                                    sections_dict[current_section] = '\n'.join(current_content)
+                                current_section = line.strip()
+                                current_content = []
+                            elif current_section:
+                                current_content.append(line)
+                        
+                        if current_section and current_content:
+                            sections_dict[current_section] = '\n'.join(current_content)
+            
+            # Find all figures mentioned in the document
+            all_figures = self._find_figures_in_sections(sections_dict)
+            
+            # Filter to only the figures we want to process
+            important_figures = {}
+            for figure_name, figure_info in all_figures.items():
+                figure_name_lower = figure_name.lower()
+                is_important = any(
+                    important_term in figure_name_lower 
+                    for important_term in IMPORTANT_FIGURES
+                )
+                
+                if is_important:
+                    important_figures[figure_name] = figure_info
+                    logger.info(f"Will process figure: {figure_name}")
+            
+            # If no important figures found, try a more general approach
+            if not important_figures:
+                logger.warning("No important figures found with exact matching, trying broader matching")
+                for important_term in IMPORTANT_FIGURES:
+                    important_figures[important_term] = {
+                        'sections': ["Generic Section"],
+                        'mentions': 1,
+                        'generic': True
+                    }
+                    logger.info(f"Added generic figure type: {important_term}")
+            
+            # Extract images based on section context
+            logger.info(f"Extracting images for {len(important_figures)} important diagrams")
+            target_names = list(important_figures.keys())
+            target_names.extend(IMPORTANT_FIGURES)
+            logger.info(f"Target figure names: {target_names}")
+            
+            image_paths = image_processor.extract_images_from_pdf(pdf_path, 
+                                                               target_figures=target_names)
+            
+            # Match images to figures
+            for figure_name, figure_info in important_figures.items():
+                logger.info(f"Processing figure: {figure_name}")
+                
+                # Find relevant images for this figure
+                relevant_images = []
+                for image_path in image_paths:
+                    # Skip processing if we already have enough images for this figure
+                    if len(relevant_images) >= 2:
+                        break
+                    
+                    # Check if image belongs to a section that mentions this figure
+                    is_relevant = False
+                    
+                    # If this is a generic figure, be more lenient in matching
+                    if figure_info.get('generic', False):
+                        # Check if path contains any part of the figure name
+                        figure_parts = figure_name.split()
+                        is_relevant = any(part.lower() in image_path.lower() for part in figure_parts)
+                    else:
+                        # Use stricter matching for normal figures
+                        image_sections = figure_info.get('sections', [])
+                        is_relevant = any(
+                            section.lower() in image_path.lower() for section in image_sections
+                        )
+                    
+                    if is_relevant:
+                        relevant_images.append(image_path)
+                        logger.info(f"Found relevant image for {figure_name}: {image_path}")
+                
+                # If no relevant images found, try a broader approach
+                if not relevant_images:
+                    logger.warning(f"No relevant images found for {figure_name}, using broader matching")
+                    # Check for partial matches in image paths
+                    figure_parts = figure_name.lower().split()
+                    for image_path in image_paths:
+                        for part in figure_parts:
+                            if len(part) > 3 and part in image_path.lower():  # Only use parts with >3 chars
+                                relevant_images.append(image_path)
+                                logger.info(f"Found image with partial match for {figure_name}: {image_path}")
+                                break
+                        
+                        if len(relevant_images) >= 2:
+                            break
+                
+                # Process the most relevant images with OpenAI vision model
+                for image_path in relevant_images:
+                    try:
                         # Convert image to base64
                         with open(image_path, "rb") as image_file:
                             image_data = base64.b64encode(image_file.read()).decode('utf-8')
