@@ -23,9 +23,9 @@ GradeWise follows a **Layered Architecture** with the backend implemented in **S
 | **Frontend**   | React + Tailwind CSS |
 | **Backend**    | Spring Boot (Java) |
 | **AI & NLP**   | Python (YOLOv8, OpenCV, LLM API) |
-| **Database**   | (TBD) |
+| **Database**   | MongoDB |
 | **Version Control** | GitHub |
-| **IDE**        | Visual Studio |
+| **IDE**        | Visual Studio Code |
 
 ## 🚀 Setup Instructions
 ### **1. Clone the Repository**
