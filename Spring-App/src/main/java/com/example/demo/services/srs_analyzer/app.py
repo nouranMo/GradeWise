@@ -34,6 +34,7 @@ import random
 import re
 from flask import send_from_directory
 import traceback
+import logging.handlers
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -228,6 +229,33 @@ def serve_output_image(filename):
         print(f"Error serving image: {str(e)}")
         return jsonify({'error': f'Image not found: {str(e)}'}), 404
 
+# Setup content analysis logger
+def setup_content_analysis_logger():
+    # Create logs directory if it doesn't exist
+    os.makedirs('logs', exist_ok=True)
+    
+    # Create a logger for content analysis
+    content_logger = logging.getLogger('content_analysis')
+    content_logger.setLevel(logging.DEBUG)
+    
+    # Create a file handler for content analysis logs
+    file_handler = logging.handlers.RotatingFileHandler(
+        'logs/content_analysis.log', 
+        maxBytes=10485760,  # 10MB
+        backupCount=5
+    )
+    
+    # Create a formatter and add it to the handler
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    
+    # Add the handler to the logger
+    content_logger.addHandler(file_handler)
+    
+    return content_logger
+
+# Create the content analysis logger
+content_analysis_logger = setup_content_analysis_logger()
 
 def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
     """Analyze a single document."""
@@ -403,7 +431,9 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
 
         if analyses.get('ContentAnalysis'):
             print("\nSTARTING CONTENT ANALYSIS")
-            print("-"*30)
+            content_analysis_logger.info("="*50)
+            content_analysis_logger.info("STARTING CONTENT ANALYSIS")
+            content_analysis_logger.info("="*50)
             try:
                 content_analysis = {
                     "sections": [],
@@ -413,15 +443,15 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     "figure_count": 0
                 }
 
-                print(f"Parsing document sections for document type: {document_type}...")
+                content_analysis_logger.info(f"Parsing document sections for document type: {document_type}...")
                 # Pass document_type to parse_document_sections
                 sections = text_processor.parse_document_sections(pdf_text, document_type)
                 content_analysis["sections"] = sections
-                print(f"Found {len(sections)} sections")
+                content_analysis_logger.info(f"Found {len(sections)} sections")
 
                 # Only perform per-section spell checking if both analyses are selected
                 if analyses.get('SpellCheck'):
-                    print("\nPerforming per-section spell checking")
+                    content_analysis_logger.info("Performing per-section spell checking")
                     section_spell_checks = {}
                     total_misspelled = 0
                     total_misspelled_words = {}
@@ -441,9 +471,9 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                                         # Add to the total misspelled words dictionary
                                         total_misspelled_words.update(misspelled_in_section)
                                         total_misspelled += len(misspelled_in_section)
-                                        print(f"Section '{title}': Found {len(misspelled_in_section)} misspelled words")
+                                        content_analysis_logger.info(f"Section '{title}': Found {len(misspelled_in_section)} misspelled words")
                         except Exception as e:
-                            print(f"Error in spell checking section '{title}': {str(e)}")
+                            content_analysis_logger.error(f"Error in spell checking section '{title}': {str(e)}")
                     
                     # Update the spelling_check response with both per-section and total results
                     response['spelling_check'] = {
@@ -454,34 +484,34 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                         'sections_count': len(section_spell_checks),
                         'misspelled_words': total_misspelled_words  # Add the combined dictionary of all misspelled words
                     }
-                    print(f"Per-section spell check completed. Found {total_misspelled} misspelled words across {len(section_spell_checks)} sections")
+                    content_analysis_logger.info(f"Per-section spell check completed. Found {total_misspelled} misspelled words across {len(section_spell_checks)} sections")
 
                 all_scopes = {}
-                print("\nCreating system scopes for sections...")
+                content_analysis_logger.info("Creating system scopes for sections...")
                 for section in sections:
                     title, content = section.split('\n', 1)
                     if content.strip():
                         try:
                             scope = similarity_analyzer.create_system_scope_with_gpt(content)
                             all_scopes[title] = scope
-                            print(f"Created scope for section: {title}")
+                            content_analysis_logger.info(f"Created scope for section: {title}")
                         except Exception as e:
-                            print(f"Error creating scope for section {title}: {str(e)}")
+                            content_analysis_logger.error(f"Error creating scope for section {title}: {str(e)}")
                             continue
 
-                print("\nProcessing diagrams...")
+                content_analysis_logger.info("Processing diagrams...")
                 sections_dict = {section.split('\n', 1)[0]: section.split('\n', 1)[1] for section in sections}
                 figures = text_processor._find_figures_in_sections(sections_dict)
                 
-                diagram_scopes = text_processor.extract_diagrams_from_pdf(file_path)
+                diagram_scopes = text_processor.extract_diagrams_from_pdf_cotentanalysis(file_path)
                 if diagram_scopes:
                     content_analysis["figures_included"] = True
                     content_analysis["figure_count"] = len(diagram_scopes)
                     all_scopes.update(diagram_scopes)
-                    print(f"Added {len(diagram_scopes)} diagram scopes")
+                    content_analysis_logger.info(f"Added {len(diagram_scopes)} diagram scopes")
 
                 if all_scopes:
-                    print("\nCreating filtered similarity matrix...")
+                    content_analysis_logger.info("Creating filtered similarity matrix...")
                     section_titles = [section.split('\n', 1)[0] for section in sections]
                     if diagram_scopes:
                         section_titles.extend(diagram_scopes.keys())
@@ -493,8 +523,8 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     content_analysis["similarity_matrix"] = filtered_matrix
                     content_analysis["relationship_analyses"] = relationship_analyses
                     
-                    print(f"Created filtered similarity matrix with {len(filtered_section_titles)} scopes")
-                    print(f"Generated {len(relationship_analyses)} relationship analyses")
+                    content_analysis_logger.info(f"Created filtered similarity matrix with {len(filtered_section_titles)} scopes")
+                    content_analysis_logger.info(f"Generated {len(relationship_analyses)} relationship analyses")
 
                 # Process diagram relationships
                 diagram_relationships = similarity_analyzer.analyze_diagram_relationships(
@@ -506,7 +536,7 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                 content_analysis["diagram_relationships"] = diagram_relationships["diagram_relationships"]
                 content_analysis["diagram_count"] = diagram_relationships["diagram_count"]
 
-                print(f"Found {diagram_relationships['diagram_count']} diagrams with {len(diagram_relationships['diagram_relationships'])} relationships")
+                content_analysis_logger.info(f"Found {diagram_relationships['diagram_count']} diagrams with {len(diagram_relationships['diagram_relationships'])} relationships")
 
                 # Improved important diagrams detection - more permissive matching
                 important_diagrams = []
@@ -515,14 +545,14 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     "entity relationship", "class diagram", "gantt chart"
                 ]
                 
-                print(f"Looking for these diagram types: {important_diagram_types}")
-                print(f"Available scope sources: {content_analysis['scope_sources']}")
+                content_analysis_logger.info(f"Looking for these diagram types: {important_diagram_types}")
+                content_analysis_logger.info(f"Available scope sources: {content_analysis['scope_sources']}")
                 
                 # If we're still missing some diagram types, add default placeholders
                 added_placeholders = False
                 
                 # DIRECT APPROACH: Explicitly add ALL important diagram types as placeholders
-                print("\nFORCING ALL IMPORTANT DIAGRAM TYPES TO BE INCLUDED")
+                content_analysis_logger.info("FORCING ALL IMPORTANT DIAGRAM TYPES TO BE INCLUDED")
                 
                 # First, collect all diagram types already in the scope sources (case insensitive)
                 existing_diagram_types = set()
@@ -531,10 +561,10 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     for diagram_type in important_diagram_types:
                         if diagram_type in scope_lower:
                             existing_diagram_types.add(diagram_type)
-                            print(f"Found existing diagram type: {diagram_type} in {scope}")
+                            content_analysis_logger.info(f"Found existing diagram type: {diagram_type} in {scope}")
                 
-                print(f"Existing diagram types: {existing_diagram_types}")
-                print(f"Missing diagram types: {set(important_diagram_types) - existing_diagram_types}")
+                content_analysis_logger.info(f"Existing diagram types: {existing_diagram_types}")
+                content_analysis_logger.info(f"Missing diagram types: {set(important_diagram_types) - existing_diagram_types}")
                 
                 # Now add placeholders for all diagram types, exactly matching the frontend casing
                 for diagram_type in important_diagram_types:
@@ -562,30 +592,30 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     
                     # Skip if this exact diagram name already exists in all_scopes
                     if placeholder_name in all_scopes:
-                        print(f"Skipping {placeholder_name} - already exists in all_scopes")
+                        content_analysis_logger.info(f"Skipping {placeholder_name} - already exists in all_scopes")
                         continue
                     
                     # Otherwise, add it to BOTH all_scopes and scope_sources
-                    print(f"ADDING FORCED PLACEHOLDER: {placeholder_name}")
+                    content_analysis_logger.info(f"ADDING FORCED PLACEHOLDER: {placeholder_name}")
                     all_scopes[placeholder_name] = placeholder_text
                     
                     # Also add to scope_sources if not already there
                     if placeholder_name not in content_analysis["scope_sources"]:
                         content_analysis["scope_sources"].append(placeholder_name)
-                        print(f"Added {placeholder_name} to scope_sources")
+                        content_analysis_logger.info(f"Added {placeholder_name} to scope_sources")
                     
                     # Add to important_diagrams if not already there
                     if placeholder_name not in important_diagrams:
                         important_diagrams.append(placeholder_name)
-                        print(f"Added {placeholder_name} to important_diagrams")
+                        content_analysis_logger.info(f"Added {placeholder_name} to important_diagrams")
                     
                     added_placeholders = True
                 
                 # Debug the final state before matrix creation
-                print("\nFinal state before matrix creation:")
-                print(f"all_scopes keys ({len(all_scopes)}): {list(all_scopes.keys())}")
-                print(f"scope_sources ({len(content_analysis['scope_sources'])}): {content_analysis['scope_sources']}")
-                print(f"important_diagrams ({len(important_diagrams)}): {important_diagrams}")
+                content_analysis_logger.info("Final state before matrix creation:")
+                content_analysis_logger.info(f"all_scopes keys ({len(all_scopes)}): {list(all_scopes.keys())}")
+                content_analysis_logger.info(f"scope_sources ({len(content_analysis['scope_sources'])}): {content_analysis['scope_sources']}")
+                content_analysis_logger.info(f"important_diagrams ({len(important_diagrams)}): {important_diagrams}")
                 
                 response["content_analysis"] = {
                     "similarity_matrix": content_analysis["similarity_matrix"],
@@ -602,10 +632,14 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     },
                     "relationship_analyses": content_analysis.get("relationship_analyses", {})
                 }
-                print("Content analysis completed")
+                content_analysis_logger.info("Content analysis completed")
+                print("Content analysis completed and logged to logs/content_analysis.log")
 
             except Exception as e:
-                print(f"Error in content analysis: {str(e)}")
+                error_msg = f"Error in content analysis: {str(e)}"
+                content_analysis_logger.error(error_msg)
+                content_analysis_logger.error(traceback.format_exc())
+                print(error_msg)
                 response["content_analysis"] = {
                     "error": "An error occurred during content analysis",
                     "details": str(e)
