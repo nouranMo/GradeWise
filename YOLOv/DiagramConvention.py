@@ -1,3 +1,4 @@
+# In DiagramConvention.py
 import os
 import json
 import time
@@ -30,6 +31,11 @@ def process_diagrams(upload_base="Uploads",
         "issues": []
     }
     
+    # Ensure output directories exist
+    os.makedirs(os.path.join(output_base, "use_case"), exist_ok=True)
+    os.makedirs(os.path.join(output_base, "class"), exist_ok=True)
+    os.makedirs(os.path.join(output_base, "sequence"), exist_ok=True)
+    
     # Process use case diagrams (only for SRS)
     if document_type == "SRS" and os.path.exists(use_case_folder):
         use_case_output = os.path.join(output_base, "use_case")
@@ -41,18 +47,29 @@ def process_diagrams(upload_base="Uploads",
             for key, value in use_case_results.items():
                 print(f"Processing use case diagram: {key} -> {value}")
                 sanitized_key = key.replace('.', '_')
-                if value.endswith('.json'):
+                image_path = value
+                json_path = None
+                if isinstance(value, dict):  # Handle dict output from process_use_case_diagram
+                    image_path = value.get('image_path', '')
+                    json_path = value.get('json_path', '')
+                elif value.endswith('.json'):  # Handle json path
+                    json_path = value
                     image_filename = os.path.basename(value).replace('use_case_', 'annotated_').replace('.json', '')
                     image_path = os.path.join(os.path.dirname(value), image_filename)
-                else:
-                    image_path = value
                 
                 print(f"Derived image path: {image_path}")
+                print(f"Derived JSON path: {json_path}")
                 if os.path.exists(image_path):
-                    sanitized_use_case_results[sanitized_key] = {
-                        "path": os.path.join("use_case", image_filename).replace('\\', '/'),
+                    # Prefix path with /output_results
+                    relative_path = os.path.join("output_results", "use_case", os.path.basename(image_path)).replace('\\', '/')
+                    result_entry = {
+                        "path": f"/{relative_path}",
                         "original_path": image_path.replace('\\', '/')
                     }
+                    if json_path and os.path.exists(json_path):
+                        json_relative_path = os.path.join("output_results", "use_case", os.path.basename(json_path)).replace('\\', '/')
+                        result_entry["json_path"] = f"/{json_relative_path}"
+                    sanitized_use_case_results[sanitized_key] = result_entry
                 else:
                     results["issues"].append(f"Image file not found: {image_path}")
             results["use_case_diagrams"] = sanitized_use_case_results
@@ -68,18 +85,29 @@ def process_diagrams(upload_base="Uploads",
             for key, value in class_results.items():
                 print(f"Processing class diagram: {key} -> {value}")
                 sanitized_key = key.replace('.', '_')
-                if value.endswith('.json'):
+                image_path = value
+                json_path = None
+                if isinstance(value, dict):  # Handle dict output from process_class_diagram
+                    image_path = value.get('image_path', '')
+                    json_path = value.get('json_path', '')
+                elif value.endswith('.json'):  # Handle json path
+                    json_path = value
                     image_filename = os.path.basename(value).replace('class_', 'annotated_').replace('.json', '')
                     image_path = os.path.join(os.path.dirname(value), image_filename)
-                else:
-                    image_path = value
                 
                 print(f"Derived image path: {image_path}")
+                print(f"Derived JSON path: {json_path}")
                 if os.path.exists(image_path):
-                    sanitized_class_results[sanitized_key] = {
-                        "path": os.path.join("class", image_filename).replace('\\', '/'),
+                    # Prefix path with /output_results
+                    relative_path = os.path.join("output_results", "class", os.path.basename(image_path)).replace('\\', '/')
+                    result_entry = {
+                        "path": f"/{relative_path}",
                         "original_path": image_path.replace('\\', '/')
                     }
+                    if json_path and os.path.exists(json_path):
+                        json_relative_path = os.path.join("output_results", "class", os.path.basename(json_path)).replace('\\', '/')
+                        result_entry["json_path"] = f"/{json_relative_path}"
+                    sanitized_class_results[sanitized_key] = result_entry
                 else:
                     results["issues"].append(f"Image file not found: {image_path}")
             results["class_diagrams"] = sanitized_class_results
@@ -95,18 +123,29 @@ def process_diagrams(upload_base="Uploads",
             for key, value in sequence_results.items():
                 print(f"Processing sequence diagram: {key} -> {value}")
                 sanitized_key = key.replace('.', '_')
-                if value.endswith('.json'):
+                image_path = value
+                json_path = None
+                if isinstance(value, dict):  # Handle dict output from process_sequence_diagram
+                    image_path = value.get('image_path', '')
+                    json_path = value.get('json_path', '')
+                elif value.endswith('.json'):  # Handle json path
+                    json_path = value
                     image_filename = os.path.basename(value).replace('sequence_', 'annotated_').replace('.json', '')
                     image_path = os.path.join(os.path.dirname(value), image_filename)
-                else:
-                    image_path = value
                 
                 print(f"Derived image path: {image_path}")
+                print(f"Derived JSON path: {json_path}")
                 if os.path.exists(image_path):
-                    sanitized_sequence_results[sanitized_key] = {
-                        "path": os.path.join("sequence", image_filename).replace('\\', '/'),
+                    # Prefix path with /output_results
+                    relative_path = os.path.join("output_results", "sequence", os.path.basename(image_path)).replace('\\', '/')
+                    result_entry = {
+                        "path": f"/{relative_path}",
                         "original_path": image_path.replace('\\', '/')
                     }
+                    if json_path and os.path.exists(json_path):
+                        json_relative_path = os.path.join("output_results", "sequence", os.path.basename(json_path)).replace('\\', '/')
+                        result_entry["json_path"] = f"/{json_relative_path}"
+                    sanitized_sequence_results[sanitized_key] = result_entry
                 else:
                     results["issues"].append(f"Image file not found: {image_path}")
             results["sequence_diagrams"] = sanitized_sequence_results

@@ -713,13 +713,13 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                 # Process all diagrams
                 diagram_results = process_diagrams(
                     upload_base=upload_folder,
-                    output_base="output_results",
+                    output_base=OUTPUT_RESULTS_DIR,
                     model_path=os.path.join(YOLO_PATH, "runs/detect/train/weights/best.pt"),
                     document_type=document_type
                 )
                 print("\nDebug: process_diagrams results:", json.dumps(diagram_results, indent=2) if isinstance(diagram_results, dict) else str(diagram_results))
                 # Validate diagram conventions using Gemini
-                validation_results = validate_diagrams(output_base="output_results",document_type=document_type)
+                validation_results = validate_diagrams(output_base=OUTPUT_RESULTS_DIR,document_type=document_type)
                 
                 logger.debug("Diagram Convention Resultssssssssssss: %s", {
                 'processing_results': diagram_results,

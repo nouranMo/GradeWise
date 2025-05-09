@@ -1282,7 +1282,7 @@ function ParsingResult() {
                             Use Case: {key.replace(/_/g, " ")}
                           </h4>
                           <img
-                            src={`http://localhost:5000/output_results/${data.path.replace(
+                            src={`http://localhost:5000${data.path.replace(
                               /\\/g,
                               "/"
                             )}`}
@@ -1329,7 +1329,7 @@ function ParsingResult() {
                             Class Diagram: {key.replace(/_/g, " ")}
                           </h4>
                           <img
-                            src={`http://localhost:5000/output_results/${data.path.replace(
+                            src={`http://localhost:5000${data.path.replace(
                               /\\/g,
                               "/"
                             )}`}
@@ -1374,7 +1374,7 @@ function ParsingResult() {
                             Sequence Diagram: {key.replace(/_/g, " ")}
                           </h4>
                           <img
-                            src={`http://localhost:5000/output_results/${data.path.replace(
+                            src={`http://localhost:5000${data.path.replace(
                               /\\/g,
                               "/"
                             )}`}
