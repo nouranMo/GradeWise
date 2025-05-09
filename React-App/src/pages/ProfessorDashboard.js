@@ -286,6 +286,7 @@ function ProfessorDashboard() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedAnalyses, setSelectedAnalyses] = useState({
     SrsValidation: false,
     ReferencesValidation: false,
@@ -413,6 +414,13 @@ function ProfessorDashboard() {
       toast.error(`Failed to fetch submissions: ${error.message}`);
     }
   }, [API_URL, currentUser?.id, navigate]);
+
+  const handleRefreshClick = () => {
+    setIsRefreshing(true);
+    fetchSubmissions().finally(() => {
+      setTimeout(() => setIsRefreshing(false), 1000); // Small delay to ensure animation completes
+    });
+  };
 
   const fetchProfessorDocuments = async () => {
     try {
@@ -1705,24 +1713,30 @@ function ProfessorDashboard() {
                 </div>
 
                 <button
-                  onClick={fetchSubmissions}
-                  className="px-3 py-2 text-sm text-white bg-blue-500 rounded-md hover:bg-blue-700 transition-colors duration-300 flex items-center"
+                  onClick={handleRefreshClick}
+                  disabled={isRefreshing}
+                  className="px-12 py-2 rounded-md flex items-center justify-center gap-2 text-gray-700 border border-gray-300 bg-white hover:bg-gray-50 hover:shadow-sm transition-all duration-300 group"
+                  title="Refresh"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 mr-1"
-                    fill="none"
                     viewBox="0 0 24 24"
-                    stroke="currentColor"
+                    fill="currentColor"
+                    className={`h-5 w-5 text-gray-600 transition-all duration-300 ${
+                      isRefreshing
+                        ? "animate-spin"
+                        : "group-hover:text-[#ff6464]"
+                    }`}
                   >
                     <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      fillRule="evenodd"
+                      d="M4.755 10.059a7.5 7.5 0 0112.548-3.364l1.903 1.903h-3.183a.75.75 0 100 1.5h4.992a.75.75 0 00.75-.75V4.356a.75.75 0 00-1.5 0v3.18l-1.9-1.9A9 9 0 003.306 9.67a.75.75 0 101.45.388zm15.408 3.352a.75.75 0 00-.919.53 7.5 7.5 0 01-12.548 3.364l-1.902-1.903h3.183a.75.75 0 000-1.5H2.984a.75.75 0 00-.75.75v4.992a.75.75 0 001.5 0v-3.18l1.9 1.9a9 9 0 0015.059-4.035.75.75 0 00-.53-.918z"
+                      clipRule="evenodd"
                     />
                   </svg>
-                  Refresh
+                  <span className="text-sm font-medium">
+                    {isRefreshing ? "Refreshing..." : "Refresh"}
+                  </span>
                 </button>
               </div>
               <div className="grid grid-cols-[1fr_1fr_0.8fr_0.8fr_1.2fr_0.7fr_0.5fr_1.5fr] gap-6 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500">
