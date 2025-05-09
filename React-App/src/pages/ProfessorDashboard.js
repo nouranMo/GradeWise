@@ -712,7 +712,7 @@ function ProfessorDashboard() {
     } else if (type === "SDD") {
       // SDD
       setSelectedAnalyses({
-        SDDValidation: false,
+        SddValidation: false,
         DiagramConvention: false,
         // SpellCheck: false,
         PlagiarismCheck: false,

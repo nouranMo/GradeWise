@@ -294,7 +294,7 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
 
         # Extract text if needed for any analysis
         pdf_text = None
-        if any([analyses.get('SrsValidation') or analyses.get('SDDValidation'), 
+        if any([analyses.get('SrsValidation') or analyses.get('SddValidation'), 
                 analyses.get('ContentAnalysis'),
                 analyses.get('BusinessValueAnalysis'),
                 analyses.get('SpellCheck'),
@@ -391,7 +391,7 @@ def analyze_document(file_path: str, analyses: Dict,document_type: str) -> Dict:
                     'message': f'Error during reference validation: {str(e)}'
                 }
 
-        if analyses.get('SrsValidation') or analyses.get('SDDValidation'):
+        if analyses.get('SrsValidation') or analyses.get('SddValidation'):
             print(f"\nSTARTING {document_type} VALIDATION")
             print("-"*30)
             try:
