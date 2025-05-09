@@ -300,6 +300,13 @@ function ProfessorDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [documents, setDocuments] = useState([]);
+  const [showGradeModal, setShowGradeModal] = useState(false);
+  const [submissionToGrade, setSubmissionToGrade] = useState(null);
+  const [gradeData, setGradeData] = useState({
+    score: 0,
+    feedback: "",
+  });
+  const [isSubmittingGrade, setIsSubmittingGrade] = useState(false);
 
   const navigate = useNavigate();
   const { currentUser } = useAuth();
@@ -647,24 +654,13 @@ function ProfessorDashboard() {
         return;
       }
       
+      // Store the submission for analysis
       setSelectedDocument(submission);
-      setDocumentType("SRS"); // Default to SRS for submissions
       
-      // Reset analysis options when opening modal
-      setSelectedAnalyses({
-        SrsValidation: true,
-        ReferencesValidation: true,
-        ContentAnalysis: true,
-        ImageAnalysis: false,
-        BusinessValueAnalysis: false,
-        DiagramConvention: false,
-        SpellCheck: true,
-        PlagiarismCheck: false,
-        FullAnalysis: false,
-      });
+      // Show document type selection modal first
+      setShowDocTypeModal(true);
       
-      // Go straight to analysis options, skipping doc type selection for submissions
-      setShowAnalysisModal(true);
+      // The rest will be handled by handleDocTypeSelection and startAnalysis
     } catch (error) {
       console.error("Error preparing submission for analysis:", error);
       toast.error("Failed to prepare submission for analysis");
@@ -693,11 +689,7 @@ function ProfessorDashboard() {
       // SDD
       setSelectedAnalyses({
         SDDValidation: false,
-        DesignPatterns: false,
-        ComponentAnalysis: false,
         DiagramConvention: false,
-        InterfaceAnalysis: false,
-        SecurityAnalysis: false,
         SpellCheck: false,
         PlagiarismCheck: false,
         FullAnalysis: false,
@@ -1356,6 +1348,146 @@ function ProfessorDashboard() {
     }
   };
 
+  const handleGradeSubmission = (submission) => {
+    // Set the submission to grade
+    setSubmissionToGrade(submission);
+    
+    // Reset grade data
+    setGradeData({
+      score: submission.grade || 0,
+      feedback: submission.feedback || "",
+    });
+    
+    // Show the grade modal
+    setShowGradeModal(true);
+  };
+
+  // Function to submit grade to the backend
+  const submitGrade = async () => {
+    try {
+      setIsSubmittingGrade(true);
+      console.log("Submitting grade for submission:", submissionToGrade);
+      
+      // Get JWT token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        toast.error("Authentication required");
+        setIsSubmittingGrade(false);
+        return;
+      }
+
+      // Make sure score is a number
+      const numericScore = Number(gradeData.score);
+      if (isNaN(numericScore) || numericScore < 0 || numericScore > 100) {
+        toast.error("Grade must be a number between 0 and 100");
+        setIsSubmittingGrade(false);
+        return;
+      }
+
+      // Prepare grade data with the correct field name the backend expects
+      const formattedGradeData = {
+        grade: numericScore, // Backend expects 'grade', not 'score'
+        feedback: gradeData.feedback,
+        status: "Graded"
+      };
+      
+      console.log("Sending grade data:", formattedGradeData);
+
+      // Send grade data to backend
+      const response = await fetch(`${API_URL}/api/submissions/${submissionToGrade.id}/grade`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formattedGradeData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to submit grade");
+      }
+
+      const data = await response.json();
+      console.log("Grade submission response:", data);
+
+      // Update submission in local state
+      setSubmissions(prev =>
+        prev.map(sub =>
+          sub.id === submissionToGrade.id ? { ...sub, status: "Graded", grade: numericScore, feedback: gradeData.feedback } : sub
+        )
+      );
+
+      toast.success("Grade submitted successfully");
+      setShowGradeModal(false);
+      setSubmissionToGrade(null);
+      setGradeData({ score: 0, feedback: "" });
+      
+      // Refresh submissions list
+      fetchSubmissions();
+    } catch (error) {
+      console.error("Error submitting grade:", error);
+      toast.error("Failed to submit grade. Please try again later.");
+    } finally {
+      setIsSubmittingGrade(false);
+    }
+  };
+
+  // Handle downloading a submission document
+  const handleDownloadSubmission = async (submissionId) => {
+    try {
+      console.log("Downloading document for submission:", submissionId);
+      
+      // Get JWT token
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No authentication token found");
+        toast.error("Authentication required");
+        return;
+      }
+
+      // Request the file from the backend
+      const response = await fetch(`${API_URL}/api/submissions/${submissionId}/download`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to download document");
+      }
+
+      // Get the filename from the content-disposition header if available
+      let filename = `submission-${submissionId}.pdf`;
+      const contentDisposition = response.headers.get("content-disposition");
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Convert the response to a blob and download it
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("Document downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      toast.error("Failed to download document: " + error.message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -1628,53 +1760,99 @@ function ProfessorDashboard() {
                     </div>
                     <div className="flex items-center justify-center space-x-2">
                       {submission.status === "Submitted" && (
-                        <button
-                          onClick={() => handleAnalyzeSubmission(submission)}
-                          className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300"
-                          disabled={analyzingSubmission === submission.id}
-                        >
-                          {analyzingSubmission === submission.id ? (
-                            <span className="flex items-center">
-                              <svg
-                                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                              >
-                                <circle
-                                  className="opacity-25"
-                                  cx="12"
-                                  cy="12"
-                                  r="10"
-                                  stroke="currentColor"
-                                  strokeWidth="4"
-                                ></circle>
-                                <path
-                                  className="opacity-75"
-                                  fill="currentColor"
-                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                ></path>
-                              </svg>
-                              Analyzing...
-                            </span>
-                          ) : (
-                            "Analyze"
-                          )}
-                        </button>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAnalyzeSubmission(submission);
+                            }}
+                            className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300"
+                            disabled={analyzingSubmission === submission.id}
+                          >
+                            {analyzingSubmission === submission.id ? (
+                              <span className="flex items-center">
+                                <svg
+                                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  ></circle>
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  ></path>
+                                </svg>
+                                Analyzing...
+                              </span>
+                            ) : (
+                              "Analyze"
+                            )}
+                          </button>
+                          
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadSubmission(submission.id);
+                            }}
+                            className="px-3 py-1 text-xs text-white bg-blue-500 rounded-md hover:bg-blue-700 transition-colors duration-300"
+                          >
+                            Download
+                          </button>
+                        </div>
                       )}
 
                       {(submission.status === "Analyzed" ||
                         submission.status === "Graded") && (
-                        <button
-                          onClick={() => viewReport(submission.id, true)}
-                          className="px-3 py-1 text-xs text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors duration-300"
-                        >
-                          View Report
-                        </button>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              viewReport(submission.id, true);
+                            }}
+                            className="px-3 py-1 text-xs text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors duration-300"
+                          >
+                            View Report
+                          </button>
+                          
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadSubmission(submission.id);
+                            }}
+                            className="px-3 py-1 text-xs text-white bg-blue-500 rounded-md hover:bg-blue-700 transition-colors duration-300"
+                          >
+                            Download
+                          </button>
+                          
+                          {submission.status === "Analyzed" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log("Grade button clicked for submission:", submission);
+                                handleGradeSubmission(submission);
+                              }}
+                              className="px-3 py-1 text-xs text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors duration-300"
+                            >
+                              Grade
+                            </button>
+                          )}
+                        </div>
                       )}
 
                       <button
-                        onClick={() => handleDeleteSubmission(submission.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSubmission(submission.id);
+                        }}
                         className="text-gray-400 hover:text-red-500 transition-colors duration-300"
                       >
                         <svg
@@ -1808,13 +1986,19 @@ function ProfessorDashboard() {
                       {isViewable || doc.status === "Completed" ? (
                         <>
                           <button
-                            onClick={() => viewReport(doc.id, false)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              viewReport(doc.id, false);
+                            }}
                             className="px-3 py-1 text-xs text-white bg-green-600 rounded-md hover:bg-green-700 whitespace-nowrap transition-colors duration-300"
                           >
                             View Report
                           </button>
                           <button
-                            onClick={() => handleAnalyzeClick(doc)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAnalyzeClick(doc);
+                            }}
                             className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] whitespace-nowrap transition-colors duration-300"
                           >
                             Re-analyze
@@ -1823,7 +2007,10 @@ function ProfessorDashboard() {
                       ) : (
                         <>
                           <button
-                            onClick={() => handleAnalyzeClick(doc)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAnalyzeClick(doc);
+                            }}
                             className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] whitespace-nowrap transition-colors duration-300"
                           >
                             Analyze
@@ -1831,9 +2018,10 @@ function ProfessorDashboard() {
                         </>
                       )}
                       <button
-                        onClick={() =>
-                          handleDeleteClick(doc, "professor_document")
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(doc, "professor_document");
+                        }}
                         className="text-gray-400 hover:text-[#ff6464] flex-shrink-0 transition-colors duration-300"
                       >
                         <svg
@@ -1972,6 +2160,73 @@ function ProfessorDashboard() {
                   }`}
                 >
                   {isAnalyzing ? "Analyzing..." : "Start Analysis"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Grade Submission Modal */}
+        {showGradeModal && submissionToGrade && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div
+              className="bg-white p-6 rounded-lg max-w-md w-full m-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-xl font-semibold mb-2">Grade Submission</h2>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="grade" className="block text-sm font-medium text-gray-700">
+                    Grade (0-100)
+                  </label>
+                  <input
+                    type="number"
+                    id="grade"
+                    name="grade"
+                    min="0"
+                    max="100"
+                    value={gradeData.score}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setGradeData({ ...gradeData, score: Number(e.target.value) })}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="feedback" className="block text-sm font-medium text-gray-700">
+                    Feedback
+                  </label>
+                  <textarea
+                    id="feedback"
+                    name="feedback"
+                    rows="4"
+                    value={gradeData.feedback}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setGradeData({ ...gradeData, feedback: e.target.value })}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end space-x-4">
+                <button
+                  onClick={() => {
+                    setShowGradeModal(false);
+                    setSubmissionToGrade(null);
+                    setGradeData({ score: 0, feedback: "" });
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitGrade}
+                  disabled={!gradeData.score || !gradeData.feedback || isSubmittingGrade}
+                  className={`px-4 py-2 bg-[#ff6464] text-white rounded-md transition-colors duration-300 ease-in-out ${
+                    !gradeData.score || !gradeData.feedback || isSubmittingGrade
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-[#ff4444]"
+                  }`}
+                >
+                  {isSubmittingGrade ? "Submitting..." : "Submit Grade"}
                 </button>
               </div>
             </div>

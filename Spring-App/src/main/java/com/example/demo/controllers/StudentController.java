@@ -333,49 +333,27 @@ public class StudentController {
                         .body(Map.of("error", "User not found"));
             }
 
-            // Get student's enrolled courses
+            // Use the new service method that correctly handles submission status by slot ID
+            List<Map<String, Object>> enhancedSlots = submissionService.getAvailableSlotsWithSubmissionStatus(user.getId());
+            
+            // Filter by enrolled courses
             List<CourseModel> studentCourses = courseService.getCoursesForStudent(user.getId());
             logger.info("Student is enrolled in {} courses", studentCourses.size());
+            
+            // Filter the slots by student's enrolled courses
+            List<Map<String, Object>> filteredSlots = enhancedSlots.stream()
+                .filter(slotMap -> {
+                    SubmissionSlotModel slot = (SubmissionSlotModel) slotMap.get("slot");
+                    String slotCourse = slot.getCourse();
+                    
+                    // Check if student is enrolled in this course
+                    return studentCourses.stream()
+                            .anyMatch(course -> course.getCode().equals(slotCourse));
+                })
+                .collect(Collectors.toList());
 
-            // Get all available submission slots
-            List<SubmissionSlotModel> allAvailableSlots = submissionService.getAvailableSubmissionSlots();
-
-            // Filter slots by the student's enrolled courses and add submission info
-            List<Map<String, Object>> enhancedSlots = new ArrayList<>();
-
-            for (SubmissionSlotModel slot : allAvailableSlots) {
-                String slotCourse = slot.getCourse();
-
-                // Check if student is enrolled in this course
-                boolean isEnrolled = studentCourses.stream()
-                        .anyMatch(course -> course.getCode().equals(slotCourse));
-
-                if (isEnrolled) {
-                    // Check if student has already submitted to this course
-                    boolean hasSubmitted = submissionService.hasStudentSubmittedToSlot(user.getId(), slotCourse);
-
-                    Map<String, Object> enhancedSlot = new HashMap<>();
-                    enhancedSlot.put("slot", slot);
-                    enhancedSlot.put("hasSubmitted", hasSubmitted);
-
-                    // If already submitted, include the submission
-                    if (hasSubmitted) {
-                        List<Submission> submissions = submissionService.getSubmissionsByUserId(user.getId());
-                        submissions = submissions.stream()
-                                .filter(s -> s.getCourseId() != null && s.getCourseId().equals(slotCourse))
-                                .collect(Collectors.toList());
-
-                        if (!submissions.isEmpty()) {
-                            enhancedSlot.put("submission", submissions.get(0));
-                        }
-                    }
-
-                    enhancedSlots.add(enhancedSlot);
-                }
-            }
-
-            logger.info("Found {} filtered submission slots for student", enhancedSlots.size());
-            return ResponseEntity.ok(enhancedSlots);
+            logger.info("Found {} filtered submission slots for student", filteredSlots.size());
+            return ResponseEntity.ok(filteredSlots);
         } catch (Exception e) {
             logger.error("Error fetching available submission slots: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
