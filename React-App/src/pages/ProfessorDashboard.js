@@ -1598,11 +1598,12 @@ function ProfessorDashboard() {
               </h2>
               <button
                 onClick={() => setShowCreateSubmissionModal(true)}
-                className="text-xs p-1.5 text-gray-600 border border-gray-300 hover:border-[#ff6464] hover:text-[#ff6464] rounded-md transition-all duration-300 flex items-center gap-1"
+                className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300 group"
+                title="Add Submission"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
+                  className="h-5 w-5 text-gray-600 group-hover:text-[#ff6464] transition-colors duration-300"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
@@ -1630,19 +1631,19 @@ function ProfessorDashboard() {
                     </div>
                     <button
                       onClick={() => handleDeleteClick(slot, "slot")}
-                      className="text-gray-400 hover:text-[#ff6464] transition-colors duration-300"
+                      className="p-2 rounded-md flex items-center justify-center w-10 h-10 bg-gray-50 hover:bg-white hover:shadow-lg transition-all duration-300 group"
+                      title="Delete Submission"
                     >
                       <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
+                        xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 24 24"
+                        fill="currentColor"
+                        className="h-5 w-5 text-gray-600 group-hover:text-[#ff6464] transition-colors duration-300"
                       >
                         <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          fillRule="evenodd"
+                          d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z"
+                          clipRule="evenodd"
                         />
                       </svg>
                     </button>
@@ -2029,9 +2030,7 @@ function ProfessorDashboard() {
           </p>
           <div className="bg-white rounded-lg shadow mb-8">
             <div className="grid grid-cols-[minmax(300px,0.8fr)_200px_120px_120px_200px] gap-6 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500">
-              <div className="flex items-center justify-center">
-                DOCUMENT
-              </div>
+              <div className="flex items-center justify-center">DOCUMENT</div>
               <div className="flex items-center justify-center">
                 UPLOADED DATE
               </div>
