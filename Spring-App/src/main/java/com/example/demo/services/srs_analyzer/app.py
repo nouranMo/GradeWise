@@ -32,9 +32,13 @@ from bs4 import BeautifulSoup
 import requests
 import random
 import re
-from flask import send_from_directory
+from flask_limiter import Limiter
+from flask import Flask, send_from_directory,jsonify
 import traceback
 import logging.handlers
+
+app = Flask(__name__)
+app.config.from_object(Config)
 # Explicit path to YOLOv8
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -50,6 +54,15 @@ if YOLO_PATH not in sys.path:
 
 # Print sys.path to verify
 print("PYTHON SEARCH PATHS:", sys.path)
+
+OUTPUT_RESULTS_DIR = app.config.get(
+    'OUTPUT_RESULTS_DIR',
+    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..',"..","..","..","..","..",'output_results'))
+)
+
+# Ensure the output_results directory exists
+os.makedirs(OUTPUT_RESULTS_DIR, exist_ok=True)
+print(f"Using OUTPUT_RESULTS_DIR: {OUTPUT_RESULTS_DIR}")
 
 # Import script correctly
 import importlib.util
@@ -219,12 +232,15 @@ def check_session():
             'message': str(e)
         }), 400
 @app.route('/output_results/<path:filename>')
+@limiter.limit("500 per hour")
 def serve_output_image(filename):
     try:
         # Replace backslashes with forward slashes for cross-platform compatibility
         filename = filename.replace('\\', '/')
-        print(f"Serving image: output_results/{filename}")
-        return send_from_directory('output_results', filename)
+        full_path = os.path.join(OUTPUT_RESULTS_DIR, filename)
+        print(f"Serving image: {full_path}")
+        # Serve file from OUTPUT_RESULTS_DIR
+        return send_from_directory(OUTPUT_RESULTS_DIR, filename)
     except Exception as e:
         print(f"Error serving image: {str(e)}")
         return jsonify({'error': f'Image not found: {str(e)}'}), 404

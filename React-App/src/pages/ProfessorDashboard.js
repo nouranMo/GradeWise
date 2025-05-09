@@ -292,7 +292,7 @@ function ProfessorDashboard() {
     ImageAnalysis: false,
     BusinessValueAnalysis: false,
     DiagramConvention: false,
-    SpellCheck: false,
+    // SpellCheck: false,
     PlagiarismCheck: false,
     FullAnalysis: false,
   });
@@ -681,7 +681,7 @@ function ProfessorDashboard() {
         ImageAnalysis: false,
         BusinessValueAnalysis: false,
         DiagramConvention: false,
-        SpellCheck: false,
+        // SpellCheck: false,
         PlagiarismCheck: false,
         FullAnalysis: false,
       });
@@ -690,7 +690,7 @@ function ProfessorDashboard() {
       setSelectedAnalyses({
         SDDValidation: false,
         DiagramConvention: false,
-        SpellCheck: false,
+        // SpellCheck: false,
         PlagiarismCheck: false,
         FullAnalysis: false,
         ContentAnalysis: false,
