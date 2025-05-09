@@ -1739,7 +1739,7 @@ function ProfessorDashboard() {
                   </span>
                 </button>
               </div>
-              <div className="grid grid-cols-[1fr_1fr_0.8fr_0.8fr_1.2fr_0.7fr_0.5fr_1.5fr] gap-6 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500">
+              <div className="grid grid-cols-[1.5fr_1.5fr_0.5fr_0.8fr_1.2fr_0.7fr_0.5fr_1.5fr] gap-6 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500">
                 <div className="flex items-center justify-center">STUDENT</div>
                 <div className="flex items-center justify-center">DOCUMENT</div>
                 <div className="flex items-center justify-center">SRS/SDD</div>
@@ -1760,8 +1760,8 @@ function ProfessorDashboard() {
                 submissions.map((submission) => (
                   <div
                     key={submission.id}
-                    onClick={() => handleSubmissionClick(submission)}
-                    className="grid grid-cols-[1fr_1fr_0.8fr_0.8fr_1.2fr_0.7fr_0.5fr_1.5fr] gap-6 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-300"
+                    // onClick={() => handleSubmissionClick(submission)}
+                    className="grid grid-cols-[1.5fr_1.5fr_0.5fr_0.8fr_1.2fr_0.7fr_0.5fr_1.5fr] gap-6 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-300"
                   >
                     <div
                       className="flex items-center col-span-1 justify-center"
@@ -1802,10 +1802,10 @@ function ProfessorDashboard() {
                           Submitted
                         </span>
                       ) : submission.status === "Analyzing" ? (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                           <span className="flex items-center">
                             <svg
-                              className="animate-spin -ml-1 mr-2 h-3 w-3 text-yellow-800"
+                              className="animate-spin -ml-1 mr-2 h-3 w-3 text-blue-800"
                               xmlns="http://www.w3.org/2000/svg"
                               fill="none"
                               viewBox="0 0 24 24"
@@ -1842,7 +1842,7 @@ function ProfessorDashboard() {
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center justify-center">
+                    <div className="flex items-center justify-center font-semibold">
                       {submission.grade ? `${submission.grade}%` : "-"}
                     </div>
                     <div className="flex items-center justify-center space-x-2">
@@ -2030,7 +2030,7 @@ function ProfessorDashboard() {
           <div className="bg-white rounded-lg shadow mb-8">
             <div className="grid grid-cols-[minmax(300px,0.8fr)_200px_120px_120px_200px] gap-6 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500">
               <div className="flex items-center justify-center">
-                DOCUMENT NAME
+                DOCUMENT
               </div>
               <div className="flex items-center justify-center">
                 UPLOADED DATE
