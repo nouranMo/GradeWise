@@ -76,7 +76,7 @@ const StudentDashboard = () => {
       }
 
       console.log("Fetching submission slots...");
-      
+
       const response = await fetch(
         `${API_URL}/api/student/submissions/available-slots`,
         {
@@ -90,30 +90,35 @@ const StudentDashboard = () => {
       if (response.ok) {
         const data = await response.json();
         console.log("Raw submission slots data:", data);
-        
+
         // Process the slots data to ensure hasSubmitted is correctly set
-        const processedData = data.map(slot => {
+        const processedData = data.map((slot) => {
           // Explicitly check if this slot has a submission
-          const hasSubmission = !!slot.submission && 
-            (slot.submission.id || slot.submission._id || slot.submission.documentId);
-          
+          const hasSubmission =
+            !!slot.submission &&
+            (slot.submission.id ||
+              slot.submission._id ||
+              slot.submission.documentId);
+
           return {
             ...slot,
             hasSubmitted: hasSubmission || slot.hasSubmitted || false,
-            submission: slot.submission ? {
-              ...slot.submission,
-              // Ensure status is set if missing
-              status: slot.submission.status || "Submitted"
-            } : null
+            submission: slot.submission
+              ? {
+                  ...slot.submission,
+                  // Ensure status is set if missing
+                  status: slot.submission.status || "Submitted",
+                }
+              : null,
           };
         });
-        
+
         console.log("Processed submission slots data:", processedData);
         setSubmissionSlots(processedData);
       } else {
         throw new Error("Failed to fetch available submission slots");
       }
-      
+
       // Also fetch the student's submitted documents to ensure we have the latest status
       const submissionsResponse = await fetch(
         `${API_URL}/api/student/submissions`,
@@ -124,35 +129,37 @@ const StudentDashboard = () => {
           },
         }
       );
-      
+
       if (submissionsResponse.ok) {
         const submissionsData = await submissionsResponse.json();
         console.log("Student's submissions:", submissionsData);
-        
+
         // Cross-reference submissions with slots to ensure consistency
         if (Array.isArray(submissionsData) && submissionsData.length > 0) {
-          setSubmissionSlots(prevSlots => {
+          setSubmissionSlots((prevSlots) => {
             const updatedSlots = [...prevSlots];
-            
+
             // For each submission, find the matching slot and update it
-            submissionsData.forEach(submission => {
+            submissionsData.forEach((submission) => {
               const slotIndex = updatedSlots.findIndex(
-                slot => slot.slot.id === submission.submissionSlotId
+                (slot) => slot.slot.id === submission.submissionSlotId
               );
-              
+
               if (slotIndex !== -1) {
-                console.log(`Found matching slot for submission ${submission.id}, updating status`);
+                console.log(
+                  `Found matching slot for submission ${submission.id}, updating status`
+                );
                 updatedSlots[slotIndex] = {
                   ...updatedSlots[slotIndex],
                   hasSubmitted: true,
                   submission: {
                     ...submission,
-                    status: submission.status || "Submitted"
-                  }
+                    status: submission.status || "Submitted",
+                  },
                 };
               }
             });
-            
+
             return updatedSlots;
           });
         }
@@ -169,11 +176,7 @@ const StudentDashboard = () => {
     fetchStudentInfo();
     fetchStudentCourses();
     fetchSubmissionSlots();
-  }, [
-    fetchStudentInfo,
-    fetchStudentCourses,
-    fetchSubmissionSlots,
-  ]);
+  }, [fetchStudentInfo, fetchStudentCourses, fetchSubmissionSlots]);
 
   const handleSlotClick = (slot) => {
     // Log the slot data for debugging
@@ -301,7 +304,7 @@ const StudentDashboard = () => {
             <select
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
-              className="border rounded-lg px-4 py-2"
+              className="border rounded-lg px-4 py-2 pr-10 focus:ring-1 focus:ring-[#FF6464] focus:border-transparent"
             >
               <option value="all">All Courses</option>
               {uniqueCourses.map((course) => (
@@ -356,53 +359,80 @@ const StudentDashboard = () => {
             <div className="bg-white p-6 rounded-lg max-w-lg w-full m-4 overflow-auto max-h-[90vh]">
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-xl font-semibold">Submission Feedback</h2>
-                <button 
+                <button
                   onClick={() => setShowFeedbackModal(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
-              
+
               <div className="mb-4 pb-4 border-b">
-                <p className="text-sm text-gray-500">Document: {feedbackSubmission.fileName || "Submitted Document"}</p>
-                <p className="text-sm text-gray-500">Type: {feedbackSubmission.submissionType || "-"}</p>
-                <p className="text-sm text-gray-500">Submitted: {feedbackSubmission.lastModified ? new Date(feedbackSubmission.lastModified).toLocaleString() : "-"}</p>
+                <p className="text-sm text-gray-500">
+                  Document:{" "}
+                  {feedbackSubmission.fileName || "Submitted Document"}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Type: {feedbackSubmission.submissionType || "-"}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Submitted:{" "}
+                  {feedbackSubmission.lastModified
+                    ? new Date(feedbackSubmission.lastModified).toLocaleString()
+                    : "-"}
+                </p>
               </div>
-              
+
               <div className="mb-6">
                 <div className="bg-blue-50 p-4 rounded-lg mb-4">
                   <div className="flex items-center mb-2">
-                    <h3 className="text-lg font-semibold text-blue-800">Grade</h3>
+                    <h3 className="text-lg font-semibold text-blue-800">
+                      Grade
+                    </h3>
                     <div className="ml-auto bg-blue-200 text-blue-800 text-lg font-bold px-3 py-1 rounded-full">
                       {feedbackSubmission.grade}%
                     </div>
                   </div>
-                  
+
                   <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                    <div 
-                      className="bg-blue-600 h-2.5 rounded-full" 
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full"
                       style={{ width: `${feedbackSubmission.grade}%` }}
                     ></div>
                   </div>
                 </div>
-                
+
                 {feedbackSubmission.feedback && (
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Professor Feedback</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      Professor Feedback
+                    </h3>
                     <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-line text-gray-700">
                       {feedbackSubmission.feedback}
                     </div>
                   </div>
                 )}
-                
+
                 {!feedbackSubmission.feedback && (
-                  <p className="text-gray-500 italic">No detailed feedback provided.</p>
+                  <p className="text-gray-500 italic">
+                    No detailed feedback provided.
+                  </p>
                 )}
               </div>
-              
+
               <div className="flex justify-end">
                 <button
                   onClick={() => setShowFeedbackModal(false)}
@@ -422,35 +452,35 @@ const StudentDashboard = () => {
 // Submission Slot Card Component
 const SubmissionSlotCard = ({ slotData, onSlotClick }) => {
   const { slot, hasSubmitted, submission } = slotData;
-  
+
   // Debug log in render to see what's coming in
   console.log(`Rendering slot card for ${slot.name}:`, {
-    slotId: slot.id, 
-    hasSubmitted, 
+    slotId: slot.id,
+    hasSubmitted,
     submission,
-    submissionStatus: submission?.status
+    submissionStatus: submission?.status,
   });
 
   // Determine status badge content and style
   const getStatusBadge = () => {
     // Debug the check we're using
-    console.log(`Status badge check for ${slot.name}:`, { 
-      hasSubmitted, 
-      submissionStatus: submission?.status 
+    console.log(`Status badge check for ${slot.name}:`, {
+      hasSubmitted,
+      submissionStatus: submission?.status,
     });
-  
+
     if (!hasSubmitted && !submission) {
       console.log(`Slot ${slot.name} has no submission`);
       return null;
     }
-    
+
     let bgColor = "bg-green-100";
     let textColor = "text-green-800";
     let statusText = "Submitted";
-    
+
     if (submission && submission.status) {
       console.log(`Slot ${slot.name} has status:`, submission.status);
-      
+
       if (submission.status === "Analyzing") {
         bgColor = "bg-yellow-100";
         textColor = "text-yellow-800";
@@ -467,9 +497,11 @@ const SubmissionSlotCard = ({ slotData, onSlotClick }) => {
     } else {
       console.log(`Slot ${slot.name} has default submitted status`);
     }
-    
+
     return (
-      <span className={`${bgColor} ${textColor} text-xs px-2 py-1 rounded-full`}>
+      <span
+        className={`${bgColor} ${textColor} text-xs px-2 py-1 rounded-full`}
+      >
         {statusText}
       </span>
     );
@@ -502,7 +534,7 @@ const SubmissionSlotCard = ({ slotData, onSlotClick }) => {
         </p>
       </div>
 
-      {(hasSubmitted || submission) ? (
+      {hasSubmitted || submission ? (
         <div className="mt-4 pt-4 border-t border-gray-100">
           <p className="text-sm font-medium text-gray-700">Your submission:</p>
           {submission && (
@@ -527,31 +559,44 @@ const SubmissionSlotCard = ({ slotData, onSlotClick }) => {
               <p className="text-xs text-gray-500 mt-1">
                 Type: {submission?.submissionType || "-"}
               </p>
-              
+
               {/* Display status information */}
               {submission.status && submission.status !== "Graded" && (
                 <div className="mt-2">
-                  <p className="text-xs font-medium text-gray-700">Status: {submission.status}</p>
+                  <p className="text-xs font-medium text-gray-700">
+                    Status: {submission.status}
+                  </p>
                   {submission.status === "Analyzing" && (
                     <div className="w-full bg-gray-200 h-1 mt-1">
-                      <div className="bg-yellow-500 h-1 animate-pulse" style={{ width: '60%' }}></div>
+                      <div
+                        className="bg-yellow-500 h-1 animate-pulse"
+                        style={{ width: "60%" }}
+                      ></div>
                     </div>
                   )}
                 </div>
               )}
-              
+
               {/* Display grade information if submission is graded */}
               {submission.status === "Graded" && (
                 <div className="mt-3 p-3 bg-blue-50 rounded-lg">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">Grade:</span>
-                    <span className="text-sm font-bold text-blue-600">{submission.grade}%</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Grade:
+                    </span>
+                    <span className="text-sm font-bold text-blue-600">
+                      {submission.grade}%
+                    </span>
                   </div>
-                  
+
                   {submission.feedback && (
                     <div className="mt-2">
-                      <p className="text-sm font-medium text-gray-700">Feedback:</p>
-                      <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{submission.feedback}</p>
+                      <p className="text-sm font-medium text-gray-700">
+                        Feedback:
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
+                        {submission.feedback}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -635,7 +680,7 @@ const UploadModal = ({
 
     try {
       setUploadingAndSubmitting(true);
-      
+
       // Upload the file directly
       const token = localStorage.getItem("token");
       if (!token) {
@@ -647,7 +692,7 @@ const UploadModal = ({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("name", file.name);
-      
+
       // Use the student-specific document upload endpoint
       const uploadResponse = await fetch(`${API_URL}/api/student/documents`, {
         method: "POST",
@@ -661,32 +706,35 @@ const UploadModal = ({
         const errorData = await uploadResponse.json();
         throw new Error(errorData.error || "Document upload failed");
       }
-      
+
       // Extract document data including ID
       const uploadData = await uploadResponse.json();
       console.log("Document upload response:", uploadData);
-      
+
       if (!uploadData.document) {
-        console.error("Document upload error: Missing document in response", uploadData);
+        console.error(
+          "Document upload error: Missing document in response",
+          uploadData
+        );
         throw new Error("Document upload failed: Invalid server response");
       }
-      
+
       // Get the document object and its ID
       const document = uploadData.document;
       // Make sure we're using the correct ID field (_id or id depending on server response)
       const documentId = document._id || document.id;
-      
+
       console.log("Document details:", document);
       console.log("Using document ID for submission:", documentId);
-      
+
       if (!documentId) {
         console.error("Error: No document ID found in upload response");
         throw new Error("Document upload successful but no ID was returned");
       }
-      
+
       // Get submission type directly from the currently selected slot
       const submissionType = selectedSlot.slot.submissionType || "SRS";
-      
+
       // Prepare submission data with all needed fields
       const submissionData = {
         documentId: documentId,
@@ -697,27 +745,27 @@ const UploadModal = ({
         documentPath: document.filePath,
         documentSize: document.fileSize,
         documentContentType: document.contentType,
-        // Make sure to include the submission slot ID 
+        // Make sure to include the submission slot ID
         submissionSlotId: selectedSlot.slot.id,
         // Add both ID formats to ensure compatibility
         _id: document._id,
         id: document.id || document._id,
         // These fields ensure the submission has all necessary document info
         document: {
-          _id: document._id, 
+          _id: document._id,
           id: document.id || document._id,
           name: document.name,
-          filePath: document.filePath, 
+          filePath: document.filePath,
           fileSize: document.fileSize,
           contentType: document.contentType,
-          userId: document.userId
+          userId: document.userId,
         },
         // Add status explicitly
-        status: "Submitted"
+        status: "Submitted",
       };
-      
+
       console.log("Submitting data:", submissionData);
-      
+
       // Submit the document to the slot
       const submitResponse = await fetch(
         `${API_URL}/api/student/submissions/slots/${selectedSlot.slot.id}/submit`,
@@ -730,28 +778,31 @@ const UploadModal = ({
           body: JSON.stringify(submissionData),
         }
       );
-      
+
       if (!submitResponse.ok) {
         const submitError = await submitResponse.json();
         throw new Error(submitError.error || "Submission failed");
       }
-      
+
       const submitData = await submitResponse.json();
       console.log("Submission response:", submitData);
-      
+
       // Verify the submission contains the document ID
       if (submitData.submission) {
         console.log("Created submission:", submitData.submission);
-        console.log("Submission document ID:", submitData.submission.documentId);
-        
+        console.log(
+          "Submission document ID:",
+          submitData.submission.documentId
+        );
+
         if (!submitData.submission.documentId) {
           console.warn("Warning: Submission created without document ID!");
         }
       }
-      
+
       toast.success("Document uploaded and submitted successfully!");
       resetModal();
-      
+
       // Create a complete submission object that includes all needed fields
       const completeSubmission = {
         ...submissionData,
@@ -761,29 +812,32 @@ const UploadModal = ({
         submissionSlotId: selectedSlot.slot.id,
         documentId: documentId,
         fileName: file.name,
-        submissionType: submissionType
+        submissionType: submissionType,
       };
-      
-      console.log("Complete submission object for UI update:", completeSubmission);
-      
+
+      console.log(
+        "Complete submission object for UI update:",
+        completeSubmission
+      );
+
       // If we have access to setSubmissionSlots, update the submission slots immediately
       if (setSubmissionSlots) {
-        setSubmissionSlots(prev => {
-          return prev.map(slot => {
+        setSubmissionSlots((prev) => {
+          return prev.map((slot) => {
             if (slot.slot.id === selectedSlot.slot.id) {
               console.log(`Updating slot ${slot.slot.id} to show as submitted`);
               // Create updated slot with submission information
               return {
                 ...slot,
                 hasSubmitted: true,
-                submission: completeSubmission
+                submission: completeSubmission,
               };
             }
             return slot;
           });
         });
       }
-      
+
       // Also refresh the submission slots list from server
       await fetchSubmissionSlots();
     } catch (error) {
@@ -911,9 +965,7 @@ const UploadModal = ({
                       >
                         <input {...getInputProps()} />
                         {isDragActive ? (
-                          <p className="text-blue-500">
-                            Drop the file here...
-                          </p>
+                          <p className="text-blue-500">Drop the file here...</p>
                         ) : (
                           <div>
                             <p className="text-gray-600">
@@ -944,7 +996,9 @@ const UploadModal = ({
                     onClick={handleUploadAndSubmit}
                     disabled={!file || uploadingAndSubmitting}
                   >
-                    {uploadingAndSubmitting ? "Uploading & Submitting..." : "Upload & Submit"}
+                    {uploadingAndSubmitting
+                      ? "Uploading & Submitting..."
+                      : "Upload & Submit"}
                   </button>
                 </div>
               </Dialog.Panel>

@@ -285,6 +285,7 @@ function ProfessorDashboard() {
   const [documentType, setDocumentType] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState(null);
   const [selectedAnalyses, setSelectedAnalyses] = useState({
     SrsValidation: false,
     ReferencesValidation: false,
@@ -360,21 +361,25 @@ function ProfessorDashboard() {
         // No validation - directly use the submissions
         if (Array.isArray(submissionData) && submissionData.length > 0) {
           // Process each submission to ensure it has complete document information
-          const processedSubmissions = submissionData.map(submission => {
+          const processedSubmissions = submissionData.map((submission) => {
             console.log("Processing submission:", submission);
-            
+
             // Ensure each submission has the required document information
             // Handle all possible ID formats
-            let documentId = submission.documentId || 
-                            (submission._id) ||
-                            (submission.document && (submission.document.id || submission.document._id));
-            
+            let documentId =
+              submission.documentId ||
+              submission._id ||
+              (submission.document &&
+                (submission.document.id || submission.document._id));
+
             // Always ensure documentId is set in a consistent field
             if (documentId && !submission.documentId) {
-              console.log(`Fixing submission ${submission.id} with document ID: ${documentId}`);
+              console.log(
+                `Fixing submission ${submission.id} with document ID: ${documentId}`
+              );
               submission.documentId = documentId;
             }
-            
+
             // Log document information for debugging
             console.log("Submission ID:", submission.id);
             console.log("Document ID:", submission.documentId);
@@ -383,7 +388,7 @@ function ProfessorDashboard() {
             // Return the enhanced submission
             return submission;
           });
-          
+
           setSubmissions(processedSubmissions);
           toast.success(`Found ${processedSubmissions.length} submissions`, {
             autoClose: 2000,
@@ -419,16 +424,16 @@ function ProfessorDashboard() {
         return;
       }
 
-      const response = await axios.get('/api/documents/professor', {
+      const response = await axios.get("/api/documents/professor", {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
       setDocuments(response.data);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching professor documents:', error);
-      toast.error('Failed to load documents. Please try again later.');
+      console.error("Error fetching professor documents:", error);
+      toast.error("Failed to load documents. Please try again later.");
       setLoading(false);
     }
   };
@@ -647,25 +652,36 @@ function ProfessorDashboard() {
   const handleAnalyzeSubmission = async (submission) => {
     try {
       console.log("Preparing to analyze submission:", submission);
-      
+
       // Make sure we have the submission ID
       if (!submission.id) {
         toast.error("Missing submission ID");
         return;
       }
-      
+
       // Store the submission for analysis
       setSelectedDocument(submission);
-      
+
       // Show document type selection modal first
       setShowDocTypeModal(true);
-      
+
       // The rest will be handled by handleDocTypeSelection and startAnalysis
     } catch (error) {
       console.error("Error preparing submission for analysis:", error);
       toast.error("Failed to prepare submission for analysis");
     }
   };
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setActiveDropdown(null);
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
 
   const handleDocTypeSelection = (type) => {
     console.log("Selected document type:", type);
@@ -868,26 +884,30 @@ function ProfessorDashboard() {
 
   const startAnalysis = async () => {
     setIsAnalyzing(true);
-    
+
     try {
       // Determine if we're analyzing a submission or a professor document
-      const isSubmission = selectedDocument && (selectedDocument.submissionSlotId || selectedDocument.courseId || selectedDocument.studentName);
-      
+      const isSubmission =
+        selectedDocument &&
+        (selectedDocument.submissionSlotId ||
+          selectedDocument.courseId ||
+          selectedDocument.studentName);
+
       console.log("Starting analysis for:", selectedDocument);
-      
+
       if (isSubmission) {
         // SUBMISSION ANALYSIS - use submissions endpoint
         const submissionId = selectedDocument.id;
         if (!submissionId) {
           throw new Error("Missing submission ID");
         }
-        
+
         console.log("Analyzing submission with ID:", submissionId);
-        
+
         // Use the submission-specific endpoint
         const endpointUrl = `${API_URL}/api/submissions/${submissionId}/analyze`;
         console.log("Using submission endpoint:", endpointUrl);
-        
+
         // Get the authentication token
         const token = localStorage.getItem("token");
         if (!token) {
@@ -903,7 +923,7 @@ function ProfessorDashboard() {
           },
           body: JSON.stringify({
             analyses: selectedAnalyses,
-            documentType: documentType
+            documentType: documentType,
           }),
         });
 
@@ -917,79 +937,85 @@ function ProfessorDashboard() {
           }
           throw new Error(errorMessage);
         }
-        
+
         // Get response data
         const responseData = await response.json();
         console.log("Analysis response:", responseData);
-        
+
         // Update UI
         updateDocumentStatus(submissionId, "Analyzing", true);
         toast.success("Analysis started successfully");
-        
+
         // Start polling for analysis completion
         let pollCounter = 0;
         const maxPolls = 60; // Poll for up to 5 minutes (5s * 60)
         const pollInterval = setInterval(async () => {
           try {
             pollCounter++;
-            console.log(`Polling submission status (${pollCounter}/${maxPolls})...`);
-            
+            console.log(
+              `Polling submission status (${pollCounter}/${maxPolls})...`
+            );
+
             // Get the latest submission status
-            const statusResponse = await fetch(`${API_URL}/api/submissions/${submissionId}`, {
-              headers: { 
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}` 
+            const statusResponse = await fetch(
+              `${API_URL}/api/submissions/${submissionId}`,
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
               }
-            });
-            
+            );
+
             if (!statusResponse.ok) {
               console.warn("Failed to check submission status");
               return;
             }
-            
+
             const submissionData = await statusResponse.json();
             console.log("Current submission status:", submissionData.status);
-            
+
             // Check if analysis is complete
-            if (submissionData.status === "Analyzed" || 
-                submissionData.status === "Graded" || 
-                submissionData.status === "Completed") {
-              
+            if (
+              submissionData.status === "Analyzed" ||
+              submissionData.status === "Graded" ||
+              submissionData.status === "Completed"
+            ) {
               clearInterval(pollInterval);
               console.log("Analysis completed successfully!");
-              
+
               // Update UI
               updateDocumentStatus(submissionId, submissionData.status, true);
               toast.success("Analysis completed successfully");
-              
+
               // Refresh the submissions list
               fetchSubmissions();
-              
+
               setIsAnalyzing(false);
               setShowAnalysisModal(false);
             } else if (submissionData.status === "Failed") {
               clearInterval(pollInterval);
               console.error("Analysis failed");
-              
+
               // Update UI
               updateDocumentStatus(submissionId, "Failed", true);
               toast.error("Analysis failed");
-              
+
               // Refresh the submissions list
               fetchSubmissions();
-              
+
               setIsAnalyzing(false);
               setShowAnalysisModal(false);
             }
-            
+
             // Stop polling after maximum attempts
             if (pollCounter >= maxPolls) {
               clearInterval(pollInterval);
               console.warn("Polling timeout reached");
-              
+
               // Refresh anyway to get current status
               fetchSubmissions();
-              
+
               setIsAnalyzing(false);
               setShowAnalysisModal(false);
             }
@@ -997,7 +1023,7 @@ function ProfessorDashboard() {
             console.error("Error polling submission status:", error);
           }
         }, 5000); // Check every 5 seconds
-        
+
         // Immediately close the modal
         setShowAnalysisModal(false);
       } else {
@@ -1006,13 +1032,13 @@ function ProfessorDashboard() {
         if (!documentId) {
           throw new Error("Missing document ID");
         }
-        
+
         console.log("Analyzing professor document with ID:", documentId);
-        
+
         // Use the document-specific endpoint
         const endpointUrl = `${API_URL}/api/documents/${documentId}/analyze`;
         console.log("Using document endpoint:", endpointUrl);
-        
+
         // Get the authentication token
         const token = localStorage.getItem("token");
         if (!token) {
@@ -1028,7 +1054,7 @@ function ProfessorDashboard() {
           },
           body: JSON.stringify({
             analyses: selectedAnalyses,
-            documentType: documentType
+            documentType: documentType,
           }),
         });
 
@@ -1042,77 +1068,83 @@ function ProfessorDashboard() {
           }
           throw new Error(errorMessage);
         }
-        
+
         const responseData = await response.json();
         console.log("Analysis response:", responseData);
-        
+
         updateDocumentStatus(documentId, "Analyzing", false);
         toast.success("Analysis started successfully");
-        
+
         // Start polling for analysis completion
         let pollCounter = 0;
         const maxPolls = 60; // Poll for up to 5 minutes (5s * 60)
         const pollInterval = setInterval(async () => {
           try {
             pollCounter++;
-            console.log(`Polling document status (${pollCounter}/${maxPolls})...`);
-            
+            console.log(
+              `Polling document status (${pollCounter}/${maxPolls})...`
+            );
+
             // Get the latest document status
-            const statusResponse = await fetch(`${API_URL}/api/documents/${documentId}`, {
-              headers: { 
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}` 
+            const statusResponse = await fetch(
+              `${API_URL}/api/documents/${documentId}`,
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
               }
-            });
-            
+            );
+
             if (!statusResponse.ok) {
               console.warn("Failed to check document status");
               return;
             }
-            
+
             const documentData = await statusResponse.json();
             console.log("Current document status:", documentData.status);
-            
+
             // Check if analysis is complete
-            if (documentData.status === "Analyzed" || 
-                documentData.status === "Graded" || 
-                documentData.status === "Completed") {
-              
+            if (
+              documentData.status === "Analyzed" ||
+              documentData.status === "Graded" ||
+              documentData.status === "Completed"
+            ) {
               clearInterval(pollInterval);
               console.log("Analysis completed successfully!");
-              
+
               // Update UI
               updateDocumentStatus(documentId, documentData.status, false);
               toast.success("Analysis completed successfully");
-              
+
               // Refresh the document list
               fetchProfessorDocuments();
-              
+
               setIsAnalyzing(false);
               setShowAnalysisModal(false);
             } else if (documentData.status === "Failed") {
               clearInterval(pollInterval);
               console.error("Analysis failed");
-              
+
               // Update UI
               updateDocumentStatus(documentId, "Failed", false);
               toast.error("Analysis failed");
-              
+
               // Refresh the document list
               fetchProfessorDocuments();
-              
+
               setIsAnalyzing(false);
               setShowAnalysisModal(false);
             }
-            
+
             // Stop polling after maximum attempts
             if (pollCounter >= maxPolls) {
               clearInterval(pollInterval);
               console.warn("Polling timeout reached");
-              
+
               // Refresh anyway to get current status
               fetchProfessorDocuments();
-              
+
               setIsAnalyzing(false);
               setShowAnalysisModal(false);
             }
@@ -1120,7 +1152,7 @@ function ProfessorDashboard() {
             console.error("Error polling document status:", error);
           }
         }, 5000); // Check every 5 seconds
-        
+
         // Immediately close the modal
         setShowAnalysisModal(false);
       }
@@ -1133,17 +1165,13 @@ function ProfessorDashboard() {
 
   // Helper function to update document status in the UI
   const updateDocumentStatus = (documentId, status, isSubmission) => {
-      if (isSubmission) {
-      setSubmissions(prev => 
-        prev.map(sub => 
-          sub.id === documentId ? { ...sub, status } : sub
-        )
+    if (isSubmission) {
+      setSubmissions((prev) =>
+        prev.map((sub) => (sub.id === documentId ? { ...sub, status } : sub))
       );
-      } else {
-      setProfessorDocuments(prev => 
-        prev.map(doc => 
-          doc.id === documentId ? { ...doc, status } : doc
-        )
+    } else {
+      setProfessorDocuments((prev) =>
+        prev.map((doc) => (doc.id === documentId ? { ...doc, status } : doc))
       );
     }
   };
@@ -1152,8 +1180,12 @@ function ProfessorDashboard() {
   const viewReport = async (itemId, isSubmission = false) => {
     try {
       setLoading(true);
-      console.log(`Viewing report for ${isSubmission ? 'submission' : 'document'} ID: ${itemId}`);
-      
+      console.log(
+        `Viewing report for ${
+          isSubmission ? "submission" : "document"
+        } ID: ${itemId}`
+      );
+
       // Get the JWT token
       const token = localStorage.getItem("token");
       if (!token) {
@@ -1164,20 +1196,26 @@ function ProfessorDashboard() {
       }
 
       // Show initial toast
-      toast.info(`Loading ${isSubmission ? 'submission' : 'document'} report...`);
-      
+      toast.info(
+        `Loading ${isSubmission ? "submission" : "document"} report...`
+      );
+
       // Try up to 3 times if first attempt fails (might be an authentication issue)
       let attempts = 0;
       const maxAttempts = 3;
-      
+
       while (attempts < maxAttempts) {
         attempts++;
-        console.log(`Attempt ${attempts}/${maxAttempts} to fetch ${isSubmission ? 'submission' : 'document'}`);
-        
+        console.log(
+          `Attempt ${attempts}/${maxAttempts} to fetch ${
+            isSubmission ? "submission" : "document"
+          }`
+        );
+
         try {
           let endpointUrl;
           let itemType;
-          
+
           if (isSubmission) {
             // For submissions, use the submission endpoint
             endpointUrl = `${API_URL}/api/submissions/${itemId}`;
@@ -1187,41 +1225,45 @@ function ProfessorDashboard() {
             endpointUrl = `${API_URL}/api/documents/${itemId}`;
             itemType = "document";
           }
-          
+
           console.log(`Fetching ${itemType} data from: ${endpointUrl}`);
-          
+
           const response = await fetch(endpointUrl, {
-            headers: { 
+            headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}` 
-            }
+              Authorization: `Bearer ${token}`,
+            },
           });
-          
+
           if (response.status === 401) {
             console.warn("Authentication issue. Token may be expired.");
             // Wait a moment and try to refresh token (simulate)
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
             continue; // Try again
           }
-          
+
           if (!response.ok) {
-            console.error(`Error fetching ${itemType}, status: ${response.status}`);
+            console.error(
+              `Error fetching ${itemType}, status: ${response.status}`
+            );
             if (attempts >= maxAttempts) {
               // Only show error on final attempt
-              toast.error(`Could not retrieve ${itemType} details (${response.status})`);
+              toast.error(
+                `Could not retrieve ${itemType} details (${response.status})`
+              );
               setLoading(false);
               return;
             }
             continue; // Try again if not final attempt
           }
-          
+
           const data = await response.json();
           console.log(`${itemType} data:`, data);
-          
+
           // Check if we have the results directly
           if (data.results && Object.keys(data.results).length > 0) {
             console.log(`Found results directly in ${itemType}:`, data.results);
-            
+
             // Navigate to the results page with the data
             navigate("/parsing-result", {
               state: {
@@ -1229,33 +1271,47 @@ function ProfessorDashboard() {
                   ...data.results,
                   status: "success",
                   document_name: data.name || data.documentName || "Document",
-                  document_type: isSubmission ? "student_submission" : "professor_document",
+                  document_type: isSubmission
+                    ? "student_submission"
+                    : "professor_document",
                 },
               },
             });
-            
+
             setLoading(false);
             return;
           }
-          
+
           // If we reach here for a submission, try to get the document results
           if (isSubmission && data.documentId) {
-            console.log("Checking document results for submission's document ID:", data.documentId);
-            
-            const documentResponse = await fetch(`${API_URL}/api/documents/${data.documentId}`, {
-              headers: { 
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}` 
+            console.log(
+              "Checking document results for submission's document ID:",
+              data.documentId
+            );
+
+            const documentResponse = await fetch(
+              `${API_URL}/api/documents/${data.documentId}`,
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
               }
-            });
-            
+            );
+
             if (documentResponse.ok) {
               const documentData = await documentResponse.json();
               console.log("Document data for submission:", documentData);
-              
-              if (documentData.results && Object.keys(documentData.results).length > 0) {
-                console.log("Found results in the associated document:", documentData.results);
-                
+
+              if (
+                documentData.results &&
+                Object.keys(documentData.results).length > 0
+              ) {
+                console.log(
+                  "Found results in the associated document:",
+                  documentData.results
+                );
+
                 // Navigate to the results page with the document data
                 navigate("/parsing-result", {
                   state: {
@@ -1267,15 +1323,17 @@ function ProfessorDashboard() {
                     },
                   },
                 });
-                
+
                 setLoading(false);
                 return;
               }
             }
           }
-          
+
           // If we get here with a valid response but no results, show specific message
-          toast.warning(`No analysis results found for this ${itemType}. The analysis may have failed or not been completed yet.`);
+          toast.warning(
+            `No analysis results found for this ${itemType}. The analysis may have failed or not been completed yet.`
+          );
           setLoading(false);
           return;
         } catch (error) {
@@ -1285,12 +1343,14 @@ function ProfessorDashboard() {
             throw error;
           }
           // Wait a bit longer between retries
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
     } catch (error) {
       console.error("Error viewing report:", error);
-      toast.error("Failed to retrieve analysis results. Please try again later.");
+      toast.error(
+        "Failed to retrieve analysis results. Please try again later."
+      );
       setLoading(false);
     }
   };
@@ -1351,13 +1411,13 @@ function ProfessorDashboard() {
   const handleGradeSubmission = (submission) => {
     // Set the submission to grade
     setSubmissionToGrade(submission);
-    
+
     // Reset grade data
     setGradeData({
       score: submission.grade || 0,
       feedback: submission.feedback || "",
     });
-    
+
     // Show the grade modal
     setShowGradeModal(true);
   };
@@ -1367,7 +1427,7 @@ function ProfessorDashboard() {
     try {
       setIsSubmittingGrade(true);
       console.log("Submitting grade for submission:", submissionToGrade);
-      
+
       // Get JWT token
       const token = localStorage.getItem("token");
       if (!token) {
@@ -1389,20 +1449,23 @@ function ProfessorDashboard() {
       const formattedGradeData = {
         grade: numericScore, // Backend expects 'grade', not 'score'
         feedback: gradeData.feedback,
-        status: "Graded"
+        status: "Graded",
       };
-      
+
       console.log("Sending grade data:", formattedGradeData);
 
       // Send grade data to backend
-      const response = await fetch(`${API_URL}/api/submissions/${submissionToGrade.id}/grade`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formattedGradeData),
-      });
+      const response = await fetch(
+        `${API_URL}/api/submissions/${submissionToGrade.id}/grade`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(formattedGradeData),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -1413,9 +1476,16 @@ function ProfessorDashboard() {
       console.log("Grade submission response:", data);
 
       // Update submission in local state
-      setSubmissions(prev =>
-        prev.map(sub =>
-          sub.id === submissionToGrade.id ? { ...sub, status: "Graded", grade: numericScore, feedback: gradeData.feedback } : sub
+      setSubmissions((prev) =>
+        prev.map((sub) =>
+          sub.id === submissionToGrade.id
+            ? {
+                ...sub,
+                status: "Graded",
+                grade: numericScore,
+                feedback: gradeData.feedback,
+              }
+            : sub
         )
       );
 
@@ -1423,7 +1493,7 @@ function ProfessorDashboard() {
       setShowGradeModal(false);
       setSubmissionToGrade(null);
       setGradeData({ score: 0, feedback: "" });
-      
+
       // Refresh submissions list
       fetchSubmissions();
     } catch (error) {
@@ -1438,7 +1508,7 @@ function ProfessorDashboard() {
   const handleDownloadSubmission = async (submissionId) => {
     try {
       console.log("Downloading document for submission:", submissionId);
-      
+
       // Get JWT token
       const token = localStorage.getItem("token");
       if (!token) {
@@ -1448,12 +1518,15 @@ function ProfessorDashboard() {
       }
 
       // Request the file from the backend
-      const response = await fetch(`${API_URL}/api/submissions/${submissionId}/download`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `${API_URL}/api/submissions/${submissionId}/download`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -1493,7 +1566,7 @@ function ProfessorDashboard() {
       <Navbar />
       <ToastContainer position="top-right" autoClose={5000} />
 
-      <div className="max-w-6xl mx-auto mt-6 px-4">
+      <div className="max-w-7xl mx-auto mt-6 px-4">
         {/* Header and Statistics Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Upload Document Card */}
@@ -1652,12 +1725,10 @@ function ProfessorDashboard() {
                   Refresh
                 </button>
               </div>
-              <div className="grid grid-cols-8 gap-6 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500">
+              <div className="grid grid-cols-[1fr_1fr_0.8fr_0.8fr_1.2fr_0.7fr_0.5fr_1.5fr] gap-6 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500">
                 <div className="flex items-center justify-center">STUDENT</div>
                 <div className="flex items-center justify-center">DOCUMENT</div>
-                <div className="flex items-center justify-center">
-                  SUBMISSION TYPE
-                </div>
+                <div className="flex items-center justify-center">SRS/SDD</div>
                 <div className="flex items-center justify-center">COURSE</div>
                 <div className="flex items-center justify-center">
                   SUBMISSION DATE
@@ -1675,10 +1746,8 @@ function ProfessorDashboard() {
                 submissions.map((submission) => (
                   <div
                     key={submission.id}
-
                     onClick={() => handleSubmissionClick(submission)}
-                    className="grid grid-cols-8 gap-4 px-4 py-3 border-b text-sm cursor-pointer text-gray-600 hover:bg-gray-50 transition-colors duration-300"
-
+                    className="grid grid-cols-[1fr_1fr_0.8fr_0.8fr_1.2fr_0.7fr_0.5fr_1.5fr] gap-6 px-4 py-3 border-b text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-300"
                   >
                     <div
                       className="flex items-center col-span-1 justify-center"
@@ -1699,8 +1768,12 @@ function ProfessorDashboard() {
                         ID: {submission.documentId}
                       </span>
                     </div>
-                    <div className="flex items-center justify-center">{submission.submissionType}</div>
-                    <div className="flex items-center justify-center">{submission.courseName || submission.courseCode}</div>
+                    <div className="flex items-center justify-center">
+                      {submission.submissionType}
+                    </div>
+                    <div className="flex items-center justify-center">
+                      {submission.courseName || submission.courseCode}
+                    </div>
                     <div className="flex items-center justify-center">
                       {submission.submissionDate
                         ? new Date(
@@ -1766,83 +1839,138 @@ function ProfessorDashboard() {
                               e.stopPropagation();
                               handleAnalyzeSubmission(submission);
                             }}
-                            className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] transition-colors duration-300"
+                            className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300 group"
+                            title="Analyze"
                             disabled={analyzingSubmission === submission.id}
                           >
                             {analyzingSubmission === submission.id ? (
-                              <span className="flex items-center">
-                                <svg
-                                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <circle
-                                    className="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    strokeWidth="4"
-                                  ></circle>
-                                  <path
-                                    className="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                  ></path>
-                                </svg>
-                                Analyzing...
-                              </span>
+                              <svg
+                                className="animate-spin h-5 w-5 text-gray-600 group-hover:text-[#ff6464]"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                ></circle>
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                              </svg>
                             ) : (
-                              "Analyze"
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                                className="h-5 w-5 text-gray-600 group-hover:text-[#ff6464] transition-colors duration-300"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
                             )}
                           </button>
-                          
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDownloadSubmission(submission.id);
                             }}
-                            className="px-3 py-1 text-xs text-white bg-blue-500 rounded-md hover:bg-blue-700 transition-colors duration-300"
+                            className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 hover:text-[#ff6464] bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300"
+                            title="Download Document"
                           >
-                            Download
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="w-5 h-5"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M12 2.25a.75.75 0 01.75.75v11.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V3a.75.75 0 01.75-.75zm-9 13.5a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
                           </button>
                         </div>
                       )}
 
                       {(submission.status === "Analyzed" ||
                         submission.status === "Graded") && (
-                        <div className="flex space-x-2">
+                        <div className="flex items-center gap-2">
+                          {/* Replace the "View Report" button with this icon version */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               viewReport(submission.id, true);
                             }}
-                            className="px-3 py-1 text-xs text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors duration-300"
+                            className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 hover:text-[#ff6464] bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300 group"
+                            title="View Report"
                           >
-                            View Report
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="h-5 w-5 text-gray-600 group-hover:text-[#ff6464] transition-colors duration-300"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0016.5 9h-1.875a1.875 1.875 0 01-1.875-1.875V5.25A3.75 3.75 0 009 1.5H5.625zM7.5 15a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 017.5 15zm.75 2.25a.75.75 0 000 1.5H12a.75.75 0 000-1.5H8.25z"
+                                clipRule="evenodd"
+                              />
+                              <path d="M12.971 1.816A5.23 5.23 0 0114.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 013.434 1.279 9.768 9.768 0 00-6.963-6.963z" />
+                            </svg>
                           </button>
-                          
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDownloadSubmission(submission.id);
                             }}
-                            className="px-3 py-1 text-xs text-white bg-blue-500 rounded-md hover:bg-blue-700 transition-colors duration-300"
+                            className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 hover:text-[#ff6464] bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300"
+                            title="Download Document"
                           >
-                            Download
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="w-5 h-5"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M12 2.25a.75.75 0 01.75.75v11.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V3a.75.75 0 01.75-.75zm-9 13.5a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
                           </button>
-                          
+
                           {submission.status === "Analyzed" && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                console.log("Grade button clicked for submission:", submission);
                                 handleGradeSubmission(submission);
                               }}
-                              className="px-3 py-1 text-xs text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors duration-300"
+                              className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 hover:text-[#ff6464] bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300 group"
+                              title="Grade Submission"
                             >
-                              Grade
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                                className="h-5 w-5 text-gray-600 group-hover:text-[#ff6464] transition-colors duration-300"
+                              >
+                                <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-8.4 8.4a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32l8.4-8.4z" />
+                                <path d="M5.25 5.25a3 3 0 00-3 3v10.5a3 3 0 003 3h10.5a3 3 0 003-3V13.5a.75.75 0 00-1.5 0v5.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5V8.25a1.5 1.5 0 011.5-1.5h5.25a.75.75 0 000-1.5H5.25z" />
+                              </svg>
                             </button>
                           )}
                         </div>
@@ -1853,19 +1981,19 @@ function ProfessorDashboard() {
                           e.stopPropagation();
                           handleDeleteSubmission(submission.id);
                         }}
-                        className="text-gray-400 hover:text-red-500 transition-colors duration-300"
+                        className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 hover:text-[#ff6464] bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300"
+                        title="Delete"
                       >
                         <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
+                          xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-5 h-5"
                         >
                           <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            fillRule="evenodd"
+                            d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z"
+                            clipRule="evenodd"
                           />
                         </svg>
                       </button>
@@ -1879,7 +2007,9 @@ function ProfessorDashboard() {
 
         {/* Professor Documents Table */}
         <div>
-          <h2 className="text-md font-semibold text-gray-800 mb-4">My Test Documents</h2>
+          <h2 className="text-md font-semibold text-gray-800 mb-4">
+            My Test Documents
+          </h2>
           <p className="text-sm text-gray-500 mb-4">
             Documents uploaded for testing and analysis purposes.
           </p>
@@ -1982,7 +2112,7 @@ function ProfessorDashboard() {
                         {doc.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 justify-center">
+                    <div className="flex items-center justify-center space-x-2">
                       {isViewable || doc.status === "Completed" ? (
                         <>
                           <button
@@ -1990,18 +2120,44 @@ function ProfessorDashboard() {
                               e.stopPropagation();
                               viewReport(doc.id, false);
                             }}
-                            className="px-3 py-1 text-xs text-white bg-green-600 rounded-md hover:bg-green-700 whitespace-nowrap transition-colors duration-300"
+                            className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 hover:text-[#ff6464] bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300 group"
+                            title="View Report"
                           >
-                            View Report
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="h-5 w-5 text-gray-600 group-hover:text-[#ff6464] transition-colors duration-300"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0016.5 9h-1.875a1.875 1.875 0 01-1.875-1.875V5.25A3.75 3.75 0 009 1.5H5.625zM7.5 15a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 017.5 15zm.75 2.25a.75.75 0 000 1.5H12a.75.75 0 000-1.5H8.25z"
+                                clipRule="evenodd"
+                              />
+                              <path d="M12.971 1.816A5.23 5.23 0 0114.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 013.434 1.279 9.768 9.768 0 00-6.963-6.963z" />
+                            </svg>
                           </button>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleAnalyzeClick(doc);
                             }}
-                            className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] whitespace-nowrap transition-colors duration-300"
+                            className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 hover:text-[#ff6464] bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300 group"
+                            title="Re-analyze"
                           >
-                            Re-analyze
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="h-5 w-5 text-gray-600 group-hover:text-[#ff6464] transition-colors duration-300"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M4.755 10.059a7.5 7.5 0 0112.548-3.364l1.903 1.903h-3.183a.75.75 0 100 1.5h4.992a.75.75 0 00.75-.75V4.356a.75.75 0 00-1.5 0v3.18l-1.9-1.9A9 9 0 003.306 9.67a.75.75 0 101.45.388zm15.408 3.352a.75.75 0 00-.919.53 7.5 7.5 0 01-12.548 3.364l-1.902-1.903h3.183a.75.75 0 000-1.5H2.984a.75.75 0 00-.75.75v4.992a.75.75 0 001.5 0v-3.18l1.9 1.9a9 9 0 0015.059-4.035.75.75 0 00-.53-.918z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
                           </button>
                         </>
                       ) : (
@@ -2011,30 +2167,43 @@ function ProfessorDashboard() {
                               e.stopPropagation();
                               handleAnalyzeClick(doc);
                             }}
-                            className="px-3 py-1 text-xs text-white bg-[#ff6464] rounded-md hover:bg-[#ff4444] whitespace-nowrap transition-colors duration-300"
+                            className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 hover:text-[#ff6464] bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300 group"
+                            title="Analyze"
                           >
-                            Analyze
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="h-5 w-5 text-gray-600 group-hover:text-[#ff6464] transition-colors duration-300"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
                           </button>
                         </>
                       )}
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteClick(doc, "professor_document");
                         }}
-                        className="text-gray-400 hover:text-[#ff6464] flex-shrink-0 transition-colors duration-300"
+                        className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 hover:text-[#ff6464] bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300"
+                        title="Delete"
                       >
                         <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
+                          xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-5 h-5"
                         >
                           <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            fillRule="evenodd"
+                            d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z"
+                            clipRule="evenodd"
                           />
                         </svg>
                       </button>
@@ -2107,7 +2276,7 @@ function ProfessorDashboard() {
                     type="checkbox"
                     checked={selectedAnalyses.FullAnalysis}
                     onChange={(e) => handleFullAnalysisChange(e.target.checked)}
-                    className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
+                    className="w-5 h-5 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
                   />
                   <span className="font-semibold">
                     Full Analysis (All Options)
@@ -2128,7 +2297,7 @@ function ProfessorDashboard() {
                         type="checkbox"
                         checked={value}
                         onChange={() => handleIndividualAnalysisChange(key)}
-                        className="w-4 h-4 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
+                        className="w-5 h-5 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
                       />
                       <span>{key.replace(/([A-Z])/g, " $1").trim()}</span>
                     </label>
@@ -2176,7 +2345,10 @@ function ProfessorDashboard() {
               <h2 className="text-xl font-semibold mb-2">Grade Submission</h2>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="grade" className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="grade"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Grade (0-100)
                   </label>
                   <input
@@ -2187,12 +2359,20 @@ function ProfessorDashboard() {
                     max="100"
                     value={gradeData.score}
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => setGradeData({ ...gradeData, score: Number(e.target.value) })}
+                    onChange={(e) =>
+                      setGradeData({
+                        ...gradeData,
+                        score: Number(e.target.value),
+                      })
+                    }
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   />
                 </div>
                 <div>
-                  <label htmlFor="feedback" className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="feedback"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Feedback
                   </label>
                   <textarea
@@ -2201,7 +2381,9 @@ function ProfessorDashboard() {
                     rows="4"
                     value={gradeData.feedback}
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => setGradeData({ ...gradeData, feedback: e.target.value })}
+                    onChange={(e) =>
+                      setGradeData({ ...gradeData, feedback: e.target.value })
+                    }
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   />
                 </div>
@@ -2219,7 +2401,9 @@ function ProfessorDashboard() {
                 </button>
                 <button
                   onClick={submitGrade}
-                  disabled={!gradeData.score || !gradeData.feedback || isSubmittingGrade}
+                  disabled={
+                    !gradeData.score || !gradeData.feedback || isSubmittingGrade
+                  }
                   className={`px-4 py-2 bg-[#ff6464] text-white rounded-md transition-colors duration-300 ease-in-out ${
                     !gradeData.score || !gradeData.feedback || isSubmittingGrade
                       ? "opacity-50 cursor-not-allowed"
