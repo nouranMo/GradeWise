@@ -712,7 +712,7 @@ function ProfessorDashboard() {
     } else if (type === "SDD") {
       // SDD
       setSelectedAnalyses({
-        SddValidation: false,
+        SDDValidation: false,
         DiagramConvention: false,
         // SpellCheck: false,
         PlagiarismCheck: false,
@@ -1615,7 +1615,10 @@ function ProfessorDashboard() {
                 </svg>
               </button>
             </div>
-            <div className="space-y-3">
+            <div
+              className="space-y-3 overflow-y-auto pr-1"
+              style={{ height: "250px" }} // Fixed height to show approximately 3 items
+            >
               {submissionSlots
                 .filter((slot) => slot.status === "Open")
                 .map((slot) => (
@@ -1626,7 +1629,7 @@ function ProfessorDashboard() {
                     <div>
                       <p className="font-medium text-gray-900">{slot.name}</p>
                       <p className="text-sm text-gray-500">
-                        Due: {new Date(slot.deadline).toLocaleDateString()}
+                        Due: {new Date(slot.deadline).toLocaleString()}
                       </p>
                     </div>
                     <button
@@ -1922,7 +1925,6 @@ function ProfessorDashboard() {
                       {(submission.status === "Analyzed" ||
                         submission.status === "Graded") && (
                         <div className="flex items-center gap-2">
-                          {/* Replace the "View Report" button with this icon version */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1994,7 +1996,7 @@ function ProfessorDashboard() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeleteSubmission(submission.id);
+                          handleDeleteClick(submission, "submission");
                         }}
                         className="p-2 rounded-md flex items-center justify-center w-10 h-10 text-gray-600 hover:text-[#ff6464] bg-gray-100 hover:bg-white hover:shadow-lg transition-all duration-300"
                         title="Delete"
@@ -2274,76 +2276,91 @@ function ProfessorDashboard() {
         {showAnalysisModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg max-w-2xl w-full m-4">
-              <h2 className="text-md font-semibold mb-4">
-                {selectedDocument && selectedDocument.submissionSlotId
-                  ? `Analyze ${documentType} Document: ${
-                      selectedDocument.documentName || selectedDocument.name
-                    }`
-                  : `Select ${documentType} Analyses to Perform`}
-              </h2>
-
-              {/* Full Analysis Option */}
-              <div className="mb-4">
-                <label className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 bg-gray-50 hover:cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedAnalyses.FullAnalysis}
-                    onChange={(e) => handleFullAnalysisChange(e.target.checked)}
-                    className="w-5 h-5 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
-                  />
-                  <span className="font-semibold">
-                    Full Analysis (All Options)
-                  </span>
-                </label>
-              </div>
-
-              {/* Individual Analysis Options */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                {Object.entries(selectedAnalyses).map(([key, value]) => {
-                  if (key === "FullAnalysis") return null;
-                  return (
-                    <label
-                      key={key}
-                      className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 hover:cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={value}
-                        onChange={() => handleIndividualAnalysisChange(key)}
-                        className="w-5 h-5 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
-                      />
-                      <span>{key.replace(/([A-Z])/g, " $1").trim()}</span>
-                    </label>
-                  );
-                })}
-              </div>
-
-              <div className="flex justify-end space-x-4">
-                <button
-                  onClick={() => {
-                    setShowAnalysisModal(false);
-                    setDocumentType(null);
-                  }}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={startAnalysis}
-                  disabled={
-                    !Object.values(selectedAnalyses).some((value) => value) ||
-                    isAnalyzing
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (
+                    Object.values(selectedAnalyses).some((value) => value) &&
+                    !isAnalyzing
+                  ) {
+                    startAnalysis();
                   }
-                  className={`px-4 py-2 bg-[#ff6464] text-white rounded-md transition-colors duration-300 ease-in-out ${
-                    !Object.values(selectedAnalyses).some((value) => value) ||
-                    isAnalyzing
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-[#ff4444]"
-                  }`}
-                >
-                  {isAnalyzing ? "Analyzing..." : "Start Analysis"}
-                </button>
-              </div>
+                }}
+              >
+                <h2 className="text-md font-semibold mb-4">
+                  {selectedDocument && selectedDocument.submissionSlotId
+                    ? `Analyze ${documentType} Document: ${
+                        selectedDocument.documentName || selectedDocument.name
+                      }`
+                    : `Select ${documentType} Analyses to Perform`}
+                </h2>
+
+                {/* Full Analysis Option */}
+                <div className="mb-4">
+                  <label className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 bg-gray-50 hover:cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedAnalyses.FullAnalysis}
+                      onChange={(e) =>
+                        handleFullAnalysisChange(e.target.checked)
+                      }
+                      className="w-5 h-5 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
+                    />
+                    <span className="font-semibold">
+                      Full Analysis (All Options)
+                    </span>
+                  </label>
+                </div>
+
+                {/* Individual Analysis Options */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  {Object.entries(selectedAnalyses).map(([key, value]) => {
+                    if (key === "FullAnalysis") return null;
+                    return (
+                      <label
+                        key={key}
+                        className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 hover:cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={value}
+                          onChange={() => handleIndividualAnalysisChange(key)}
+                          className="w-5 h-5 text-[#FF4550] focus:ring-0 focus:ring-offset-0 focus:outline-none hover:cursor-pointer"
+                        />
+                        <span>{key.replace(/([A-Z])/g, " $1").trim()}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAnalysisModal(false);
+                      setDocumentType(null);
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={
+                      !Object.values(selectedAnalyses).some((value) => value) ||
+                      isAnalyzing
+                    }
+                    className={`px-4 py-2 bg-[#ff6464] text-white rounded-md transition-colors duration-300 ease-in-out ${
+                      !Object.values(selectedAnalyses).some((value) => value) ||
+                      isAnalyzing
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:bg-[#ff4444]"
+                    }`}
+                  >
+                    {isAnalyzing ? "Analyzing..." : "Start Analysis"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

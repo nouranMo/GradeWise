@@ -169,7 +169,7 @@ const SignUpPage = () => {
       const data = await response.json();
       login(data);
       toast.success("Registration successful!");
-      navigate("/dashboard");
+      navigate("/login");
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Failed to register");

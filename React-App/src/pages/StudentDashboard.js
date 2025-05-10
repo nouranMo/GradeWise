@@ -219,78 +219,131 @@ const StudentDashboard = () => {
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Student Profile Section */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-2xl font-bold text-blue-600">
-                {studentInfo?.firstName?.[0] || "S"}
-              </span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">
-                {studentInfo?.firstName} {studentInfo?.lastName}
-              </h1>
-              <p className="text-gray-600">{studentInfo?.email}</p>
-              <p className="text-gray-600">
-                Student ID: {studentInfo?.studentId}
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Course Overview Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Enrolled Courses */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Enrolled Courses</h2>
-            <div className="space-y-2">
+            <h2 className="text-lg font-semibold mb-4">Enrolled Courses</h2>
+            <div
+              className="space-y-3 overflow-y-auto pr-1"
+              style={{ height: "250px" }}
+            >
               {courses.map((course) => (
                 <div
                   key={course.id}
-                  className="flex justify-between items-center"
+                  className="p-3 border border-gray-100 rounded-md hover:bg-gray-50 transition-colors"
                 >
-                  <span className="font-medium">{course.name}</span>
-                  <span className="text-sm text-gray-500">{course.code}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">{course.name}</span>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                      {course.code}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
+          {/* Recently Submitted */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Recent Submissions</h2>
-            <div className="space-y-2">
-              {submissionSlots
-                .filter((slot) => slot.hasSubmitted)
-                .slice(0, 3)
-                .map((slot) => (
-                  <div
-                    key={slot.slot.id}
-                    className="flex justify-between items-center"
-                  >
-                    <span className="font-medium">{slot.slot.name}</span>
-                    <span className="text-sm text-gray-500">
-                      {slot.slot.course}
-                    </span>
-                  </div>
-                ))}
-            </div>
+            <h2 className="text-lg font-semibold mb-4">Recently Submitted</h2>
+            {submissionSlots.filter((slot) => slot.hasSubmitted).length ===
+            0 ? (
+              <p className="text-sm text-gray-500">No submissions yet</p>
+            ) : (
+              <div
+                className="space-y-3 overflow-y-auto pr-1"
+                style={{ height: "250px" }}
+              >
+                {submissionSlots
+                  .filter((slot) => slot.hasSubmitted)
+                  .map((slot) => (
+                    <div
+                      key={slot.slot.id}
+                      className="p-3 border border-gray-100 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-medium">
+                          {slot.slot.name}
+                        </span>
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                          {slot.slot.course}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        Submitted:{" "}
+                        {new Date(
+                          slot.submission?.submissionDate ||
+                            slot.submission?.lastModified ||
+                            slot.submission?.createdAt ||
+                            slot.submission?.submitDate ||
+                            slot.submission?.date
+                        ).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}{" "}
+                        at{" "}
+                        {new Date(
+                          slot.submission?.submissionDate ||
+                            slot.submission?.lastModified ||
+                            slot.submission?.createdAt ||
+                            slot.submission?.submitDate ||
+                            slot.submission?.date
+                        ).toLocaleTimeString("en-GB", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
 
+          {/* Upcoming Deadlines */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Upcoming Deadlines</h2>
-            <div className="space-y-2">
+            <h2 className="text-lg font-semibold mb-4">Upcoming Deadlines</h2>
+            <div
+              className="space-y-3 overflow-y-auto pr-1"
+              style={{ height: "250px" }}
+            >
               {submissionSlots
                 .filter((slot) => !slot.hasSubmitted)
-                .slice(0, 3)
                 .map((slot) => (
                   <div
                     key={slot.slot.id}
-                    className="flex justify-between items-center"
+                    className="p-3 border border-gray-100 rounded-md hover:bg-gray-50 transition-colors"
                   >
-                    <span className="font-medium">{slot.slot.name}</span>
-                    <span className="text-sm text-gray-500">
-                      {new Date(slot.slot.deadline).toLocaleDateString()}
-                    </span>
+                    <div className="flex justify-between items-start">
+                      <span className="text-sm font-medium break-words">
+                        {slot.slot.name}
+                      </span>
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                        {slot.slot.course}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      Due:{" "}
+                      {new Date(slot.slot.deadline).toLocaleDateString(
+                        "en-GB",
+                        {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        }
+                      )}{" "}
+                      -{" "}
+                      {new Date(slot.slot.deadline).toLocaleTimeString(
+                        "en-GB",
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        }
+                      )}
+                    </div>
                   </div>
                 ))}
             </div>
@@ -355,92 +408,135 @@ const StudentDashboard = () => {
 
         {/* Feedback Modal */}
         {showFeedbackModal && feedbackSubmission && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg max-w-lg w-full m-4 overflow-auto max-h-[90vh]">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-xl font-semibold">Submission Feedback</h2>
-                <button
-                  onClick={() => setShowFeedbackModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={() => setShowFeedbackModal(false)} // Close when clicking outside
+          >
+            <div
+              className="bg-white p-6 rounded-lg max-w-lg w-full m-4 overflow-auto max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()} // Prevent clicks inside modal from closing it
+            >
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setShowFeedbackModal(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    setShowFeedbackModal(false);
+                  }
+                }}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-xl font-semibold">Submission Feedback</h2>
+                  <button
+                    type="button"
+                    onClick={() => setShowFeedbackModal(false)}
+                    className="text-gray-500 hover:text-gray-700"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="mb-4 pb-4 border-b">
-                <p className="text-sm text-gray-500">
-                  Document:{" "}
-                  {feedbackSubmission.fileName || "Submitted Document"}
-                </p>
-                <p className="text-sm text-gray-500">
-                  Type: {feedbackSubmission.submissionType || "-"}
-                </p>
-                <p className="text-sm text-gray-500">
-                  Submitted:{" "}
-                  {feedbackSubmission.lastModified
-                    ? new Date(feedbackSubmission.lastModified).toLocaleString()
-                    : "-"}
-                </p>
-              </div>
-
-              <div className="mb-6">
-                <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                  <div className="flex items-center mb-2">
-                    <h3 className="text-lg font-semibold text-blue-800">
-                      Grade
-                    </h3>
-                    <div className="ml-auto bg-blue-200 text-blue-800 text-lg font-bold px-3 py-1 rounded-full">
-                      {feedbackSubmission.grade}%
-                    </div>
-                  </div>
-
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                    <div
-                      className="bg-blue-600 h-2.5 rounded-full"
-                      style={{ width: `${feedbackSubmission.grade}%` }}
-                    ></div>
-                  </div>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
                 </div>
 
-                {feedbackSubmission.feedback && (
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      Professor Feedback
-                    </h3>
-                    <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-line text-gray-700">
-                      {feedbackSubmission.feedback}
+                <div className="mb-4 pb-4 border-b">
+                  <p className="text-sm text-gray-500">
+                    Document:{" "}
+                    {feedbackSubmission.fileName || "Submitted Document"}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Type: {feedbackSubmission.submissionType || "-"}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Submitted:{" "}
+                    {feedbackSubmission.lastModified
+                      ? new Date(
+                          feedbackSubmission.lastModified
+                        ).toLocaleString()
+                      : "-"}
+                  </p>
+                </div>
+
+                <div className="mb-6">
+                  <div
+                    className={`p-4 rounded-lg mb-4 ${
+                      feedbackSubmission.grade >= 80
+                        ? "bg-green-50"
+                        : feedbackSubmission.grade >= 50
+                        ? "bg-yellow-50"
+                        : "bg-red-50"
+                    }`}
+                  >
+                    <div className="flex items-center mb-2">
+                      <h3
+                        className={`text-lg font-semibold ${
+                          feedbackSubmission.grade >= 80
+                            ? "text-green-800"
+                            : feedbackSubmission.grade >= 50
+                            ? "text-yellow-800"
+                            : "text-red-800"
+                        }`}
+                      >
+                        Grade
+                      </h3>
+                      <div
+                        className={`ml-auto text-lg font-bold px-3 py-1 rounded-full ${
+                          feedbackSubmission.grade >= 80
+                            ? "bg-green-100 text-green-800"
+                            : feedbackSubmission.grade >= 50
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {feedbackSubmission.grade}%
+                      </div>
+                    </div>
+
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                      <div
+                        className={`h-2.5 rounded-full ${
+                          feedbackSubmission.grade >= 80
+                            ? "bg-green-500"
+                            : feedbackSubmission.grade >= 50
+                            ? "bg-yellow-500"
+                            : "bg-red-800"
+                        }`}
+                        style={{ width: `${feedbackSubmission.grade}%` }}
+                      ></div>
                     </div>
                   </div>
-                )}
 
-                {!feedbackSubmission.feedback && (
-                  <p className="text-gray-500 italic">
-                    No detailed feedback provided.
-                  </p>
-                )}
-              </div>
+                  {feedbackSubmission.feedback && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">
+                        Professor Feedback
+                      </h3>
+                      <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-line text-gray-700">
+                        {feedbackSubmission.feedback}
+                      </div>
+                    </div>
+                  )}
 
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setShowFeedbackModal(false)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-300"
-                >
-                  Close
-                </button>
-              </div>
+                  {!feedbackSubmission.feedback && (
+                    <p className="text-gray-500 italic">
+                      No detailed feedback provided.
+                    </p>
+                  )}
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -490,8 +586,8 @@ const SubmissionSlotCard = ({ slotData, onSlotClick }) => {
         textColor = "text-blue-800";
         statusText = "Analyzed";
       } else if (submission.status === "Graded") {
-        bgColor = "bg-indigo-100";
-        textColor = "text-indigo-800";
+        bgColor = "bg-green-200";
+        textColor = "text-green-800";
         statusText = "Graded";
       }
     } else {
@@ -529,7 +625,15 @@ const SubmissionSlotCard = ({ slotData, onSlotClick }) => {
         <p className="text-sm text-gray-500">
           Due:{" "}
           {slot.deadline
-            ? new Date(slot.deadline).toLocaleDateString()
+            ? `${new Date(slot.deadline).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })} - ${new Date(slot.deadline).toLocaleTimeString("en-GB", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}`
             : "No deadline"}
         </p>
       </div>
@@ -579,12 +683,28 @@ const SubmissionSlotCard = ({ slotData, onSlotClick }) => {
 
               {/* Display grade information if submission is graded */}
               {submission.status === "Graded" && (
-                <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                <div
+                  className={`mt-3 p-3 rounded-lg ${
+                    submission.grade >= 80
+                      ? "bg-green-50"
+                      : submission.grade >= 50
+                      ? "bg-yellow-50"
+                      : "bg-red-50"
+                  }`}
+                >
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-700">
                       Grade:
                     </span>
-                    <span className="text-sm font-bold text-blue-600">
+                    <span
+                      className={`text-sm font-bold ${
+                        submission.grade >= 80
+                          ? "text-green-600"
+                          : submission.grade >= 50
+                          ? "text-yellow-600"
+                          : "text-red-600"
+                      }`}
+                    >
                       {submission.grade}%
                     </span>
                   </div>
@@ -611,7 +731,7 @@ const SubmissionSlotCard = ({ slotData, onSlotClick }) => {
         </div>
       ) : (
         <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="text-sm text-blue-600 flex items-center">
+          <p className="text-sm text-[#ff6464] flex items-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5 mr-1"
@@ -893,14 +1013,27 @@ const UploadModal = ({
                   Upload and Submit Document for {selectedSlot?.slot.name}
                 </Dialog.Title>
                 <div className="mt-2">
-                  <p className="text-sm text-gray-500">
-                    {selectedSlot?.slot.course} - Due:{" "}
-                    {selectedSlot?.slot.deadline
-                      ? new Date(
-                          selectedSlot.slot.deadline
-                        ).toLocaleDateString()
-                      : "No deadline"}
-                  </p>
+                  <div className="text-sm text-gray-500">
+                    <p>{selectedSlot?.slot.course}</p>
+                    <p>
+                      Due:{" "}
+                      {selectedSlot?.slot.deadline
+                        ? `${new Date(
+                            selectedSlot.slot.deadline
+                          ).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })} - ${new Date(
+                            selectedSlot.slot.deadline
+                          ).toLocaleTimeString("en-GB", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}`
+                        : "No deadline"}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="mt-4">
@@ -945,7 +1078,7 @@ const UploadModal = ({
                         <div className="mt-4 flex justify-end space-x-2">
                           <button
                             type="button"
-                            className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+                            className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-300"
                             onClick={() => setFile(null)}
                             disabled={uploadingAndSubmitting}
                           >
@@ -992,7 +1125,7 @@ const UploadModal = ({
                   </button>
                   <button
                     type="button"
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
+                    className="px-4 py-2 text-sm font-medium text-white bg-[#ff6464] hover:bg-[#ff4444] rounded-md disabled:opacity-50 transition-colors duration-300"
                     onClick={handleUploadAndSubmit}
                     disabled={!file || uploadingAndSubmitting}
                   >
