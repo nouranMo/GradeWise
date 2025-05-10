@@ -274,14 +274,17 @@ function ProfessorDashboard() {
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedCourse, setSelectedCourse] = useState("all");
   const [showDocTypeModal, setShowDocTypeModal] = useState(false);
+  const [filteredSubmissions, setFilteredSubmissions] = useState([]);
+  const [allSubmissions, setAllSubmissions] = useState([]);
   const [showCreateSubmissionModal, setShowCreateSubmissionModal] =
     useState(false);
   const [submissionSlots, setSubmissionSlots] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [deleteType, setDeleteType] = useState(null); // 'submission' or 'slot'
+  const [deleteType, setDeleteType] = useState(null);
   const [professorDocuments, setProfessorDocuments] = useState([]);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [availableCourses, setAvailableCourses] = useState([]);
   const [documentType, setDocumentType] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -333,7 +336,8 @@ function ProfessorDashboard() {
   const fetchSubmissions = useCallback(async () => {
     try {
       console.log("Fetching submissions...");
-      setSubmissions([]); // Clear existing submissions while loading
+      setAllSubmissions([]); // Clear existing all submissions while loading
+      setIsRefreshing(true);
       toast.info("Refreshing submissions...", { autoClose: 2000 });
 
       // Get JWT token
@@ -390,14 +394,16 @@ function ProfessorDashboard() {
             return submission;
           });
 
-          setSubmissions(processedSubmissions);
+          // Set all submissions instead of directly setting filtered submissions
+          setAllSubmissions(processedSubmissions);
           toast.success(`Found ${processedSubmissions.length} submissions`, {
             autoClose: 2000,
           });
         } else {
           console.log("No submissions found or empty array returned");
           toast.info("No submissions found", { autoClose: 2000 });
-          // Keep the submissions array empty
+          // Keep the all submissions array empty
+          setAllSubmissions([]);
         }
       } else {
         const errorText = await submissionsResponse.text();
@@ -412,8 +418,10 @@ function ProfessorDashboard() {
     } catch (error) {
       console.error("Error fetching submissions:", error);
       toast.error(`Failed to fetch submissions: ${error.message}`);
+    } finally {
+      setIsRefreshing(false);
     }
-  }, [API_URL, currentUser?.id, navigate]);
+  }, [API_URL, currentUser?.id]);
 
   const handleRefreshClick = () => {
     setIsRefreshing(true);
@@ -533,6 +541,40 @@ function ProfessorDashboard() {
       fetchSubmissions();
     }
   }, [fetchSubmissions, currentUser]); // Add currentUser to dependencies
+
+  // Add this effect to filter submissions whenever filters change
+  useEffect(() => {
+    // Start with all submissions
+    let result = [...allSubmissions];
+
+    // Apply course filter
+    if (selectedCourse !== "all") {
+      result = result.filter(
+        (submission) =>
+          submission.courseCode === selectedCourse ||
+          submission.courseName === selectedCourse
+      );
+    }
+
+    // Apply status filter
+    if (selectedFilter !== "all") {
+      if (selectedFilter === "submitted") {
+        result = result.filter(
+          (submission) =>
+            submission.status === "Submitted" ||
+            submission.status === "Analyzing"
+        );
+      } else if (selectedFilter === "graded") {
+        result = result.filter(
+          (submission) =>
+            submission.status === "Analyzed" || submission.status === "Graded"
+        );
+      }
+    }
+
+    // Update the filtered submissions
+    setSubmissions(result);
+  }, [selectedCourse, selectedFilter, allSubmissions]);
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return "0 MB";
@@ -690,6 +732,28 @@ function ProfessorDashboard() {
       document.removeEventListener("click", handleClickOutside);
     };
   }, []);
+
+  // Add this useEffect after your filtering useEffect
+  useEffect(() => {
+    // Extract unique courses from allSubmissions
+    if (allSubmissions.length > 0) {
+      // Create a Set to store unique course codes
+      const uniqueCourses = new Set();
+
+      // Collect all courses
+      allSubmissions.forEach((submission) => {
+        if (submission.courseCode) {
+          uniqueCourses.add(submission.courseCode);
+        } else if (submission.courseName) {
+          uniqueCourses.add(submission.courseName);
+        }
+      });
+
+      // Convert Set to array and sort
+      const coursesArray = Array.from(uniqueCourses).sort();
+      setAvailableCourses(coursesArray);
+    }
+  }, [allSubmissions]);
 
   const handleDocTypeSelection = (type) => {
     console.log("Selected document type:", type);
@@ -1382,19 +1446,6 @@ function ProfessorDashboard() {
     );
   };
 
-  const filteredSubmissions = submissions.filter((submission) => {
-    if (
-      selectedFilter !== "all" &&
-      submission.status.toLowerCase() !== selectedFilter
-    ) {
-      return false;
-    }
-    if (selectedCourse !== "all" && submission.course !== selectedCourse) {
-      return false;
-    }
-    return true;
-  });
-
   // Handle row click for submissions
   const handleSubmissionClick = (submission) => {
     if (submission.status === "Analyzed" || submission.status === "Graded") {
@@ -1670,7 +1721,7 @@ function ProfessorDashboard() {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Pending Review</p>
+                <p className="text-xs text-gray-500">Pending Analysis</p>
                 <p className="text-xl font-semibold text-[#ff6464]">
                   {submissions.filter((s) => s.status === "Submitted").length}
                 </p>
@@ -1699,10 +1750,11 @@ function ProfessorDashboard() {
                     onChange={(e) => setSelectedCourse(e.target.value)}
                   >
                     <option value="all">All Courses</option>
-                    <option value="SWE301">SWE 301</option>
-                    <option value="SWE302">SWE 302</option>
-                    <option value="SWE401">SWE 401</option>
-                    <option value="SWE402">SWE 402</option>
+                    {availableCourses.map((course) => (
+                      <option key={course} value={course}>
+                        {course}
+                      </option>
+                    ))}
                   </select>
 
                   <select
@@ -1711,8 +1763,8 @@ function ProfessorDashboard() {
                     onChange={(e) => setSelectedFilter(e.target.value)}
                   >
                     <option value="all">All Status</option>
-                    <option value="submitted">Pending Review</option>
-                    <option value="graded">Reviewed</option>
+                    <option value="submitted">Pending Analysis</option>
+                    <option value="graded">Analyzed</option>
                   </select>
                 </div>
 
