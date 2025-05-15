@@ -308,7 +308,7 @@ function ProfessorDashboard() {
   const [showGradeModal, setShowGradeModal] = useState(false);
   const [submissionToGrade, setSubmissionToGrade] = useState(null);
   const [gradeData, setGradeData] = useState({
-    score: 0,
+    score: null,
     feedback: "",
   });
   const [isSubmittingGrade, setIsSubmittingGrade] = useState(false);
@@ -326,7 +326,7 @@ function ProfessorDashboard() {
   const formatDate = (date) => {
     if (!date) return "-";
     return new Date(date).toLocaleDateString("en-GB", {
-      day: "2-digit",
+      day: "numeric",
       month: "short",
       year: "numeric",
     });
@@ -1899,7 +1899,10 @@ function ProfessorDashboard() {
                       )}
                     </div>
                     <div className="flex items-center justify-center font-semibold">
-                      {submission.grade ? `${submission.grade}%` : "-"}
+                      {submission.grade !== null &&
+                      submission.grade !== undefined
+                        ? `${submission.grade}%`
+                        : "-"}
                     </div>
                     <div className="flex items-center justify-center space-x-2">
                       {submission.status === "Submitted" && (
@@ -2439,14 +2442,15 @@ function ProfessorDashboard() {
                     name="grade"
                     min="0"
                     max="100"
-                    value={gradeData.score}
+                    value={gradeData.score === null ? "" : gradeData.score}
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const inputValue = e.target.value;
                       setGradeData({
                         ...gradeData,
-                        score: Number(e.target.value),
-                      })
-                    }
+                        score: inputValue === "" ? null : Number(inputValue),
+                      });
+                    }}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   />
                 </div>
@@ -2484,10 +2488,14 @@ function ProfessorDashboard() {
                 <button
                   onClick={submitGrade}
                   disabled={
-                    !gradeData.score || !gradeData.feedback || isSubmittingGrade
+                    gradeData.score === null ||
+                    !gradeData.feedback ||
+                    isSubmittingGrade
                   }
                   className={`px-4 py-2 bg-[#ff6464] text-white rounded-md transition-colors duration-300 ease-in-out ${
-                    !gradeData.score || !gradeData.feedback || isSubmittingGrade
+                    gradeData.score === null ||
+                    !gradeData.feedback ||
+                    isSubmittingGrade
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:bg-[#ff4444]"
                   }`}

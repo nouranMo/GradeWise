@@ -279,7 +279,7 @@ const StudentDashboard = () => {
                             slot.submission?.submitDate ||
                             slot.submission?.date
                         ).toLocaleDateString("en-GB", {
-                          day: "2-digit",
+                          day: "numeric",
                           month: "short",
                           year: "numeric",
                         })}{" "}
@@ -291,7 +291,7 @@ const StudentDashboard = () => {
                             slot.submission?.submitDate ||
                             slot.submission?.date
                         ).toLocaleTimeString("en-GB", {
-                          hour: "2-digit",
+                          hour: "numeric",
                           minute: "2-digit",
                           hour12: true,
                         })}
@@ -329,7 +329,7 @@ const StudentDashboard = () => {
                       {new Date(slot.slot.deadline).toLocaleDateString(
                         "en-GB",
                         {
-                          day: "2-digit",
+                          day: "numeric",
                           month: "short",
                           year: "numeric",
                         }
@@ -338,7 +338,7 @@ const StudentDashboard = () => {
                       {new Date(slot.slot.deadline).toLocaleTimeString(
                         "en-GB",
                         {
-                          hour: "2-digit",
+                          hour: "numeric",
                           minute: "2-digit",
                           hour12: true,
                         }
@@ -465,7 +465,14 @@ const StudentDashboard = () => {
                     {feedbackSubmission.lastModified
                       ? new Date(
                           feedbackSubmission.lastModified
-                        ).toLocaleString()
+                        ).toLocaleString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
                       : "-"}
                   </p>
                 </div>
@@ -613,7 +620,7 @@ const SubmissionSlotCard = ({ slotData, onSlotClick }) => {
 
   return (
     <div
-      className={`bg-white rounded-lg shadow p-6 ${getCardStyling()}`}
+      className={`bg-white rounded-lg shadow p-6 cursor-pointer ${getCardStyling()}`}
       onClick={() => onSlotClick(slotData)}
     >
       <div className="mb-4">
@@ -626,7 +633,7 @@ const SubmissionSlotCard = ({ slotData, onSlotClick }) => {
           Due:{" "}
           {slot.deadline
             ? `${new Date(slot.deadline).toLocaleDateString("en-GB", {
-                day: "2-digit",
+                day: "numeric",
                 month: "short",
                 year: "numeric",
               })} - ${new Date(slot.deadline).toLocaleTimeString("en-GB", {
@@ -1021,13 +1028,13 @@ const UploadModal = ({
                         ? `${new Date(
                             selectedSlot.slot.deadline
                           ).toLocaleDateString("en-GB", {
-                            day: "2-digit",
+                            day: "numeric",
                             month: "short",
                             year: "numeric",
                           })} - ${new Date(
                             selectedSlot.slot.deadline
                           ).toLocaleTimeString("en-GB", {
-                            hour: "2-digit",
+                            hour: "numeric",
                             minute: "2-digit",
                             hour12: true,
                           })}`

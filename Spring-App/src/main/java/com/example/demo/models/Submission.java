@@ -17,7 +17,7 @@ public class Submission {
     private String fileType;
     private String status;
     private String feedback;
-    private double grade;
+    private Integer grade;
     private String documentId;
     private Date submissionDate;
     private Date lastModified;
@@ -123,11 +123,11 @@ public class Submission {
         this.feedback = feedback;
     }
 
-    public double getGrade() {
+    public Integer getGrade() {
         return grade;
     }
 
-    public void setGrade(double grade) {
+    public void setGrade(Integer grade) {
         this.grade = grade;
     }
 

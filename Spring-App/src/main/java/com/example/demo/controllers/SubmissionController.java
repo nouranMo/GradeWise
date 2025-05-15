@@ -162,7 +162,11 @@ public class SubmissionController {
                 dto.setSubmissionType(sub.getSubmissionType());
                 dto.setSubmissionDate(sub.getLastModified());
                 dto.setStatus(sub.getStatus());
-                dto.setGrade((int) sub.getGrade());
+                if (sub.getGrade() != null) {
+                    dto.setGrade(sub.getGrade().intValue());
+                } else {
+                    dto.setGrade(null);
+                }
                 return dto;
             }).collect(Collectors.toList());
             return ResponseEntity.ok(detailedSubmissions);
@@ -183,7 +187,7 @@ public class SubmissionController {
 
             String userId = authentication.getName();
             logger.info("Current user identifier: {}", userId);
-            
+
             // Try to find user by both email and ID
             User currentUser = userService.findByEmail(userId);
             if (currentUser == null) {
@@ -195,8 +199,8 @@ public class SubmissionController {
                 logger.error("User not found with ID/email: {}", userId);
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
-            
-            logger.info("Found user: {} ({}), role: {}", 
+
+            logger.info("Found user: {} ({}), role: {}",
                     currentUser.getEmail(), currentUser.getId(), currentUser.getRole());
 
             // Get the submission
@@ -206,14 +210,14 @@ public class SubmissionController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "Submission not found", "submission_id", id));
             }
-            
-            logger.info("Found submission: ID={}, UserID={}, DocumentID={}", 
+
+            logger.info("Found submission: ID={}, UserID={}, DocumentID={}",
                     submission.getId(), submission.getUserId(), submission.getDocumentId());
 
             // If user is professor or admin, they can access any submission
             if ("PROFESSOR".equals(currentUser.getRole()) || "ADMIN".equals(currentUser.getRole())) {
                 logger.info("Professor/Admin accessing submission: {}", submission.getId());
-                
+
                 // If the submission has a document ID, try to get the document results
                 if (submission.getDocumentId() != null) {
                     DocumentModel document = documentService.getDocumentById(submission.getDocumentId());
@@ -221,19 +225,19 @@ public class SubmissionController {
                         logger.info("Found document with results: {}", document.getId());
                         submission.setResults(document.getResults());
                     } else {
-                        logger.info("Document found but has no results or document not found: {}", 
+                        logger.info("Document found but has no results or document not found: {}",
                                 submission.getDocumentId());
                     }
                 } else {
                     logger.warn("Submission has no document ID: {}", submission.getId());
                 }
-                
+
                 return ResponseEntity.ok(submission);
             }
 
             // For students, check using their ID, not email
             if (!submission.getUserId().equals(currentUser.getId())) {
-                logger.warn("Student {} attempted to access submission belonging to {}", 
+                logger.warn("Student {} attempted to access submission belonging to {}",
                         currentUser.getId(), submission.getUserId());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "You can only access your own submissions"));
@@ -260,36 +264,36 @@ public class SubmissionController {
     public ResponseEntity<?> deleteSubmission(@PathVariable String id, Authentication authentication) {
         try {
             String userId = authentication.getName(); // Get email from authentication
-            
+
             // Get user details to check role
             User currentUser = userService.findByEmail(userId);
             if (currentUser == null) {
                 currentUser = userService.findById(userId);
             }
-            
+
             if (currentUser == null) {
                 logger.error("User not found: {}", userId);
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
             }
-            
+
             // Allow professors and admins to delete any submission
             // For students, only allow them to delete their own submissions
             if ("PROFESSOR".equals(currentUser.getRole()) || "ADMIN".equals(currentUser.getRole())) {
                 logger.info("Professor/Admin {} deleting submission {}", userId, id);
-                
+
                 // Get the submission to check if it exists
                 Submission submission = submissionService.getSubmission(id);
                 if (submission == null) {
                     logger.error("Submission not found with ID: {}", id);
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Submission not found");
                 }
-                
+
                 // For professors, we'll do a soft check if they teach the course
                 // But we won't block them if they don't since this appears to be a data issue
                 if ("PROFESSOR".equals(currentUser.getRole())) {
                     String courseId = submission.getCourseId();
                     logger.info("Submission belongs to course: {}", courseId);
-                    
+
                     CourseModel course = courseService.getCourseById(courseId);
                     if (course == null) {
                         logger.warn("Course not found with ID: {}. Proceeding with deletion anyway.", courseId);
@@ -297,18 +301,18 @@ public class SubmissionController {
                         // Log debugging info
                         logger.info("Course teacherIds: {}", course.getTeacherIds());
                         logger.info("Professor ID: {}", currentUser.getId());
-                        
+
                         if (course.getTeacherIds() == null || course.getTeacherIds().isEmpty()) {
                             logger.warn("Course has no teachers assigned");
                         } else if (!course.getTeacherIds().contains(currentUser.getId())) {
-                            logger.warn("Professor {} not in teacher list for course {}, but proceeding with deletion", 
+                            logger.warn("Professor {} not in teacher list for course {}, but proceeding with deletion",
                                     currentUser.getId(), courseId);
                         } else {
                             logger.info("Professor authorized to delete this submission");
                         }
                     }
                 }
-                
+
                 // Delete the submission directly using the repository
                 submissionRepository.deleteById(id);
                 logger.info("Submission {} deleted successfully by professor/admin {}", id, userId);
@@ -539,14 +543,14 @@ public class SubmissionController {
             logger.info("Document ID: {}", documentId);
             logger.info("Submission Slot ID: {}", submissionSlotId);
             logger.info("Course: {}", course);
-            
+
             // Validate required fields
             if (documentId == null || documentId.isEmpty()) {
                 logger.error("Missing document ID in submission request");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Document ID is required"));
             }
-            
+
             // Check if we got a MongoDB _id format and handle it
             if (submissionData.containsKey("_id")) {
                 String mongoId = (String) submissionData.get("_id");
@@ -557,19 +561,19 @@ public class SubmissionController {
                     logger.info("Using _id as documentId: {}", documentId);
                 }
             }
-            
+
             // Also check document object if present
             if (submissionData.containsKey("document")) {
                 Object docObj = submissionData.get("document");
                 if (docObj instanceof Map) {
                     @SuppressWarnings("unchecked")
                     Map<String, Object> documentMap = (Map<String, Object>) docObj;
-                    
+
                     String docId = (String) documentMap.get("id");
                     String docMongoId = (String) documentMap.get("_id");
-                    
+
                     logger.info("Document object found with id: {}, _id: {}", docId, docMongoId);
-                    
+
                     // If documentId is still not set, try to use from document object
                     if ((documentId == null || documentId.isEmpty()) && docId != null) {
                         documentId = docId;
@@ -580,7 +584,7 @@ public class SubmissionController {
                     }
                 }
             }
-            
+
             // Final validation check for documentId
             if (documentId == null || documentId.isEmpty()) {
                 logger.error("Could not determine document ID from request");
@@ -679,41 +683,43 @@ public class SubmissionController {
                         .body(Collections.singletonMap("error", "Submission not found with ID: " + submissionId));
             }
 
-            logger.info("Found submission: id={}, userId={}, courseId={}, status={}", 
-                submission.getId(), submission.getUserId(), submission.getCourseId(), submission.getStatus());
+            logger.info("Found submission: id={}, userId={}, courseId={}, status={}",
+                    submission.getId(), submission.getUserId(), submission.getCourseId(), submission.getStatus());
 
             // Get the document associated with the submission
             String documentId = submission.getDocumentId();
             logger.info("Checking document ID in submission: {}", documentId);
-            
+
             if (documentId == null || documentId.isEmpty()) {
                 logger.error("No document ID associated with this submission: {}", submissionId);
-                
+
                 // Log the full submission to help debug
-                logger.error("Submission details: id={}, userId={}, courseId={}, submissionType={}, status={}, lastModified={}",
-                    submission.getId(), submission.getUserId(), submission.getCourseId(), 
-                    submission.getSubmissionType(), submission.getStatus(), submission.getLastModified());
-                    
+                logger.error(
+                        "Submission details: id={}, userId={}, courseId={}, submissionType={}, status={}, lastModified={}",
+                        submission.getId(), submission.getUserId(), submission.getCourseId(),
+                        submission.getSubmissionType(), submission.getStatus(), submission.getLastModified());
+
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Collections.singletonMap("error", "No document ID associated with this submission. The submission was not properly created with a document reference."));
+                        .body(Collections.singletonMap("error",
+                                "No document ID associated with this submission. The submission was not properly created with a document reference."));
             }
 
             logger.info("Analyzing document ID: {} for submission: {}", documentId, submissionId);
-            
+
             // Verify document exists in the database
             DocumentModel document = documentService.getDocumentById(documentId);
             if (document == null) {
-                logger.error("Document not found for submission: document_id={}, submission_id={}", documentId, submissionId);
+                logger.error("Document not found for submission: document_id={}, submission_id={}", documentId,
+                        submissionId);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of(
-                            "error", "Document not found for this submission",
-                            "documentId", documentId,
-                            "submissionId", submissionId
-                        ));
+                                "error", "Document not found for this submission",
+                                "documentId", documentId,
+                                "submissionId", submissionId));
             }
-            
+
             logger.info("Found document for analysis: id={}, name={}, path={}, userId={}",
-                document.getId(), document.getName(), document.getFilePath(), document.getUserId());
+                    document.getId(), document.getName(), document.getFilePath(), document.getUserId());
 
             // Extract analyses from request body if provided
             Map<String, Boolean> analyses = new HashMap<>();
@@ -760,9 +766,11 @@ public class SubmissionController {
                 documentService.startAnalysis(documentId, analyses, documentType);
                 logger.info("Analysis started for document: {}", documentId);
 
-                // Directly call the analyzeSubmission method with the submission ID and analyses
+                // Directly call the analyzeSubmission method with the submission ID and
+                // analyses
                 logger.info("Calling submissionService.analyzeSubmission with submission ID: {}", submissionId);
-                Submission analyzedSubmission = submissionService.analyzeSubmission(submissionId, analyses, documentType);
+                Submission analyzedSubmission = submissionService.analyzeSubmission(submissionId, analyses,
+                        documentType);
 
                 logger.info("Analysis started for submission: {}", submissionId);
                 return ResponseEntity.ok(Map.of(
@@ -850,37 +858,37 @@ public class SubmissionController {
             @PathVariable String submissionId,
             @RequestBody Map<String, Object> gradeData,
             Authentication authentication) {
-        
+
         logger.info("Processing grade submission for ID: {}", submissionId);
-        
+
         try {
             // Get current user
             String userId = authentication.getName();
-            
+
             // Check if user is professor
             User currentUser = userService.findByEmail(userId);
             if (currentUser == null) {
                 currentUser = userService.findById(userId);
             }
-            
+
             if (currentUser == null) {
                 logger.error("User not found with ID/email: {}", userId);
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "User not found"));
             }
-            
+
             if (!"PROFESSOR".equals(currentUser.getRole()) && !"ADMIN".equals(currentUser.getRole())) {
-                logger.error("User {} with role {} attempted to grade a submission", 
+                logger.error("User {} with role {} attempted to grade a submission",
                         currentUser.getId(), currentUser.getRole());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Only professors can grade submissions"));
             }
-            
+
             // Extract grade data
             Double grade = null;
             String feedback = null;
             String status = "Graded";
-            
+
             if (gradeData.containsKey("grade")) {
                 if (gradeData.get("grade") instanceof Number) {
                     grade = ((Number) gradeData.get("grade")).doubleValue();
@@ -894,30 +902,30 @@ public class SubmissionController {
                     }
                 }
             }
-            
+
             if (gradeData.containsKey("feedback")) {
                 feedback = (String) gradeData.get("feedback");
             }
-            
+
             if (gradeData.containsKey("status")) {
                 status = (String) gradeData.get("status");
             }
-            
+
             // Validate grade
             if (grade == null || grade < 0 || grade > 100) {
                 logger.error("Invalid grade value: {}", grade);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Grade must be between 0 and 100"));
             }
-            
+
             // Update the submission with grade
             Submission gradedSubmission = submissionService.gradeSubmission(
                     submissionId, grade, feedback, status);
-            
+
             return ResponseEntity.ok(Map.of(
                     "message", "Submission graded successfully",
                     "submission", gradedSubmission));
-            
+
         } catch (Exception e) {
             logger.error("Error grading submission: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -930,22 +938,22 @@ public class SubmissionController {
     public ResponseEntity<?> downloadSubmissionDocument(@PathVariable String id, Authentication authentication) {
         try {
             logger.info("Processing download request for submission: {}", id);
-            
+
             // Get current user
             String userId = authentication.getName();
-            
+
             // Check if user exists
             User currentUser = userService.findByEmail(userId);
             if (currentUser == null) {
                 currentUser = userService.findById(userId);
             }
-            
+
             if (currentUser == null) {
                 logger.error("User not found with ID/email: {}", userId);
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "User not found"));
             }
-            
+
             // Get the submission
             Submission submission = submissionService.getSubmission(id);
             if (submission == null) {
@@ -953,18 +961,18 @@ public class SubmissionController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "Submission not found"));
             }
-            
+
             // For non-professors, only allow downloading their own submissions
-            if (!"PROFESSOR".equals(currentUser.getRole()) && 
-                !"ADMIN".equals(currentUser.getRole()) && 
-                !submission.getUserId().equals(currentUser.getId())) {
-                
-                logger.error("User {} attempted to download submission {} belonging to {}", 
+            if (!"PROFESSOR".equals(currentUser.getRole()) &&
+                    !"ADMIN".equals(currentUser.getRole()) &&
+                    !submission.getUserId().equals(currentUser.getId())) {
+
+                logger.error("User {} attempted to download submission {} belonging to {}",
                         currentUser.getId(), id, submission.getUserId());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "You can only download your own submissions"));
             }
-            
+
             // Get the document associated with the submission
             String documentId = submission.getDocumentId();
             if (documentId == null || documentId.isEmpty()) {
@@ -972,7 +980,7 @@ public class SubmissionController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Submission has no associated document"));
             }
-            
+
             // Get the document
             DocumentModel document = documentService.getDocumentById(documentId);
             if (document == null) {
@@ -980,7 +988,7 @@ public class SubmissionController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "Document not found"));
             }
-            
+
             // Get the file path
             String filePath = document.getFilePath();
             if (filePath == null || filePath.isEmpty()) {
@@ -988,7 +996,7 @@ public class SubmissionController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Document has no file path"));
             }
-            
+
             // Check if file exists
             java.io.File file = new java.io.File(filePath);
             if (!file.exists()) {
@@ -996,15 +1004,15 @@ public class SubmissionController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "File not found on server"));
             }
-            
+
             // Read file and return as resource
             try {
                 byte[] fileContent = java.nio.file.Files.readAllBytes(file.toPath());
-                
+
                 // Determine content type based on file extension
                 String contentType = "application/octet-stream"; // Default
                 String fileName = document.getName() != null ? document.getName() : "document";
-                
+
                 if (fileName.toLowerCase().endsWith(".pdf")) {
                     contentType = "application/pdf";
                 } else if (fileName.toLowerCase().endsWith(".doc")) {
@@ -1012,20 +1020,20 @@ public class SubmissionController {
                 } else if (fileName.toLowerCase().endsWith(".docx")) {
                     contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
                 }
-                
+
                 // Create downloadable response
                 return ResponseEntity.ok()
-                    .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
-                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, 
-                            "attachment; filename=\"" + fileName + "\"")
-                    .body(fileContent);
-                
+                        .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
+                        .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                                "attachment; filename=\"" + fileName + "\"")
+                        .body(fileContent);
+
             } catch (java.io.IOException e) {
                 logger.error("Error reading file: {}", e.getMessage(), e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(Map.of("error", "Error reading file: " + e.getMessage()));
             }
-            
+
         } catch (Exception e) {
             logger.error("Error downloading submission document: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

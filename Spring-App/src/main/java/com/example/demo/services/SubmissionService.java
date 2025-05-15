@@ -368,7 +368,7 @@ public class SubmissionService {
                         submission.setFeedback("Analysis completed but no results were generated");
                     }
 
-                    submission.setGrade(85); // Default grade, can be calculated based on results
+                    submission.setGrade(null); // Default grade, can be calculated based on results
 
                     submissionRepository.save(submission);
                     logger.info("Submission analysis completed successfully");
@@ -544,7 +544,11 @@ public class SubmissionService {
                 .orElseThrow(() -> new IllegalArgumentException("Submission not found with ID: " + submissionId));
 
         // Update the submission with grade and feedback
-        submission.setGrade(grade);
+        if (grade != null) {
+            submission.setGrade(grade.intValue()); // Convert Double to Integer
+        } else {
+            submission.setGrade(null);
+        }
         submission.setFeedback(feedback);
         submission.setStatus(status != null ? status : "Graded");
         submission.setLastModified(new Date());
