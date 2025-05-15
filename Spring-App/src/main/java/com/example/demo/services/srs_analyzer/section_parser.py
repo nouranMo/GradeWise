@@ -70,9 +70,9 @@ class SectionParser:
             },
             "4 Data Design": {
                 "4.1 Data Description": {},
-                "4.2 Database design description": {},
-                "4.3 Data Models": {},
-                "4.4 Database Schema": {}
+                "4.2 Dataset Description": {},
+                "4.3 Database design description": {},
+
             },
             "5 Human Interface Design": {
                 "5.1 User Interface": {},
