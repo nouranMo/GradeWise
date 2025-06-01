@@ -77,7 +77,7 @@ function Dashboard() {
       }
 
       const response = await fetch(
-        "http://localhost:8080/api/submissions/available",
+        `${process.env.REACT_APP_API_URL}/api/submissions/available`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -124,7 +124,7 @@ function Dashboard() {
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:8080/api/users/me", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/me`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -147,7 +147,7 @@ function Dashboard() {
   const fetchCourses = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:8080/api/courses", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/courses`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

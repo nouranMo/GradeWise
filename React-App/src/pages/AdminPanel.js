@@ -71,7 +71,7 @@ const AdminPanel = () => {
       const token = localStorage.getItem("token");
       console.log("Using token for admin request:", token ? "Token exists" : "No token found");
       
-      const response = await fetch("http://localhost:8080/admin-api/users", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/admin-api/users`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
