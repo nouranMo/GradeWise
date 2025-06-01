@@ -14,26 +14,9 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     wget \
     git \
+    gcc \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Install additional dependencies for the Flask app
-RUN pip install --no-cache-dir \
-    flask-limiter \
-    nltk \
-    beautifulsoup4 \
-    openai \
-    PyPDF2 \
-    python-docx \
-    google-auth \
-    google-auth-oauthlib \
-    google-auth-httplib2
-
-# Download NLTK data
-RUN python -c "import nltk; nltk.download('punkt')"
 
 # Copy the entire services directory structure
 COPY . .
@@ -41,8 +24,14 @@ COPY . .
 # Set the working directory to where app.py is located
 WORKDIR /app/srs_analyzer
 
-# Create uploads directory
-RUN mkdir -p /app/uploads ./uploads
+# Install Python dependencies from the actual requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Download NLTK data
+RUN python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger'); nltk.download('stopwords')" || true
+
+# Create uploads directory in the srs_analyzer folder
+RUN mkdir -p ./uploads ./logs
 
 # Create a non-root user
 RUN useradd --create-home --shell /bin/bash app
@@ -53,7 +42,7 @@ EXPOSE 5000
 
 # Set environment variables
 ENV FLASK_APP=app.py
-ENV FLASK_ENV=production
+ENV FLASK_ENV=development
 ENV PYTHONPATH=/app
 
 # Health check

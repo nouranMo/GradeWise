@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Digital Ocean Deployment Script for Automated Document Analysis Tool
-# This script automates the deployment process on your droplet
+# Local Docker Deployment Script for Automated Document Analysis Tool
+# This script automates the deployment process using Docker locally
 
 set -e
 
-echo "🚀 Starting deployment to Digital Ocean droplet..."
+echo "🚀 Starting local Docker deployment..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -39,17 +39,13 @@ fi
 source .env
 
 # Validate required environment variables
-if [ -z "$MONGODB_URI" ] || [ -z "$JWT_SECRET" ] || [ -z "$GEMINI_API_KEY" ] || [ -z "$DROPLET_IP" ]; then
+if [ -z "$MONGODB_URI" ] || [ -z "$JWT_SECRET" ] || [ -z "$GEMINI_API_KEY" ] || [ -z "$GOOGLE_CLIENT_ID" ]; then
     print_error "Missing required environment variables in .env file!"
     print_warning "Please ensure all variables in environment.example are set"
     exit 1
 fi
 
 print_status "Environment variables loaded successfully"
-
-# Update REACT_APP_API_URL in docker-compose.yml
-print_status "Updating API URL in docker-compose.yml..."
-sed -i "s/your-droplet-ip/$DROPLET_IP/g" docker-compose.yml
 
 # Stop existing containers
 print_status "Stopping existing containers..."
@@ -102,13 +98,13 @@ fi
 print_status "Running containers:"
 docker-compose ps
 
-print_status "🎉 Deployment completed!"
+print_status "🎉 Local deployment completed!"
 echo ""
 echo "Access your application:"
-echo "🌐 Frontend: http://$DROPLET_IP"
-echo "🔧 Backend API: http://$DROPLET_IP:8080"
-echo "🐍 Flask Service: http://$DROPLET_IP:5000"
-echo "🤖 YOLO Service: http://$DROPLET_IP:5001"
+echo "🌐 Frontend: http://localhost"
+echo "🔧 Backend API: http://localhost:8080"
+echo "🐍 Flask Service: http://localhost:5000"
+echo "🤖 YOLO Service: http://localhost:5001"
 echo ""
 echo "To view logs:"
 echo "docker-compose logs -f [service-name]"

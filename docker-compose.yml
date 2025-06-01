@@ -9,7 +9,7 @@ services:
     ports:
       - "80:80"
     environment:
-      - REACT_APP_API_URL=http://206.189.60.118:8080
+      - REACT_APP_API_URL=http://localhost:8080
       - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     depends_on:
       - backend
@@ -24,7 +24,6 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=production
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - PYTHON_API_URL=http://python-service:5000/analyze_document
@@ -36,7 +35,7 @@ services:
     networks:
       - app-network
 
-  # Python Flask Service (main app.py)
+  # Python Flask Service (main app.py in srs_analyzer)
   python-service:
     build:
       context: ./Spring-App/src/main/java/com/example/demo/services
@@ -44,14 +43,14 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - FLASK_ENV=production
+      - FLASK_ENV=development
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
-      - ./uploads:/app/uploads
+      - ./uploads:/app/srs_analyzer/uploads
       - ./YOLOv:/app/yolo
-      - ./Spring-App/src/main/java/com/example/demo/services/srs_analyzer:/app/srs_analyzer
+      - ./Spring-App/src/main/java/com/example/demo/services/srs_analyzer/.env:/app/srs_analyzer/.env:ro
     networks:
       - app-network
 
