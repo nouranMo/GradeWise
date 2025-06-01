@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # React Frontend
+  frontend:
+    build:
+      context: ./React-App
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - REACT_APP_API_URL=http://206.189.60.118:8080
+      - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ./Spring-App
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - PYTHON_API_URL=http://python-service:5000/analyze_document
+    depends_on:
+      - python-service
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    networks:
+      - app-network
+
+  # Python Flask Service (main app.py)
+  python-service:
+    build:
+      context: ./Spring-App/src/main/java/com/example/demo/services
+      dockerfile: Dockerfile.flask
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./YOLOv:/app/yolo
+      - ./Spring-App/src/main/java/com/example/demo/services/srs_analyzer:/app/srs_analyzer
+    networks:
+      - app-network
+
+  # YOLO Python Service
+  yolo-service:
+    build:
+      context: ./YOLOv
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./uploads:/app/uploads
+      - ./YOLOv/output_results:/app/output_results
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  uploads:
+  logs: 
