@@ -7,9 +7,9 @@ services:
       context: ./React-App
       dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "0.0.0.0:80:80"
     environment:
-      - REACT_APP_API_URL=http://localhost:8080
+      - REACT_APP_API_URL=http://206.189.60.118:8080
       - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     depends_on:
       - backend
@@ -22,7 +22,7 @@ services:
       context: ./Spring-App
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "0.0.0.0:8080:8080"
     environment:
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
@@ -41,7 +41,7 @@ services:
       context: ./Spring-App/src/main/java/com/example/demo/services
       dockerfile: Dockerfile.flask
     ports:
-      - "5000:5000"
+      - "0.0.0.0:5000:5000"
     environment:
       - FLASK_ENV=development
       - GEMINI_API_KEY=${GEMINI_API_KEY}
@@ -60,7 +60,7 @@ services:
       context: ./YOLOv
       dockerfile: Dockerfile
     ports:
-      - "5001:5001"
+      - "0.0.0.0:5001:5001"
     environment:
       - PYTHONPATH=/app
     volumes:
