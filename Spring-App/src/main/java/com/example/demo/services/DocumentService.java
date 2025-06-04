@@ -53,7 +53,11 @@ public class DocumentService {
 
     // Set an absolute file path for uploads
     private final String uploadDir = System.getProperty("user.dir") + File.separator + "uploads";
-    private final String pythonApiUrl = "http://localhost:5000/analyze_document";
+    
+    // Use environment variable for Python API URL, fallback to localhost for development
+    private final String pythonApiUrl = System.getenv("PYTHON_API_URL") != null 
+        ? System.getenv("PYTHON_API_URL") 
+        : "http://localhost:5000/analyze_document";
 
     @PostConstruct
     public void init() {
@@ -65,6 +69,11 @@ public class DocumentService {
             } else {
                 System.out.println("Upload directory already exists: " + uploadPath.toAbsolutePath());
             }
+            
+            // Log the Python API URL being used
+            System.out.println("Python API URL configured as: " + pythonApiUrl);
+            String envUrl = System.getenv("PYTHON_API_URL");
+            System.out.println("PYTHON_API_URL environment variable: " + (envUrl != null ? envUrl : "not set"));
         } catch (IOException e) {
             throw new RuntimeException("Could not create upload directory!", e);
         }
@@ -251,6 +260,7 @@ public class DocumentService {
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
             logger.info("Sending request to Python API for document: {}", document.getId());
+            logger.info("Python API URL: {}", pythonApiUrl);
             ResponseEntity<String> response = restTemplate.exchange(
                     pythonApiUrl,
                     HttpMethod.POST,
