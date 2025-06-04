@@ -1,24 +1,27 @@
 // Configuration file for the React app
-// This replaces environment variables for more reliable deployment
+// This works with both Docker environment variables and fallback values
 
 const config = {
   // API URL for the backend server
-  // Change this based on your deployment environment
+  // In Docker, this will use the environment variable set in docker-compose.yml
+  // For local development, it falls back to localhost
   API_URL: process.env.REACT_APP_API_URL || "http://localhost:8080",
   
   // Google OAuth Client ID
-  // Replace 'your-google-client-id-here' with your actual Google Client ID
+  // In Docker, this will use the environment variable from docker-compose.yml
   GOOGLE_CLIENT_ID: process.env.REACT_APP_GOOGLE_CLIENT_ID || "your-google-client-id-here",
   
   // Add other configuration values as needed
-  // ANOTHER_CONFIG: "value",
+  // ANOTHER_CONFIG: process.env.REACT_APP_OTHER_CONFIG || "default-value",
 };
 
-// For Docker deployments, you can override these values by setting them here directly:
-// Uncomment and modify the lines below for production deployment
-/*
-config.API_URL = "https://your-production-api.com";
-config.GOOGLE_CLIENT_ID = "your-actual-google-client-id";
-*/
+// Log the configuration in development for debugging
+if (process.env.NODE_ENV === 'development') {
+  console.log('App Configuration:', {
+    API_URL: config.API_URL,
+    GOOGLE_CLIENT_ID: config.GOOGLE_CLIENT_ID ? 'Set' : 'Not set',
+    NODE_ENV: process.env.NODE_ENV
+  });
+}
 
 export default config; 
