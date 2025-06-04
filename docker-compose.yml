@@ -17,6 +17,23 @@ services:
     networks:
       - app-network
 
+  # Initialize uploads directory permissions
+  init-uploads:
+    image: alpine:latest
+    volumes:
+      - ./uploads:/host-uploads
+      - ./logs:/host-logs
+    command: >
+      sh -c "
+        echo 'Setting up uploads directory permissions...';
+        mkdir -p /host-uploads /host-logs;
+        chmod 755 /host-uploads /host-logs;
+        chown 1001:1001 /host-uploads /host-logs;
+        echo 'Permissions setup complete';
+      "
+    networks:
+      - app-network
+
   # Spring Boot Backend
   backend:
     build:
@@ -24,12 +41,14 @@ services:
       dockerfile: Dockerfile
     ports:
       - "0.0.0.0:8080:8080"
+    user: "1001:1001"
     environment:
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - PYTHON_API_URL=http://python-service:5000/analyze_document
     depends_on:
       - python-service
+      - init-uploads
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
@@ -48,6 +67,8 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - init-uploads
     volumes:
       - ./uploads:/app/srs_analyzer/uploads
       - ./YOLOv:/app/yolo
@@ -64,6 +85,8 @@ services:
       - "0.0.0.0:5001:5001"
     environment:
       - PYTHONPATH=/app
+    depends_on:
+      - init-uploads
     volumes:
       - ./uploads:/app/uploads
       - ./YOLOv/output_results:/app/output_results
