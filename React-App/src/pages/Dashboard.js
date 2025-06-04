@@ -4,6 +4,7 @@ import Navbar from "components/layout/Navbar/Navbar";
 import UploadModal from "components/UploadModal";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import config from "../config";
 
 function Dashboard() {
   const [documents, setDocuments] = useState([]);
@@ -77,7 +78,7 @@ function Dashboard() {
       }
 
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/submissions/available`,
+        `${config.API_URL}/api/submissions/available`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -124,7 +125,7 @@ function Dashboard() {
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/me`, {
+      const response = await fetch(`${config.API_URL}/api/users/me`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -147,7 +148,7 @@ function Dashboard() {
   const fetchCourses = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/courses`, {
+      const response = await fetch(`${config.API_URL}/api/courses`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

@@ -7,6 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import showImage from "assets/images/show.svg";
 import hideImage from "assets/images/hide.svg";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import config from "../../config";
 
 const SignUpPage = () => {
   const [email, setEmail] = useState("");
@@ -147,7 +148,7 @@ const SignUpPage = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/register`, {
+      const response = await fetch(`${config.API_URL}/api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

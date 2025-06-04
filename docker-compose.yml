@@ -6,6 +6,9 @@ services:
     build:
       context: ./React-App
       dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://206.189.60.118:8080
+        - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     ports:
       - "0.0.0.0:80:80"
     environment:

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "contexts/AuthContext";
 import { ProtectedRoute } from "components/ProtectedRoute";
+import config from "./config";
 
 import LandingPage from "pages/LandingPage";
 import StudentDashboard from "pages/StudentDashboard";
@@ -19,9 +20,9 @@ import Profile from "pages/account/Profile";
 
 function App() {
   console.log("App rendering with routes including /admin");
-
+  
   return (
-    <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
+    <GoogleOAuthProvider clientId={config.GOOGLE_CLIENT_ID}>
       <AuthProvider>
         <Router>
           <Routes>

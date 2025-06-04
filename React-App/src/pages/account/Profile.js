@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import Navbar from "components/layout/Navbar/Navbar";
 import { toast } from "react-toastify";
 import { useAuth } from "contexts/AuthContext";
+import config from "../../config";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
+const API_URL = config.API_URL;
 
 function Profile({ userData }) {
   const { updateUser } = useAuth();

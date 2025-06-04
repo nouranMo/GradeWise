@@ -18,6 +18,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
+import config from "../config";
 
 const handleApiError = (error, defaultMessage = 'An error occurred') => {
   console.error(defaultMessage, error);
@@ -71,7 +72,7 @@ const AdminPanel = () => {
       const token = localStorage.getItem("token");
       console.log("Using token for admin request:", token ? "Token exists" : "No token found");
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/admin-api/users`, {
+      const response = await fetch(`${config.API_URL}/admin-api/users`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

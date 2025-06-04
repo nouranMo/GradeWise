@@ -7,9 +7,10 @@ import { useAuth } from "../contexts/AuthContext";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
+import config from "../config";
 
 // API URL constant
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
+const API_URL = config.API_URL;
 
 // Modal for creating new submission slots
 const CreateSubmissionModal = ({ isOpen, onClose, onSubmit }) => {

@@ -5,9 +5,10 @@ import { useDropzone } from "react-dropzone";
 import { Dialog, Transition } from "@headlessui/react";
 import Navbar from "components/layout/Navbar/Navbar";
 import { useAuth } from "contexts/AuthContext";
+import config from "../config";
 
 // API URL constant
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
+const API_URL = config.API_URL;
 
 const StudentDashboard = () => {
   const { user } = useAuth();
