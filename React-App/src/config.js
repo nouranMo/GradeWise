@@ -5,7 +5,7 @@ const config = {
   // API URL for the backend server
   // In Docker, this will use the environment variable set in docker-compose.yml
   // For local development, it falls back to localhost
-  API_URL: process.env.REACT_APP_API_URL || "http://localhost:8080",
+  API_URL: "http://localhost:8080",
   
   // Google OAuth Client ID
   // In Docker, this will use the environment variable from docker-compose.yml
