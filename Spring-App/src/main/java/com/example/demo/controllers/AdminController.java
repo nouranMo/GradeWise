@@ -18,7 +18,12 @@ import com.example.demo.services.CourseService;
 
 @RestController
 @RequestMapping("/admin-api")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true", 
+@CrossOrigin(origins = {
+    "http://localhost:3000", 
+    "http://206.189.60.118", 
+    "http://206.189.60.118:80", 
+    "https://206.189.60.118"
+}, allowCredentials = "true", 
              allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE})
 public class AdminController {
 

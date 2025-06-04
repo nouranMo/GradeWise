@@ -19,7 +19,12 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/analysis-jobs")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@CrossOrigin(origins = {
+    "http://localhost:3000", 
+    "http://206.189.60.118", 
+    "http://206.189.60.118:80", 
+    "https://206.189.60.118"
+}, allowCredentials = "true")
 public class AnalysisJobController {
     
     private static final Logger logger = LoggerFactory.getLogger(AnalysisJobController.class);
