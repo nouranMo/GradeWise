@@ -38,10 +38,10 @@ beautifulsoup4==4.9.3
 lxml==4.9.1
 
 # Google Services (updated versions for better compatibility)
-google-auth==2.3.3
-google-auth-oauthlib==0.4.6
-google-auth-httplib2==0.1.0
-google-api-python-client==2.31.0
+google-auth>=2.15.0
+google-auth-oauthlib>=0.7.0
+google-auth-httplib2>=0.2.0
+google-api-python-client>=2.80.0
 google-generativeai==0.8.0
 
 # Utilities
