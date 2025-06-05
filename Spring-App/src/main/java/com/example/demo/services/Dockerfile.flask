@@ -40,14 +40,12 @@ COPY . /app
 # Download NLTK data
 RUN python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger'); nltk.download('stopwords')" || true
 
-# Create necessary directories
+# Create necessary directories with proper permissions
 RUN mkdir -p ./uploads ./logs /app/output_results /output_results
 
-# Create a non-root user
-RUN useradd --create-home --shell /bin/bash app
-RUN chown -R app:app /app
-RUN chmod 755 /output_results && chown app:app /output_results
-USER app
+# Set ownership for user 1001 (docker-compose user)
+RUN chown -R 1001:1001 /app
+RUN chmod -R 755 /app
 
 EXPOSE 5000
 
