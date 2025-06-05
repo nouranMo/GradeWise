@@ -46,6 +46,7 @@ services:
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - PYTHON_API_URL=http://python-service:5000/analyze_document
+      - DOCKER_ENV=true
     depends_on:
       - python-service
       - init-uploads

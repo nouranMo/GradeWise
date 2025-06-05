@@ -51,8 +51,10 @@ public class DocumentService {
     @Autowired
     private DocumentAnalysisService documentAnalysisService;
 
-    // Set an absolute file path for uploads
-    private final String uploadDir = System.getProperty("user.dir") + File.separator + "uploads";
+    // Set upload directory path - Docker vs Local development
+    private final String uploadDir = System.getenv("DOCKER_ENV") != null 
+        ? "/app/uploads" 
+        : System.getProperty("user.dir") + File.separator + "uploads";
     
     // Use environment variable for Python API URL, fallback to localhost for development
     private final String pythonApiUrl = System.getenv("PYTHON_API_URL") != null 
