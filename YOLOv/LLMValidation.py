@@ -8,10 +8,6 @@ print("WELCOME TO GEMINIIIIIIIIIIIIIIIII")
 # 🔹 Step 1: Set up Gemini API Key
 API_KEY = "AIzaSyDO6WpIgBA3IynSdN3bYlisi-4xBarKFxY"  # Replace with your actual API key
 
-# Set up Google Application Credentials to avoid authentication warnings
-# This is for Google Cloud services, but Gemini API uses API key auth
-os.environ.setdefault('GOOGLE_APPLICATION_CREDENTIALS', '/dev/null')
-
 try:
     genai.configure(api_key=API_KEY)
     print("Gemini API configured successfully")
@@ -148,8 +144,16 @@ def validate_uml(json_data, diagram_type):
     except Exception as e:
         # Handle authentication or API errors gracefully
         error_msg = str(e)
-        if "credentials" in error_msg.lower() or "authentication" in error_msg.lower():
+        print(f"Validation error for {diagram_type}: {error_msg}")
+        
+        if "credentials" in error_msg.lower():
+            return f"Validation skipped - Google Cloud credentials not configured (this is optional for basic functionality)"
+        elif "authentication" in error_msg.lower():
             return f"Validation skipped - API authentication issue: {error_msg}"
+        elif "api key" in error_msg.lower():
+            return f"Validation failed - Invalid or missing Gemini API key"
+        elif "json" in error_msg.lower() and "file" in error_msg.lower():
+            return f"Validation skipped - Google credentials file issue (using API key authentication instead)"
         else:
             return f"Validation failed - API error: {error_msg}"
 
