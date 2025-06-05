@@ -40,12 +40,13 @@ COPY . /app
 # Download NLTK data
 RUN python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger'); nltk.download('stopwords')" || true
 
-# Create uploads directory in the srs_analyzer folder
-RUN mkdir -p ./uploads ./logs
+# Create necessary directories
+RUN mkdir -p ./uploads ./logs /app/output_results /output_results
 
 # Create a non-root user
 RUN useradd --create-home --shell /bin/bash app
 RUN chown -R app:app /app
+RUN chmod 755 /output_results && chown app:app /output_results
 USER app
 
 EXPOSE 5000
