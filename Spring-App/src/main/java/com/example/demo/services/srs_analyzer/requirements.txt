@@ -21,7 +21,7 @@ pdfplumber==0.7.4
 PyMuPDF==1.20.2
 
 # Image Processing
-opencv-python==4.7.1.72
+opencv-python==4.7.0.72
 pytesseract==0.3.10
 
 # YOLO Dependencies
