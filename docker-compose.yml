@@ -62,6 +62,7 @@ services:
       dockerfile: Dockerfile.flask
     ports:
       - "0.0.0.0:5000:5000"
+    user: "1001:1001"
     environment:
       - FLASK_ENV=development
       - GEMINI_API_KEY=${GEMINI_API_KEY}
