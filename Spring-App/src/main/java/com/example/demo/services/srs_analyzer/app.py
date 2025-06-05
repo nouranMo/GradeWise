@@ -39,14 +39,15 @@ import logging.handlers
 
 app = Flask(__name__)
 app.config.from_object(Config)
-# Explicit path to YOLOv8
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Explicit path to YOLOv8 (Docker environment)
+# In Docker, YOLO files are mounted at /app/yolo
+YOLO_PATH = "/app/yolo"
 
-# Move up multiple levels to locate the project root (Spring-App's parent)
-PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "../../../../../../../../.."))
-
-# Dynamically construct the YOLOv path
-YOLO_PATH = os.path.join(PROJECT_ROOT, "YOLOv")
+# Fallback for local development
+if not os.path.exists(YOLO_PATH):
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "../../../../../../../../.."))
+    YOLO_PATH = os.path.join(PROJECT_ROOT, "YOLOv")
 
 # Add YOLOv8 to sys.path if not already included
 if YOLO_PATH not in sys.path:
