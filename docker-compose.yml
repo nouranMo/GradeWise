@@ -23,12 +23,13 @@ services:
     volumes:
       - ./uploads:/host-uploads
       - ./logs:/host-logs
+      - ./output_results:/host-output
     command: >
       sh -c "
-        echo 'Setting up uploads directory permissions...';
-        mkdir -p /host-uploads /host-logs;
-        chmod 755 /host-uploads /host-logs;
-        chown 1001:1001 /host-uploads /host-logs;
+        echo 'Setting up directory permissions...';
+        mkdir -p /host-uploads /host-logs /host-output;
+        chmod 755 /host-uploads /host-logs /host-output;
+        chown 1001:1001 /host-uploads /host-logs /host-output;
         echo 'Permissions setup complete';
       "
     networks:
@@ -74,6 +75,7 @@ services:
     volumes:
       - ./uploads:/app/srs_analyzer/uploads
       - ./YOLOv:/app/yolo
+      - ./output_results:/output_results
       - ./Spring-App/src/main/java/com/example/demo/services/srs_analyzer/.env:/app/srs_analyzer/.env:ro
     networks:
       - app-network
