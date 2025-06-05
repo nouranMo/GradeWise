@@ -24,6 +24,10 @@ PyMuPDF==1.20.2
 opencv-python==4.6.0.66
 pytesseract==0.3.10
 
+# YOLO Dependencies
+ultralytics==8.0.196
+matplotlib==3.6.3
+
 # Text Processing & NLP
 nltk==3.6.2
 language-tool-python==2.7.1
