@@ -2,6 +2,7 @@
 numpy==1.21.6
 transformers
 torch
+openai==0.28.1
 google-cloud-aiplatform
 google-generativeai
 

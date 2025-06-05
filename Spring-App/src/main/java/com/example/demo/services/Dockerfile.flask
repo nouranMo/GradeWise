@@ -18,14 +18,24 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the entire services directory structure
-COPY . .
-
 # Set the working directory to where app.py is located
 WORKDIR /app/srs_analyzer
 
-# Install Python dependencies from the actual requirements.txt
+# Copy ONLY requirements.txt first (for better Docker layer caching)
+COPY srs_analyzer/requirements.txt ./requirements.txt
+
+# Upgrade pip and install core dependencies first
+RUN pip install --upgrade pip setuptools wheel
+
+# Install dependencies in stages to avoid conflicts
+RUN pip install --no-cache-dir numpy==1.21.6
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir scikit-learn==1.0.2
+RUN pip install --no-cache-dir transformers
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the entire services directory structure AFTER installing dependencies
+COPY . /app
 
 # Download NLTK data
 RUN python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger'); nltk.download('stopwords')" || true
