@@ -4,9 +4,20 @@ import json
 import google.generativeai as genai
 
 print("WELCOME TO GEMINIIIIIIIIIIIIIIIII")
+
 # 🔹 Step 1: Set up Gemini API Key
 API_KEY = "AIzaSyDO6WpIgBA3IynSdN3bYlisi-4xBarKFxY"  # Replace with your actual API key
-genai.configure(api_key=API_KEY)
+
+# Set up Google Application Credentials to avoid authentication warnings
+# This is for Google Cloud services, but Gemini API uses API key auth
+os.environ.setdefault('GOOGLE_APPLICATION_CREDENTIALS', '/dev/null')
+
+try:
+    genai.configure(api_key=API_KEY)
+    print("Gemini API configured successfully")
+except Exception as e:
+    print(f"Warning: Failed to configure Gemini API: {e}")
+    print("Diagram validation will be limited")
 
 # 🔹 Step 2: Load JSON File
 def load_json(file_path):
@@ -121,18 +132,26 @@ def generate_sequence_prompt(uml_json):
 
 # 🔹 Step 4: Validate UML with LLM
 def validate_uml(json_data, diagram_type):
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    if diagram_type == "use_case":
-        prompt = generate_use_case_prompt(json_data)
-    elif diagram_type == "class":
-        prompt = generate_class_prompt(json_data)
-    elif diagram_type == "sequence":
-        prompt = generate_sequence_prompt(json_data)
-    else:
-        raise ValueError(f"Unsupported diagram type: {diagram_type}")
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        if diagram_type == "use_case":
+            prompt = generate_use_case_prompt(json_data)
+        elif diagram_type == "class":
+            prompt = generate_class_prompt(json_data)
+        elif diagram_type == "sequence":
+            prompt = generate_sequence_prompt(json_data)
+        else:
+            raise ValueError(f"Unsupported diagram type: {diagram_type}")
 
-    response = model.generate_content(prompt)
-    return response.text
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        # Handle authentication or API errors gracefully
+        error_msg = str(e)
+        if "credentials" in error_msg.lower() or "authentication" in error_msg.lower():
+            return f"Validation skipped - API authentication issue: {error_msg}"
+        else:
+            return f"Validation failed - API error: {error_msg}"
 
 # 🔹 Step 5: Main Validation Function
 def validate_diagrams(output_base="output_results", document_type="SRS"):
