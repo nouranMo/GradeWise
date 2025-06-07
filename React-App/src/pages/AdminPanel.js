@@ -97,7 +97,7 @@ const AdminPanel = () => {
 
   const updateUserRole = async (userId, newRole) => {
     try {
-      const response = await fetch("http://localhost:8080/admin-api/update-role", {
+      const response = await fetch(`${config.API_URL}/admin-api/update-role`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -144,7 +144,7 @@ const AdminPanel = () => {
           return;
         }
         
-        const response = await axios.get('http://localhost:8080/admin-api/courses', {
+        const response = await axios.get(`${config.API_URL}/admin-api/courses`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -172,7 +172,7 @@ const AdminPanel = () => {
   const handleDeleteUser = async (userId) => {
     if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
       try {
-        await axios.delete(`http://localhost:8080/admin-api/users/${userId}`, {
+        await axios.delete(`${config.API_URL}/admin-api/users/${userId}`, {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem("token")}`
           }
@@ -234,7 +234,7 @@ function UserManagement({ assignedUsers, handleDeleteUser }) {
     try {
       const token = localStorage.getItem("token");
       
-      const response = await fetch("http://localhost:8080/admin-api/users", {
+      const response = await fetch(`${config.API_URL}/admin-api/users`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -259,7 +259,7 @@ function UserManagement({ assignedUsers, handleDeleteUser }) {
 
   const updateUserRole = async (userId, newRole) => {
     try {
-      const response = await fetch("http://localhost:8080/admin-api/update-role", {
+      const response = await fetch(`${config.API_URL}/admin-api/update-role`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -441,7 +441,7 @@ function CourseManagement() {
         return;
       }
 
-      const response = await axios.get('http://localhost:8080/admin-api/courses', {
+      const response = await axios.get(`${config.API_URL}/admin-api/courses`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -464,7 +464,7 @@ function CourseManagement() {
         return;
       }
 
-      const response = await axios.get('http://localhost:8080/admin-api/users', {
+      const response = await axios.get(`${config.API_URL}/admin-api/users`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -490,7 +490,7 @@ function CourseManagement() {
         return;
       }
 
-      const response = await axios.get('http://localhost:8080/admin-api/users', {
+      const response = await axios.get(`${config.API_URL}/admin-api/users`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -547,7 +547,7 @@ function CourseManagement() {
         return;
       }
       
-      await axios.post('http://localhost:8080/admin-api/courses', newCourse, {
+      await axios.post(`${config.API_URL}/admin-api/courses`, newCourse, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -575,7 +575,7 @@ function CourseManagement() {
         return;
       }
       
-      await axios.post(`http://localhost:8080/admin-api/courses/${selectedCourse.id}/teachers`, {
+      await axios.post(`${config.API_URL}/admin-api/courses/${selectedCourse.id}/teachers`, {
         teacherId: selectedTeacher
       }, {
         headers: {
@@ -608,7 +608,7 @@ function CourseManagement() {
       // Create a promise for each student assignment
       const assignmentPromises = selectedStudents.map(studentId => {
         console.log("Assigning student:", studentId);
-        return axios.post(`http://localhost:8080/admin-api/courses/${selectedCourse.id}/students`, {
+        return axios.post(`${config.API_URL}/admin-api/courses/${selectedCourse.id}/students`, {
           studentId
         }, {
           headers: {
@@ -655,7 +655,7 @@ function CourseManagement() {
         return;
       }
       
-      await axios.delete(`http://localhost:8080/admin-api/courses/${courseId}/teachers/${teacherId}`, {
+      await axios.delete(`${config.API_URL}/admin-api/courses/${courseId}/teachers/${teacherId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -676,7 +676,7 @@ function CourseManagement() {
         return;
       }
       
-      await axios.delete(`http://localhost:8080/admin-api/courses/${courseId}/students/${studentId}`, {
+      await axios.delete(`${config.API_URL}/admin-api/courses/${courseId}/students/${studentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -700,7 +700,7 @@ function CourseManagement() {
         
         console.log(`Deleting course with ID: ${courseId}`);
         
-        await axios.delete(`http://localhost:8080/admin-api/courses/${courseId}`, {
+        await axios.delete(`${config.API_URL}/admin-api/courses/${courseId}`, {
           headers: {
             "Authorization": `Bearer ${token}`
           }
