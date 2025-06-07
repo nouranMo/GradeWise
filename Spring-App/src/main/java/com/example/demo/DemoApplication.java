@@ -12,7 +12,9 @@ import org.springframework.scheduling.annotation.EnableAsync;
 public class DemoApplication {
 	public static void main(String[] args) {
 		// Create uploads directory if it doesn't exist
-		String uploadDir = System.getProperty("user.dir") + File.separator + "uploads";
+		String uploadDir = System.getenv("DOCKER_ENV") != null 
+			? "/app/uploads" 
+			: System.getProperty("user.dir") + File.separator + "uploads";
 		File uploadsDir = new File(uploadDir);
 		if (!uploadsDir.exists()) {
 			boolean created = uploadsDir.mkdirs();

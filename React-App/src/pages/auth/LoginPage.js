@@ -7,6 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import showImage from "assets/images/show.svg";
 import hideImage from "assets/images/hide.svg";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import config from "../../config";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -30,8 +31,10 @@ const LoginPage = () => {
   useEffect(() => {
     const fetchCsrfToken = async () => {
       try {
+        console.log("Fetching CSRF token");
+        console.log(config.API_URL);
         const response = await fetch(
-          "http://localhost:8080/api/auth/csrf-token",
+          `${config.API_URL}/api/auth/csrf-token`,
           {
             method: "GET",
             credentials: "include",
@@ -96,7 +99,9 @@ const LoginPage = () => {
     setErrors({ email: "", password: "" });
 
     try {
-      const response = await fetch("http://localhost:8080/api/auth/login", {
+      console.log("Submitting login form");
+      console.log(config.API_URL);
+      const response = await fetch(`${config.API_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

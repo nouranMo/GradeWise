@@ -6,10 +6,15 @@ from PIL import Image
 import json
 import numpy as np
 import os
+import platform
 
 def process_use_case_diagram(image_folder, output_folder, model_path):
-    # Configure Tesseract path
-    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    # Configure Tesseract path based on environment
+    if platform.system() == "Windows":
+        pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    else:
+        # For Linux/Docker environment, tesseract should be in PATH
+        pytesseract.pytesseract.tesseract_cmd = "tesseract"
     
     # Debugging message: Starting the diagram processing
     print("Starting use case diagram processing...")

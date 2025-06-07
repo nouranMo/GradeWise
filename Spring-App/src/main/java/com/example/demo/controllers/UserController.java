@@ -1,31 +1,33 @@
 package com.example.demo.controllers;
 
-import com.example.demo.models.User;
-import com.example.demo.services.UserService;
-
-import jakarta.servlet.http.HttpServletRequest;
-
-import com.example.demo.security.JwtTokenProvider;
 import com.example.demo.dto.LoginRequest;
+import com.example.demo.models.User;
+import com.example.demo.security.JwtTokenProvider;
+import com.example.demo.services.UserService;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import javax.validation.Valid;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@CrossOrigin(origins = {
+    "http://localhost:3000", 
+    "http://206.189.60.118", 
+    "http://206.189.60.118:80", 
+    "https://206.189.60.118"
+}, allowCredentials = "true")
 public class UserController {
 
     @Autowired

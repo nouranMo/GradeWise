@@ -14,7 +14,12 @@ public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:3000")
+                .allowedOrigins(
+                    "http://localhost:3000",           // Local development
+                    "http://206.189.60.118",           // Production server
+                    "http://206.189.60.118:80",        // Production server with explicit port
+                    "https://206.189.60.118"           // HTTPS if used
+                )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders("Authorization")
@@ -27,7 +32,12 @@ public class CorsConfig implements WebMvcConfigurer {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
-        config.addAllowedOrigin("http://localhost:3000");
+        // Add all allowed origins
+        config.addAllowedOrigin("http://localhost:3000");      // Local development
+        config.addAllowedOrigin("http://206.189.60.118");      // Production server
+        config.addAllowedOrigin("http://206.189.60.118:80");   // Production server with explicit port
+        config.addAllowedOrigin("https://206.189.60.118");     // HTTPS if used
+        
         config.addAllowedHeader("*");
         config.addExposedHeader("Authorization");
         config.addAllowedMethod("*");

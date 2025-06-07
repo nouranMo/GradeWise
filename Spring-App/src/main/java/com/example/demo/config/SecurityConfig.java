@@ -1,5 +1,6 @@
 package com.example.demo.config;
 
+import com.example.demo.security.JwtAuthenticationFilter;
 import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -17,7 +18,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import com.example.demo.security.JwtAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -50,7 +50,12 @@ public class SecurityConfig {
 	@Primary
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+		configuration.setAllowedOrigins(Arrays.asList(
+			"http://localhost:3000", 
+			"http://206.189.60.118", 
+			"http://206.189.60.118:80", 
+			"https://206.189.60.118"
+		));
 		configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(Arrays.asList("*"));
 		configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));

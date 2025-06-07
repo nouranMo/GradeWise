@@ -51,9 +51,15 @@ public class DocumentService {
     @Autowired
     private DocumentAnalysisService documentAnalysisService;
 
-    // Set an absolute file path for uploads
-    private final String uploadDir = System.getProperty("user.dir") + File.separator + "uploads";
-    private final String pythonApiUrl = "http://localhost:5000/analyze_document";
+    // Set upload directory path - Docker vs Local development
+    private final String uploadDir = System.getenv("DOCKER_ENV") != null 
+        ? "/app/uploads" 
+        : System.getProperty("user.dir") + File.separator + "uploads";
+    
+    // Use environment variable for Python API URL, fallback to localhost for development
+    private final String pythonApiUrl = System.getenv("PYTHON_API_URL") != null 
+        ? System.getenv("PYTHON_API_URL") 
+        : "http://localhost:5000/analyze_document";
 
     @PostConstruct
     public void init() {
@@ -65,6 +71,11 @@ public class DocumentService {
             } else {
                 System.out.println("Upload directory already exists: " + uploadPath.toAbsolutePath());
             }
+            
+            // Log the Python API URL being used
+            System.out.println("Python API URL configured as: " + pythonApiUrl);
+            String envUrl = System.getenv("PYTHON_API_URL");
+            System.out.println("PYTHON_API_URL environment variable: " + (envUrl != null ? envUrl : "not set"));
         } catch (IOException e) {
             throw new RuntimeException("Could not create upload directory!", e);
         }
@@ -73,27 +84,82 @@ public class DocumentService {
     public DocumentModel saveDocument(String userId, MultipartFile file, Map<String, Boolean> selectedAnalyses,
             String documentType) throws IOException {
         try {
+            System.out.println("=== DocumentService.saveDocument START ===");
             System.out.println("Saving document for user: " + userId);
+            System.out.println("File original name: " + file.getOriginalFilename());
+            System.out.println("File size: " + file.getSize());
+            System.out.println("Document type: " + documentType);
+            System.out.println("Upload directory: " + uploadDir);
+            
             if (documentType == null || (!documentType.equals("SRS") && !documentType.equals("SDD"))) {
                 throw new IllegalArgumentException("Invalid documentType: must be SRS or SDD");
             }
+            
+            // Check if file is empty
+            if (file.isEmpty()) {
+                throw new IllegalArgumentException("File is empty");
+            }
+            
             // Ensure upload directory exists
             Path uploadPath = Paths.get(uploadDir);
+            System.out.println("Upload path absolute: " + uploadPath.toAbsolutePath());
+            
             if (!Files.exists(uploadPath)) {
+                System.out.println("Creating upload directory...");
                 Files.createDirectories(uploadPath);
-                System.out.println("Created upload directory on demand: " + uploadPath.toAbsolutePath());
+                System.out.println("Created upload directory: " + uploadPath.toAbsolutePath());
+            } else {
+                System.out.println("Upload directory already exists: " + uploadPath.toAbsolutePath());
             }
+            
+            // Check directory permissions
+            System.out.println("Directory readable: " + Files.isReadable(uploadPath));
+            System.out.println("Directory writable: " + Files.isWritable(uploadPath));
 
             // Generate unique filename
             String originalFilename = file.getOriginalFilename();
-            String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            if (originalFilename == null || originalFilename.trim().isEmpty()) {
+                throw new IllegalArgumentException("Original filename is null or empty");
+            }
+            
+            String fileExtension = "";
+            int lastDotIndex = originalFilename.lastIndexOf(".");
+            if (lastDotIndex > 0 && lastDotIndex < originalFilename.length() - 1) {
+                fileExtension = originalFilename.substring(lastDotIndex);
+                System.out.println("File extension: " + fileExtension);
+            } else {
+                System.out.println("No file extension found, using .pdf as default");
+                fileExtension = ".pdf";
+            }
+            
             String uniqueFilename = UUID.randomUUID().toString() + fileExtension;
             Path filePath = uploadPath.resolve(uniqueFilename);
+            
+            System.out.println("Unique filename: " + uniqueFilename);
+            System.out.println("Full file path: " + filePath.toAbsolutePath());
 
             // Save file to disk
-            Files.copy(file.getInputStream(), filePath);
+            System.out.println("Attempting to save file to disk...");
+            try {
+                Files.copy(file.getInputStream(), filePath);
+                System.out.println("File successfully saved to disk");
+                
+                // Verify file was actually saved
+                if (Files.exists(filePath)) {
+                    long savedFileSize = Files.size(filePath);
+                    System.out.println("Saved file size: " + savedFileSize + " bytes");
+                    System.out.println("Original file size: " + file.getSize() + " bytes");
+                } else {
+                    throw new IOException("File was not saved - does not exist after copy operation");
+                }
+            } catch (IOException e) {
+                System.err.println("IOException during file save: " + e.getMessage());
+                e.printStackTrace();
+                throw new IOException("Failed to save file to disk: " + e.getMessage(), e);
+            }
 
             // Create document record
+            System.out.println("Creating document record...");
             DocumentModel document = new DocumentModel();
             document.setUserId(userId);
             document.setName(originalFilename);
@@ -106,12 +172,29 @@ public class DocumentService {
             document.setUploadDate(new Date());
 
             // Save to database
-            DocumentModel savedDocument = documentRepository.save(document);
-            System.out.println("Document saved with ID: " + savedDocument.getId());
-
-            return savedDocument;
+            System.out.println("Saving document to database...");
+            try {
+                DocumentModel savedDocument = documentRepository.save(document);
+                System.out.println("Document saved to database with ID: " + savedDocument.getId());
+                System.out.println("=== DocumentService.saveDocument SUCCESS ===");
+                return savedDocument;
+            } catch (Exception e) {
+                System.err.println("Exception during database save: " + e.getMessage());
+                e.printStackTrace();
+                
+                // Clean up the file if database save failed
+                try {
+                    Files.deleteIfExists(filePath);
+                    System.out.println("Cleaned up file after database save failure");
+                } catch (IOException cleanupEx) {
+                    System.err.println("Failed to clean up file after database save failure: " + cleanupEx.getMessage());
+                }
+                
+                throw new IOException("Failed to save document to database: " + e.getMessage(), e);
+            }
         } catch (Exception e) {
-            System.out.println("Error saving document: " + e.getMessage());
+            System.err.println("=== DocumentService.saveDocument FAILED ===");
+            System.err.println("Error saving document: " + e.getMessage());
             e.printStackTrace();
             throw e;
         }
@@ -179,6 +262,7 @@ public class DocumentService {
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
             logger.info("Sending request to Python API for document: {}", document.getId());
+            logger.info("Python API URL: {}", pythonApiUrl);
             ResponseEntity<String> response = restTemplate.exchange(
                     pythonApiUrl,
                     HttpMethod.POST,

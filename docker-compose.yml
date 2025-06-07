@@ -1,0 +1,106 @@
+services:
+  # React Frontend
+  frontend:
+    build:
+      context: ./React-App
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://206.189.60.118:8080
+        - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+    ports:
+      - "0.0.0.0:80:80"
+    environment:
+      - REACT_APP_API_URL=http://206.189.60.118:8080
+      - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # Initialize uploads directory permissions
+  init-uploads:
+    image: alpine:latest
+    volumes:
+      - ./uploads:/host-uploads
+      - ./logs:/host-logs
+      - ./output_results:/host-output
+    command: >
+      sh -c "
+        echo 'Setting up directory permissions...';
+        mkdir -p /host-uploads /host-logs /host-output;
+        chmod 755 /host-uploads /host-logs /host-output;
+        chown 1001:1001 /host-uploads /host-logs /host-output;
+        echo 'Permissions setup complete';
+      "
+    networks:
+      - app-network
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ./Spring-App
+      dockerfile: Dockerfile
+    ports:
+      - "0.0.0.0:8080:8080"
+    user: "1001:1001"
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - PYTHON_API_URL=http://python-service:5000/analyze_document
+      - DOCKER_ENV=true
+    depends_on:
+      - python-service
+      - init-uploads
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    networks:
+      - app-network
+
+  # Python Flask Service (main app.py in srs_analyzer)
+  python-service:
+    build:
+      context: ./Spring-App/src/main/java/com/example/demo/services
+      dockerfile: Dockerfile.flask
+    ports:
+      - "0.0.0.0:5000:5000"
+    user: "1001:1001"
+    environment:
+      - FLASK_ENV=development
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - init-uploads
+    volumes:
+      - ./uploads:/app/srs_analyzer/uploads
+      - ./YOLOv:/app/yolo
+      - ./output_results:/output_results
+      - ./Spring-App/src/main/java/com/example/demo/services/srs_analyzer/.env:/app/srs_analyzer/.env:ro
+    networks:
+      - app-network
+
+  # YOLO Python Service
+  yolo-service:
+    build:
+      context: ./YOLOv
+      dockerfile: Dockerfile
+    ports:
+      - "0.0.0.0:5001:5001"
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      - init-uploads
+    volumes:
+      - ./uploads:/app/uploads
+      - ./YOLOv/output_results:/app/output_results
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  uploads:
+  logs: 

@@ -73,3 +73,6 @@ app.log
 # Project specific
 uploads/
 /node_modules
+
+# Configuration files (environment-specific)
+React-App/src/config.js

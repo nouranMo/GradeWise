@@ -19,7 +19,12 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@CrossOrigin(origins = {
+    "http://localhost:3000", 
+    "http://206.189.60.118", 
+    "http://206.189.60.118:80", 
+    "https://206.189.60.118"
+}, allowCredentials = "true")
 public class CourseController {
 
     private static final Logger logger = LoggerFactory.getLogger(CourseController.class);
