@@ -6,7 +6,7 @@
 - **Main File**: `React-App/src/App.js` ✅
 - **Port**: 80 (served via Nginx)
 - **Environment Variables**: 
-  - `REACT_APP_API_URL=http://localhost:8080` ✅
+  - `REACT_APP_API_URL=http://206.189.60.118:8080` ✅
   - `REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}` ✅
 
 ### **Backend (Spring Boot)**
