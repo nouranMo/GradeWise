@@ -61,7 +61,8 @@ public class CourseService {
         }
         
         // Check if the user is a teacher/professor
-        if (!teacher.getRole().equals("ROLE_TEACHER") && !teacher.getRole().equals("PROFESSOR")) {
+        String role = teacher.getRole();
+        if (!role.equals("ROLE_TEACHER") && !role.equals("PROFESSOR") && !role.equals("TEACHER")) {
             throw new IllegalArgumentException("Invalid teacher ID or user is not a teacher");
         }
         
@@ -81,7 +82,15 @@ public class CourseService {
     public CourseModel assignStudentToCourse(String courseId, String studentId) {
         // Verify student exists and has student role
         Optional<UserModel> studentOpt = userRepository.findById(studentId);
-        if (studentOpt.isEmpty() || !studentOpt.get().getRoles().contains("ROLE_STUDENT")) {
+        if (studentOpt.isEmpty()) {
+            throw new IllegalArgumentException("Invalid student ID or user not found");
+        }
+        
+        UserModel student = studentOpt.get();
+        boolean isStudent = student.getRoles().contains("ROLE_STUDENT") || 
+                           student.getRoles().contains("STUDENT");
+        
+        if (!isStudent) {
             throw new IllegalArgumentException("Invalid student ID or user is not a student");
         }
 
