@@ -53,6 +53,17 @@ services:
     networks:
       - app-network
 
+  # Init container to set up directories and permissions
+  init-dirs:
+    image: busybox
+    volumes:
+      - ./output_results:/output_results
+    command: >
+      sh -c "mkdir -p /output_results/use_case /output_results/class /output_results/sequence && 
+             chmod -R 777 /output_results"
+    networks:
+      - app-network
+
   # Python Flask Service (main app.py in srs_analyzer)
   python-service:
     build:
@@ -68,7 +79,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OUTPUT_RESULTS_DIR=/app/srs_analyzer/output_results
     depends_on:
-      - init-uploads
+      - init-dirs
     volumes:
       - ./uploads:/app/srs_analyzer/uploads
       - ./YOLOv:/app/yolo
@@ -88,7 +99,7 @@ services:
       - PYTHONPATH=/app
       - OUTPUT_RESULTS_DIR=/app/output_results
     depends_on:
-      - init-uploads
+      - init-dirs
     volumes:
       - ./uploads:/app/uploads
       - ./output_results:/app/output_results
