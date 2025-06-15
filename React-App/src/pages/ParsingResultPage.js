@@ -1259,10 +1259,10 @@ function ParsingResult() {
                             Use Case: {key.replace(/_/g, " ")}
                           </h4>
                           <img
-                            src={`http://localhost:5000${data.path.replace(
-                              /\\/g,
-                              "/"
-                            )}`}
+                            src={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/output_results/${data.path.replace(
+                              /^\/output_results\//,
+                              ''
+                            ).replace(/\\/g, "/")}`}
                             alt={key}
                             className="w-1/2 h-auto rounded-lg shadow-md mx-auto block"
                             onError={(e) =>
@@ -1306,10 +1306,10 @@ function ParsingResult() {
                             Class Diagram: {key.replace(/_/g, " ")}
                           </h4>
                           <img
-                            src={`http://localhost:5000${data.path.replace(
-                              /\\/g,
-                              "/"
-                            )}`}
+                            src={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/output_results/${data.path.replace(
+                              /^\/output_results\//,
+                              ''
+                            ).replace(/\\/g, "/")}`}
                             alt={key}
                             className="w-1/2 h-auto rounded-lg shadow-md mx-auto block"
                             onError={(e) =>
@@ -1351,10 +1351,10 @@ function ParsingResult() {
                             Sequence Diagram: {key.replace(/_/g, " ")}
                           </h4>
                           <img
-                            src={`http://localhost:5000${data.path.replace(
-                              /\\/g,
-                              "/"
-                            )}`}
+                            src={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/output_results/${data.path.replace(
+                              /^\/output_results\//,
+                              ''
+                            ).replace(/\\/g, "/")}`}
                             alt={key}
                             className="w-1/2 h-auto rounded-lg shadow-md mx-auto block"
                             onError={(e) =>

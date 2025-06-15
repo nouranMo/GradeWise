@@ -56,9 +56,10 @@ if YOLO_PATH not in sys.path:
 # Print sys.path to verify
 print("PYTHON SEARCH PATHS:", sys.path)
 
+# Configure output results directory
 OUTPUT_RESULTS_DIR = app.config.get(
     'OUTPUT_RESULTS_DIR',
-    os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..',"..","..","..","..","..",'output_results'))
+    os.path.abspath(os.path.join(os.path.dirname(__file__), 'output_results'))
 )
 
 # Ensure the output_results directory exists
@@ -89,11 +90,18 @@ logger = logging.getLogger(__name__)
 app = create_app()
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:3000"],
+        "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True,
         "expose_headers": ["Content-Type", "Authorization"],
+        "max_age": 600
+    },
+    r"/output_results/*": {
+        "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+        "methods": ["GET"],
+        "allow_headers": ["Content-Type"],
+        "supports_credentials": True,
         "max_age": 600
     }
 })
@@ -238,8 +246,15 @@ def serve_output_image(filename):
     try:
         # Replace backslashes with forward slashes for cross-platform compatibility
         filename = filename.replace('\\', '/')
+        print(f"Attempting to serve image: {filename}")
+        print(f"Full path: {os.path.join(OUTPUT_RESULTS_DIR, filename)}")
+        
+        # Check if file exists
         full_path = os.path.join(OUTPUT_RESULTS_DIR, filename)
-        print(f"Serving image: {full_path}")
+        if not os.path.exists(full_path):
+            print(f"File not found: {full_path}")
+            return jsonify({'error': f'Image not found: {filename}'}), 404
+            
         # Serve file from OUTPUT_RESULTS_DIR
         return send_from_directory(OUTPUT_RESULTS_DIR, filename)
     except Exception as e:
