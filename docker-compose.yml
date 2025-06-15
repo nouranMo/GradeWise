@@ -1,6 +1,6 @@
 services:
   # React Frontend
-  react-app:
+  frontend:
     build:
       context: ./React-App
       dockerfile: Dockerfile
@@ -8,8 +8,10 @@ services:
       - "0.0.0.0:3000:3000"
     environment:
       - REACT_APP_API_URL=http://localhost:5000
+      - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     depends_on:
       - python-service
+      - backend
     networks:
       - app-network
 
