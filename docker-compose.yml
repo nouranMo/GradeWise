@@ -1,19 +1,15 @@
 services:
   # React Frontend
-  frontend:
+  react-app:
     build:
       context: ./React-App
       dockerfile: Dockerfile
-      args:
-        - REACT_APP_API_URL=http://206.189.60.118:8080
-        - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     ports:
-      - "0.0.0.0:80:80"
+      - "0.0.0.0:3000:3000"
     environment:
-      - REACT_APP_API_URL=http://206.189.60.118:8080
-      - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - REACT_APP_API_URL=http://localhost:5000
     depends_on:
-      - backend
+      - python-service
     networks:
       - app-network
 
@@ -70,12 +66,13 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OUTPUT_RESULTS_DIR=/app/srs_analyzer/output_results
     depends_on:
       - init-uploads
     volumes:
       - ./uploads:/app/srs_analyzer/uploads
       - ./YOLOv:/app/yolo
-      - ./output_results:/output_results
+      - ./output_results:/app/srs_analyzer/output_results
       - ./Spring-App/src/main/java/com/example/demo/services/srs_analyzer/.env:/app/srs_analyzer/.env:ro
     networks:
       - app-network
@@ -89,11 +86,12 @@ services:
       - "0.0.0.0:5001:5001"
     environment:
       - PYTHONPATH=/app
+      - OUTPUT_RESULTS_DIR=/app/output_results
     depends_on:
       - init-uploads
     volumes:
       - ./uploads:/app/uploads
-      - ./YOLOv/output_results:/app/output_results
+      - ./output_results:/app/output_results
     networks:
       - app-network
 
