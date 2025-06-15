@@ -31,10 +31,17 @@ def process_diagrams(upload_base="Uploads",
         "issues": []
     }
     
-    # Ensure output directories exist
-    os.makedirs(os.path.join(output_base, "use_case"), exist_ok=True)
-    os.makedirs(os.path.join(output_base, "class"), exist_ok=True)
-    os.makedirs(os.path.join(output_base, "sequence"), exist_ok=True)
+    # Ensure output directories exist with proper permissions
+    try:
+        for dir_name in ["use_case", "class", "sequence"]:
+            dir_path = os.path.join(output_base, dir_name)
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path, mode=0o777, exist_ok=True)
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to create output directories: {str(e)}"
+        }
     
     # Process use case diagrams (only for SRS)
     if document_type == "SRS" and os.path.exists(use_case_folder):
