@@ -5,4 +5,4 @@ torchvision
 torchaudio
 matplotlib
 numpy
-flask
+flask 
